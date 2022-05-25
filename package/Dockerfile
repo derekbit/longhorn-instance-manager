@@ -22,9 +22,9 @@ COPY package/engine-manager /usr/local/bin/
 
 # Build liblonghorn
 RUN cd /usr/src && \
-    git clone https://github.com/rancher/liblonghorn.git && \
+    git clone https://github.com/derekbit/liblonghorn.git && \
     cd liblonghorn && \
-    git checkout 74f14b50895ac6b0faebc715c025a8a46a4333a1 && \
+    git checkout cefe82f8d1d7be21ca8828cfb0fdc0f2d8459daf && \
     make && \
     make install && \
     rm -rf /usr/src/liblonghorn
