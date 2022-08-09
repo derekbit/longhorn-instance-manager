@@ -45,7 +45,7 @@ RUN wget -O - https://storage.googleapis.com/golang/go1.14.15.linux-${!GOLANG_AR
 RUN cd /usr/src && \
     git clone https://github.com/rancher/liblonghorn.git && \
     cd liblonghorn && \
-    git checkout 6544c2432d543137a198e4a779f676369dbd9e82 && \
+    git checkout dead8bbaad91ed5e1e55239a39207b6408fc6647 && \
     make && \
     make install
 
