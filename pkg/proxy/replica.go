@@ -16,6 +16,7 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 	log := logrus.WithFields(logrus.Fields{
 		"serviceURL": req.ProxyEngineRequest.Address,
 		"restore":    req.Restore,
+		"size":       req.Size,
 	})
 	log.Debugf("Adding replica %v", req.ReplicaAddress)
 
@@ -25,11 +26,11 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 	}
 
 	if req.Restore {
-		if err := task.AddRestoreReplica(req.ReplicaAddress); err != nil {
+		if err := task.AddRestoreReplica(req.Size, req.ReplicaAddress); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := task.AddReplica(req.ReplicaAddress); err != nil {
+		if err := task.AddReplica(req.Size, req.ReplicaAddress); err != nil {
 			return nil, err
 		}
 	}
