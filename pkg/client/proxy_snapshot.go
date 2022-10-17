@@ -3,11 +3,10 @@ package client
 import (
 	"github.com/pkg/errors"
 
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
-
 	etypes "github.com/longhorn/longhorn-engine/pkg/types"
 	eutil "github.com/longhorn/longhorn-engine/pkg/util"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
 const (
@@ -278,4 +277,69 @@ func (c *ProxyClient) SnapshotRemove(serviceAddress string, names []string) (err
 	}
 
 	return nil
+}
+
+func (c *ProxyClient) SnapshotHash(serviceAddress string, snapshotNames []string, rehash bool, concurrentLimit int) (err error) {
+	input := map[string]string{
+		"serviceAddress": serviceAddress,
+	}
+	if err := validateProxyMethodParameters(input); err != nil {
+		return errors.Wrap(err, "failed to hash snapshot")
+	}
+
+	defer func() {
+		err = errors.Wrapf(err, "%v failed to hash snapshot", c.getProxyErrorPrefix(serviceAddress))
+	}()
+
+	req := &rpc.EngineSnapshotHashRequest{
+		ProxyEngineRequest: &rpc.ProxyEngineRequest{
+			Address: serviceAddress,
+		},
+		SnapshotNames:   snapshotNames,
+		Rehash:          rehash,
+		ConcurrentLimit: int32(concurrentLimit),
+	}
+	_, err = c.service.SnapshotHash(getContextWithGRPCTimeout(c.ctx), req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ProxyClient) SnapshotHashStatus(serviceAddress, snapshotName string) (status map[string]*SnapshotHashStatus, err error) {
+	input := map[string]string{
+		"serviceAddress": serviceAddress,
+	}
+	if err := validateProxyMethodParameters(input); err != nil {
+		return nil, errors.Wrap(err, "failed to get snapshot hash status")
+	}
+
+	defer func() {
+		err = errors.Wrapf(err, "%v failed to get snapshot hash status", c.getProxyErrorPrefix(serviceAddress))
+	}()
+
+	req := &rpc.EngineSnapshotHashStatusRequest{
+		ProxyEngineRequest: &rpc.ProxyEngineRequest{
+			Address: serviceAddress,
+		},
+		SnapshotName: snapshotName,
+	}
+
+	recv, err := c.service.SnapshotHashStatus(getContextWithGRPCTimeout(c.ctx), req)
+	if err != nil {
+		return nil, err
+	}
+
+	status = make(map[string]*SnapshotHashStatus)
+	for k, v := range recv.Status {
+		status[k] = &SnapshotHashStatus{
+			State:    v.State,
+			Progress: int(v.Progress),
+			Checksum: v.Checksum,
+			Error:    v.Error,
+		}
+	}
+
+	return status, nil
 }

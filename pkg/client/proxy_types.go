@@ -73,3 +73,10 @@ type ReplicaRebuildStatus struct {
 	State              string
 	FromReplicaAddress string
 }
+
+type SnapshotHashStatus struct {
+	State    string
+	Progress int
+	Checksum string
+	Error    string
+}
