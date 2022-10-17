@@ -135,6 +135,11 @@ class ProxyEngineServiceStub(object):
         request_serializer=proxy__pb2.EngineReplicaRemoveRequest.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
+    self.ReplicaUpdate = channel.unary_unary(
+        '/imrpc.ProxyEngineService/ReplicaUpdate',
+        request_serializer=proxy__pb2.EngineReplicaUpdateRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
 
 
 class ProxyEngineServiceServicer(object):
@@ -309,6 +314,13 @@ class ProxyEngineServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def ReplicaUpdate(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_ProxyEngineServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -430,6 +442,11 @@ def add_ProxyEngineServiceServicer_to_server(servicer, server):
       'ReplicaRemove': grpc.unary_unary_rpc_method_handler(
           servicer.ReplicaRemove,
           request_deserializer=proxy__pb2.EngineReplicaRemoveRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
+      'ReplicaUpdate': grpc.unary_unary_rpc_method_handler(
+          servicer.ReplicaUpdate,
+          request_deserializer=proxy__pb2.EngineReplicaUpdateRequest.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
   }

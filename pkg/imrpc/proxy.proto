@@ -35,6 +35,8 @@ service ProxyEngineService {
 	rpc ReplicaRebuildingStatus(ProxyEngineRequest) returns (EngineReplicaRebuildStatusProxyResponse);
 	rpc ReplicaVerifyRebuild(EngineReplicaVerifyRebuildRequest) returns (google.protobuf.Empty);
 	rpc ReplicaRemove(EngineReplicaRemoveRequest) returns (google.protobuf.Empty);
+	rpc ReplicaUpdate(EngineReplicaUpdateRequest) returns (google.protobuf.Empty);
+	
 }
 
 message ProxyEngineRequest{
@@ -212,6 +214,13 @@ message EngineReplicaRemoveRequest {
 	ProxyEngineRequest proxy_engine_request = 1;
 
 	string replica_address = 2;
+}
+
+message EngineReplicaUpdateRequest {
+	ProxyEngineRequest proxy_engine_request = 1;
+
+	string replica_address = 2;
+	ptypes.ReplicaMode mode = 3;
 }
 
 message EngineSnapshotHashRequest {
