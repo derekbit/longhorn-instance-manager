@@ -22,6 +22,8 @@ service ProxyEngineService {
 	rpc SnapshotClone(EngineSnapshotCloneRequest) returns (google.protobuf.Empty);
 	rpc SnapshotCloneStatus(ProxyEngineRequest) returns (EngineSnapshotCloneStatusProxyResponse);
 	rpc SnapshotRemove(EngineSnapshotRemoveRequest) returns (google.protobuf.Empty);
+	rpc SnapshotHash(EngineSnapshotHashRequest) returns (google.protobuf.Empty);
+	rpc SnapshotHashStatus(EngineSnapshotHashStatusRequest) returns (EngineSnapshotHashStatusProxyResponse);
 
 	rpc SnapshotBackup(EngineSnapshotBackupRequest) returns (EngineSnapshotBackupProxyResponse);
 	rpc SnapshotBackupStatus(EngineSnapshotBackupStatusRequest) returns (EngineSnapshotBackupStatusProxyResponse);
@@ -211,3 +213,22 @@ message EngineReplicaRemoveRequest {
 
 	string replica_address = 2;
 }
+
+message EngineSnapshotHashRequest {
+	ProxyEngineRequest proxy_engine_request = 1;
+
+	repeated string snapshot_names = 2;
+	bool rehash = 3;
+	int32 concurrent_limit = 4;
+}
+
+message EngineSnapshotHashStatusRequest {
+	ProxyEngineRequest proxy_engine_request = 1;
+
+	string snapshot_name = 2;
+}
+
+message EngineSnapshotHashStatusProxyResponse {
+	map<string, ptypes.SnapshotHashStatusResponse> status = 1;
+}
+

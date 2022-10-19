@@ -160,11 +160,11 @@ message SnapshotHashRequest {
   repeated string snapshot_names = 1;
   bool rehash = 2;
   int32 concurrent_limit = 3;
-};
+}
 
 message SnapshotHashStatusRequest {
   string snapshot_name = 1;
-};
+}
 
 message SnapshotHashStatusResponse {
   string state = 1;
