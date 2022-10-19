@@ -11,13 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/longhorn/longhorn-engine/pkg/controller/client"
-	"github.com/longhorn/longhorn-engine/pkg/replica"
 	replicaClient "github.com/longhorn/longhorn-engine/pkg/replica/client"
 	"github.com/longhorn/longhorn-engine/pkg/types"
-)
-
-const (
-	VolumeHeadName = "volume-head"
+	diskutil "github.com/longhorn/longhorn-engine/pkg/util/disk"
 )
 
 type Task struct {
@@ -55,6 +51,13 @@ type SnapshotCloneStatus struct {
 	State              string `json:"state"`
 	FromReplicaAddress string `json:"fromReplicaAddress"`
 	SnapshotName       string `json:"snapshotName"`
+}
+
+type SnapshotHashStatus struct {
+	State    string `json:"state"`
+	Progress int    `json:"progress"`
+	Checksum string `json:"checksum"`
+	Error    string `json:"error"`
 }
 
 func NewTaskError(res ...ReplicaError) *TaskError {
@@ -128,7 +131,7 @@ func (t *Task) DeleteSnapshot(snapshot string) error {
 		if ok, err := t.isRebuilding(r); err != nil {
 			return err
 		} else if ok {
-			return fmt.Errorf("Can not remove a snapshot because %s is rebuilding", r.Address)
+			return fmt.Errorf("cannot remove a snapshot because %s is rebuilding", r.Address)
 		}
 	}
 
@@ -254,20 +257,6 @@ func (t *Task) PurgeSnapshotStatus() (map[string]*SnapshotPurgeStatus, error) {
 	return replicaStatusMap, nil
 }
 
-func getNameAndIndex(chain []string, snapshot string) (string, int) {
-	index := find(chain, snapshot)
-	if index < 0 {
-		snapshot = fmt.Sprintf("volume-snap-%s.img", snapshot)
-		index = find(chain, snapshot)
-	}
-
-	if index < 0 {
-		return "", index
-	}
-
-	return snapshot, index
-}
-
 func (t *Task) isRebuilding(replicaInController *types.ControllerReplicaInfo) (bool, error) {
 	repClient, err := replicaClient.NewReplicaClient(replicaInController.Address)
 	if err != nil {
@@ -298,24 +287,9 @@ func (t *Task) isPurging(replicaInController *types.ControllerReplicaInfo) (bool
 	return status.IsPurging, nil
 }
 
-func (t *Task) isDirty(replicaInController *types.ControllerReplicaInfo) (bool, error) {
-	repClient, err := replicaClient.NewReplicaClient(replicaInController.Address)
-	if err != nil {
-		return false, err
-	}
-	defer repClient.Close()
-
-	replica, err := repClient.GetReplica()
-	if err != nil {
-		return false, err
-	}
-
-	return replica.Dirty, nil
-}
-
 func (t *Task) markSnapshotAsRemoved(replicaInController *types.ControllerReplicaInfo, snapshot string) error {
 	if replicaInController.Mode != types.RW {
-		return fmt.Errorf("Can only mark snapshot as removed from replica in mode RW, got %s", replicaInController.Mode)
+		return fmt.Errorf("can only mark snapshot as removed from replica in mode RW, got %s", replicaInController.Mode)
 	}
 
 	repClient, err := replicaClient.NewReplicaClient(replicaInController.Address)
@@ -329,15 +303,6 @@ func (t *Task) markSnapshotAsRemoved(replicaInController *types.ControllerReplic
 	}
 
 	return nil
-}
-
-func find(list []string, item string) int {
-	for i, val := range list {
-		if val == item {
-			return i
-		}
-	}
-	return -1
 }
 
 func (t *Task) AddRestoreReplica(volumeSize, volumeCurrentSize int64, replica string) error {
@@ -536,7 +501,7 @@ func (t *Task) reloadAndVerify(address string, repClient *replicaClient.ReplicaC
 func checkIfVolumeHeadExists(infoList []types.SyncFileInfo) bool {
 	// volume head has been synced by PrepareRebuild()
 	for _, info := range infoList {
-		if strings.Contains(info.FromFileName, VolumeHeadName) {
+		if strings.Contains(info.FromFileName, diskutil.VolumeHeadName) {
 			return true
 		}
 	}
@@ -667,30 +632,30 @@ func GetSnapshotsInfo(replicas []*types.ControllerReplicaInfo) (outputDisks map[
 		for name, disk := range disks {
 			snapshot := ""
 
-			if !replica.IsHeadDisk(name) {
-				snapshot, err = replica.GetSnapshotNameFromDiskName(name)
+			if !diskutil.IsHeadDisk(name) {
+				snapshot, err = diskutil.GetSnapshotNameFromDiskName(name)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				snapshot = VolumeHeadName
+				snapshot = diskutil.VolumeHeadName
 			}
 			children := map[string]bool{}
 			for childDisk := range disk.Children {
 				child := ""
-				if !replica.IsHeadDisk(childDisk) {
-					child, err = replica.GetSnapshotNameFromDiskName(childDisk)
+				if !diskutil.IsHeadDisk(childDisk) {
+					child, err = diskutil.GetSnapshotNameFromDiskName(childDisk)
 					if err != nil {
 						return nil, err
 					}
 				} else {
-					child = VolumeHeadName
+					child = diskutil.VolumeHeadName
 				}
 				children[child] = true
 			}
 			parent := ""
 			if disk.Parent != "" {
-				parent, err = replica.GetSnapshotNameFromDiskName(disk.Parent)
+				parent, err = diskutil.GetSnapshotNameFromDiskName(disk.Parent)
 				if err != nil {
 					return nil, err
 				}
@@ -798,7 +763,7 @@ func CloneSnapshot(engineControllerClient, fromControllerClient *client.Controll
 		}
 	}
 	if sourceReplica == nil {
-		return fmt.Errorf("cannot find a RW replica in the source volume for clonning")
+		return fmt.Errorf("cannot find a RW replica in the source volume for cloning")
 	}
 
 	replicas, err = engineControllerClient.ReplicaList()
@@ -886,4 +851,113 @@ func CloneStatus(engineControllerClient *client.ControllerClient) (map[string]*S
 		}
 	}
 	return cloneStatusMap, nil
+}
+
+func (t *Task) HashSnapshot(snapshotNames []string, rehash bool, concurrentLimit int) error {
+	replicas, err := t.client.ReplicaList()
+	if err != nil {
+		return err
+	}
+
+	for _, r := range replicas {
+		if r.Mode != types.RW {
+			return fmt.Errorf("cannot hash a snapshot because %v is in %v mode", r.Address, r.Mode)
+		}
+
+		if ok, err := t.isRebuilding(r); err != nil {
+			return err
+		} else if ok {
+			return fmt.Errorf("cannot hash a snapshot because %s is rebuilding", r.Address)
+		}
+	}
+
+	taskErr := NewTaskError()
+	syncErrorMap := sync.Map{}
+	var wg sync.WaitGroup
+	wg.Add(len(replicas))
+
+	for _, r := range replicas {
+		go func(r *types.ControllerReplicaInfo) {
+			defer wg.Done()
+			repClient, err := replicaClient.NewReplicaClient(r.Address)
+			if err != nil {
+				syncErrorMap.Store(r.Address, err)
+				return
+			}
+			defer repClient.Close()
+			if err := repClient.SnapshotHash(snapshotNames, rehash, concurrentLimit); err != nil {
+				syncErrorMap.Store(r.Address, err)
+			}
+		}(r)
+	}
+
+	wg.Wait()
+
+	for _, r := range replicas {
+		if v, ok := syncErrorMap.Load(r.Address); ok {
+			err = v.(error)
+			taskErr.Append(NewReplicaError(r.Address, err))
+		}
+	}
+	if taskErr.HasError() {
+		return taskErr
+	}
+
+	return nil
+}
+
+func (t *Task) HashSnapshotStatus(snapshotName string) (map[string]*SnapshotHashStatus, error) {
+	hashStatusMap := make(map[string]*SnapshotHashStatus)
+
+	replicas, err := t.client.ReplicaList()
+	if err != nil {
+		return nil, err
+	}
+
+	// clean up clients after processing
+	var clients []*replicaClient.ReplicaClient
+	defer func() {
+		for _, client := range clients {
+			_ = client.Close()
+		}
+	}()
+
+	for _, r := range replicas {
+		repClient, err := replicaClient.NewReplicaClient(r.Address)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, repClient)
+
+		if r.Mode != types.RW {
+			hashStatusMap[r.Address] = &SnapshotHashStatus{
+				Error: fmt.Sprintf("cannot get snapshot hash status of %v since it is in %v mode", r.Address, r.Mode),
+			}
+		}
+
+		if ok, err := t.isRebuilding(r); err != nil {
+			hashStatusMap[r.Address] = &SnapshotHashStatus{
+				Error: fmt.Sprintf("cannot get snapshot hash status of %v since %v", r.Address, err),
+			}
+		} else if ok {
+			hashStatusMap[r.Address] = &SnapshotHashStatus{
+				Error: fmt.Sprintf("cannot get snapshot hash status since %s is rebuilding", r.Address),
+			}
+		}
+
+		status, err := repClient.SnapshotHashStatus(snapshotName)
+		if err != nil {
+			hashStatusMap[r.Address] = &SnapshotHashStatus{
+				Error: fmt.Sprintf("failed to get snapshot hash status of %v since %v", r.Address, err),
+			}
+			continue
+		}
+		hashStatusMap[r.Address] = &SnapshotHashStatus{
+			State:    status.State,
+			Progress: int(status.Progress),
+			Checksum: status.Checksum,
+			Error:    status.Error,
+		}
+	}
+	return hashStatusMap, nil
 }

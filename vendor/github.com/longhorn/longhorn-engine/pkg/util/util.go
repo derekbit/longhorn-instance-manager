@@ -30,8 +30,6 @@ var (
 	MaximumVolumeNameSize = 64
 	validVolumeName       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]+$`)
 
-	cmdTimeout = time.Minute // one minute by default
-
 	HostProc = "/host/proc"
 )
 

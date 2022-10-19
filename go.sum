@@ -13,6 +13,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:ma
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/derekbit/longhorn-engine v1.2.1-0.20221024132922-0e1a9a008d30 h1:MQFzL3LawTQr5H7BWqVbq5DJ1yYrs0ka8YfIQGiXHZU=
+github.com/derekbit/longhorn-engine v1.2.1-0.20221024132922-0e1a9a008d30/go.mod h1:AC5smEVsxdJKI+joa0vSUPLd0Cp/xEQiqAsh3UM3UfY=
 github.com/docker/go-units v0.3.3/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 h1:Ujru1hufTHVb++eG6OuNDKMxZnGIvF6o/u8q/8h2+I4=
@@ -51,10 +53,7 @@ github.com/longhorn/backupstore v0.0.0-20220913112826-5f5c95274f2a/go.mod h1:hvI
 github.com/longhorn/go-iscsi-helper v0.0.0-20220805034259-7b59e22574bb/go.mod h1:9z/y9glKmWEdV50tjlUPxFwi1goQfIrrsoZbnMyIZbY=
 github.com/longhorn/go-iscsi-helper v0.0.0-20220927074943-051bf960608b h1:nGWLOG/u+hT1aQnygRavj31JxPwfig/Ts8EnqUVEW6o=
 github.com/longhorn/go-iscsi-helper v0.0.0-20220927074943-051bf960608b/go.mod h1:9z/y9glKmWEdV50tjlUPxFwi1goQfIrrsoZbnMyIZbY=
-github.com/longhorn/longhorn-engine v1.3.2-0.20220929032851-7aac8ae9c8b4 h1:hNdnSDe6vRZ3uIi6rZIsVITdXAR0G86gLIOJVQtICCo=
-github.com/longhorn/longhorn-engine v1.3.2-0.20220929032851-7aac8ae9c8b4/go.mod h1:AC5smEVsxdJKI+joa0vSUPLd0Cp/xEQiqAsh3UM3UfY=
 github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003/go.mod h1:0CLeXlf59Lg6C0kjLSDf47ft73Dh37CwymYRKWwAn04=
-github.com/longhorn/sparse-tools v0.0.0-20220323120706-0bd9b4129826 h1:8IeuJT9y0xFGSfSl9dOG/L6dJOGtIrS3nYqgo3eYzao=
 github.com/longhorn/sparse-tools v0.0.0-20220323120706-0bd9b4129826/go.mod h1:BWM7yTPb1DulG18EE/Jy20LVIySzIYoZpiOYFtAGwZo=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
@@ -70,7 +69,6 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pkg/sftp v1.10.1/go.mod h1:lYOWFsE0bwd1+KfKJaKeuokY15vzFx25BLbzYYoAxZI=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/rancher/go-fibmap v0.0.0-20160418233256-5fc9f8c1ed47 h1:JSipdfqjzjD9EMzehVJaS48FXXfC8Bec4japPmWE5pM=
 github.com/rancher/go-fibmap v0.0.0-20160418233256-5fc9f8c1ed47/go.mod h1:aLaSmp4RuKnOBJO5jFdPH+qkSfLByIGGZVczecL9okc=
 github.com/rancher/go-rancher v0.1.1-0.20190307222549-9756097e5e4c/go.mod h1:7oQvGNiJsGvrUgB+7AH8bmdzuR0uhULfwKb43Ht0hUk=
 github.com/russross/blackfriday/v2 v2.0.1 h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=

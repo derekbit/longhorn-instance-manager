@@ -8,10 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/longhorn/backupstore"
-	"github.com/longhorn/longhorn-engine/pkg/replica"
+
 	replicaClient "github.com/longhorn/longhorn-engine/pkg/replica/client"
 	"github.com/longhorn/longhorn-engine/pkg/types"
 	"github.com/longhorn/longhorn-engine/pkg/util"
+	diskutil "github.com/longhorn/longhorn-engine/pkg/util/disk"
 )
 
 type BackupCreateInfo struct {
@@ -43,7 +44,7 @@ type RestoreStatus struct {
 func (t *Task) CreateBackup(backupName, snapshot, dest, backingImageName, backingImageChecksum string, labels []string, credential map[string]string) (*BackupCreateInfo, error) {
 	var replica *types.ControllerReplicaInfo
 
-	if snapshot == VolumeHeadName {
+	if snapshot == diskutil.VolumeHeadName {
 		return nil, fmt.Errorf("can not backup the head disk in the chain")
 	}
 
@@ -92,7 +93,7 @@ func (t *Task) createBackup(replicaInController *types.ControllerReplicaInfo, ba
 		return nil, err
 	}
 
-	diskName := replica.GenerateSnapshotDiskName(snapshot)
+	diskName := diskutil.GenerateSnapshotDiskName(snapshot)
 	if _, ok := rep.Disks[diskName]; !ok {
 		return nil, fmt.Errorf("snapshot disk %s not found on replica %s", diskName, replicaInController.Address)
 	}
@@ -175,7 +176,7 @@ func (t *Task) RestoreBackup(backup string, credential map[string]string) error 
 		if isRebuilding, err := t.isRebuilding(r); err != nil {
 			taskErr.Append(NewReplicaError(r.Address, err))
 		} else if isRebuilding {
-			taskErr.Append(NewReplicaError(r.Address, fmt.Errorf("can not do restore for normal rebuilding replica")))
+			taskErr.Append(NewReplicaError(r.Address, fmt.Errorf("cannot do restore for normal rebuilding replica")))
 		}
 	}
 	if taskErr.HasError() {
@@ -222,12 +223,12 @@ func (t *Task) RestoreBackup(backup string, credential map[string]string) error 
 			return fmt.Errorf("BUG: replicas %+v of DR volume should contains at least 2 disk files: the volume head and a snapshot storing restore data", replicas)
 		}
 		if snapshotDiskName == "" {
-			snapshotDiskName = replica.GenerateSnapshotDiskName(util.UUID())
+			snapshotDiskName = diskutil.GenerateSnapshotDiskName(util.UUID())
 		}
 	case 2: // the volume head and the only system snapshot.
 		for _, s := range snapshots {
-			if s.Name == VolumeHeadName {
-				snapshotDiskName = replica.GenerateSnapshotDiskName(s.Parent)
+			if s.Name == diskutil.VolumeHeadName {
+				snapshotDiskName = diskutil.GenerateSnapshotDiskName(s.Parent)
 				break
 			}
 		}
@@ -284,7 +285,7 @@ func (t *Task) RestoreBackup(backup string, credential map[string]string) error 
 
 func (t *Task) restoreBackup(replicaInController *types.ControllerReplicaInfo, backup string, snapshotFile string, credential map[string]string) error {
 	if replicaInController.Mode == types.ERR {
-		return fmt.Errorf("can not restore backup from replica in mode ERR")
+		return fmt.Errorf("cannot restore backup from replica in mode ERR")
 	}
 
 	repClient, err := replicaClient.NewReplicaClient(replicaInController.Address)
@@ -313,7 +314,7 @@ func (t *Task) Reset() error {
 			return err
 		} else if ok {
 			logrus.Errorf("Replicas are rebuilding. Can't reset: %v", err)
-			return fmt.Errorf("can not reset Restore info as replica(%s) is rebuilding", r.Address)
+			return fmt.Errorf("cannot reset Restore info as replica(%s) is rebuilding", r.Address)
 		}
 	}
 
