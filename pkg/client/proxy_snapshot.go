@@ -5,12 +5,10 @@ import (
 
 	etypes "github.com/longhorn/longhorn-engine/pkg/types"
 	eutil "github.com/longhorn/longhorn-engine/pkg/util"
+	ediskutil "github.com/longhorn/longhorn-engine/pkg/util/disk"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
-)
 
-const (
-	VolumeHeadName = "volume-head"
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
 func (c *ProxyClient) VolumeSnapshot(serviceAddress, volumeSnapshotName string, labels map[string]string) (snapshotName string, err error) {
@@ -175,8 +173,8 @@ func (c *ProxyClient) SnapshotRevert(serviceAddress string, name string) (err er
 		err = errors.Wrapf(err, "%v failed to revert volume to snapshot %v", c.getProxyErrorPrefix(serviceAddress), name)
 	}()
 
-	if name == VolumeHeadName {
-		err = errors.Errorf("invalid operation: cannot revert to %v", VolumeHeadName)
+	if name == ediskutil.VolumeHeadName {
+		err = errors.Errorf("invalid operation: cannot revert to %v", ediskutil.VolumeHeadName)
 		return err
 	}
 
