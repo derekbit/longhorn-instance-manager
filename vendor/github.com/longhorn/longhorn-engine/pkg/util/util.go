@@ -30,8 +30,6 @@ var (
 	MaximumVolumeNameSize = 64
 	validVolumeName       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]+$`)
 
-	cmdTimeout = time.Minute // one minute by default
-
 	HostProc = "/host/proc"
 )
 
@@ -328,4 +326,8 @@ func GetInitiatorNS() string {
 
 func GetFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func RandomID(randomIDLenth int) string {
+	return UUID()[:randomIDLenth]
 }
