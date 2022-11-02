@@ -80,6 +80,21 @@ class ProxyEngineServiceStub(object):
         request_serializer=proxy__pb2.EngineSnapshotRemoveRequest.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
+    self.SnapshotHash = channel.unary_unary(
+        '/imrpc.ProxyEngineService/SnapshotHash',
+        request_serializer=proxy__pb2.EngineSnapshotHashRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
+    self.SnapshotHashStatus = channel.unary_unary(
+        '/imrpc.ProxyEngineService/SnapshotHashStatus',
+        request_serializer=proxy__pb2.EngineSnapshotHashStatusRequest.SerializeToString,
+        response_deserializer=proxy__pb2.EngineSnapshotHashStatusProxyResponse.FromString,
+        )
+    self.SnapshotHashInProgressTasks = channel.unary_unary(
+        '/imrpc.ProxyEngineService/SnapshotHashInProgressTasks',
+        request_serializer=proxy__pb2.ProxyEngineRequest.SerializeToString,
+        response_deserializer=proxy__pb2.EngineSnapshotHashInProgressTasksProxyResponse.FromString,
+        )
     self.SnapshotBackup = channel.unary_unary(
         '/imrpc.ProxyEngineService/SnapshotBackup',
         request_serializer=proxy__pb2.EngineSnapshotBackupRequest.SerializeToString,
@@ -123,6 +138,11 @@ class ProxyEngineServiceStub(object):
     self.ReplicaRemove = channel.unary_unary(
         '/imrpc.ProxyEngineService/ReplicaRemove',
         request_serializer=proxy__pb2.EngineReplicaRemoveRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
+    self.ReplicaModeUpdate = channel.unary_unary(
+        '/imrpc.ProxyEngineService/ReplicaModeUpdate',
+        request_serializer=proxy__pb2.EngineReplicaModeUpdateRequest.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
 
@@ -222,6 +242,27 @@ class ProxyEngineServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def SnapshotHash(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def SnapshotHashStatus(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def SnapshotHashInProgressTasks(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def SnapshotBackup(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -279,6 +320,13 @@ class ProxyEngineServiceServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def ReplicaRemove(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def ReplicaModeUpdate(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -353,6 +401,21 @@ def add_ProxyEngineServiceServicer_to_server(servicer, server):
           request_deserializer=proxy__pb2.EngineSnapshotRemoveRequest.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
+      'SnapshotHash': grpc.unary_unary_rpc_method_handler(
+          servicer.SnapshotHash,
+          request_deserializer=proxy__pb2.EngineSnapshotHashRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
+      'SnapshotHashStatus': grpc.unary_unary_rpc_method_handler(
+          servicer.SnapshotHashStatus,
+          request_deserializer=proxy__pb2.EngineSnapshotHashStatusRequest.FromString,
+          response_serializer=proxy__pb2.EngineSnapshotHashStatusProxyResponse.SerializeToString,
+      ),
+      'SnapshotHashInProgressTasks': grpc.unary_unary_rpc_method_handler(
+          servicer.SnapshotHashInProgressTasks,
+          request_deserializer=proxy__pb2.ProxyEngineRequest.FromString,
+          response_serializer=proxy__pb2.EngineSnapshotHashInProgressTasksProxyResponse.SerializeToString,
+      ),
       'SnapshotBackup': grpc.unary_unary_rpc_method_handler(
           servicer.SnapshotBackup,
           request_deserializer=proxy__pb2.EngineSnapshotBackupRequest.FromString,
@@ -396,6 +459,11 @@ def add_ProxyEngineServiceServicer_to_server(servicer, server):
       'ReplicaRemove': grpc.unary_unary_rpc_method_handler(
           servicer.ReplicaRemove,
           request_deserializer=proxy__pb2.EngineReplicaRemoveRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
+      'ReplicaModeUpdate': grpc.unary_unary_rpc_method_handler(
+          servicer.ReplicaModeUpdate,
+          request_deserializer=proxy__pb2.EngineReplicaModeUpdateRequest.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
   }
