@@ -5,11 +5,13 @@ import (
 	"os"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/longhorn/longhorn-engine/pkg/backingfile"
-
 	"github.com/longhorn/backupstore"
+
+	"github.com/longhorn/longhorn-engine/pkg/backingfile"
+	diskutil "github.com/longhorn/longhorn-engine/pkg/util/disk"
 )
 
 type ProgressState string
@@ -162,7 +164,7 @@ func NewBackup(backingFile *backingfile.BackingFile) *BackupStatus {
 }
 
 func (rb *BackupStatus) UpdateBackupStatus(snapID, volumeID string, progress int, url string, errString string) error {
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	rb.lock.Lock()
 	defer rb.lock.Unlock()
 	if err := rb.assertOpen(id, volumeID); err != nil {
@@ -189,7 +191,7 @@ func (rb *BackupStatus) HasSnapshot(snapID, volumeID string) bool {
 		logrus.Warnf("Invalid state volume [%s] are open, not [%s]", rb.volumeID, volumeID)
 		return false
 	}
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	to := rb.findIndex(id)
 	if to < 0 {
 		return false
@@ -198,7 +200,7 @@ func (rb *BackupStatus) HasSnapshot(snapID, volumeID string) bool {
 }
 
 func (rb *BackupStatus) OpenSnapshot(snapID, volumeID string) error {
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	rb.lock.Lock()
 	defer rb.lock.Unlock()
 	if rb.volumeID == volumeID && rb.SnapshotID == id {
@@ -206,12 +208,12 @@ func (rb *BackupStatus) OpenSnapshot(snapID, volumeID string) error {
 	}
 
 	if rb.volumeID != "" {
-		return fmt.Errorf("Volume %s and snapshot %s are already open, close first", rb.volumeID, rb.SnapshotID)
+		return fmt.Errorf("volume %s and snapshot %s are already open, close first", rb.volumeID, rb.SnapshotID)
 	}
 
 	dir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Cannot get working directory: %v", err)
+		return errors.Wrap(err, "cannot get working directory")
 	}
 	r, err := NewReadOnly(dir, id, rb.backingFile)
 	if err != nil {
@@ -227,13 +229,13 @@ func (rb *BackupStatus) OpenSnapshot(snapID, volumeID string) error {
 
 func (rb *BackupStatus) assertOpen(id, volumeID string) error {
 	if rb.volumeID != volumeID || rb.SnapshotID != id {
-		return fmt.Errorf("Invalid state volume [%s] and snapshot [%s] are open, not volume [%s], snapshot [%s]", rb.volumeID, rb.SnapshotID, volumeID, id)
+		return fmt.Errorf("invalid state volume [%s] and snapshot [%s] are open, not volume [%s], snapshot [%s]", rb.volumeID, rb.SnapshotID, volumeID, id)
 	}
 	return nil
 }
 
 func (rb *BackupStatus) ReadSnapshot(snapID, volumeID string, start int64, data []byte) error {
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	rb.lock.Lock()
 	defer rb.lock.Unlock()
 	if err := rb.assertOpen(id, volumeID); err != nil {
@@ -245,7 +247,7 @@ func (rb *BackupStatus) ReadSnapshot(snapID, volumeID string, start int64, data 
 }
 
 func (rb *BackupStatus) CloseSnapshot(snapID, volumeID string) error {
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	rb.lock.Lock()
 	defer rb.lock.Unlock()
 	if err := rb.assertOpen(id, volumeID); err != nil {
@@ -271,10 +273,10 @@ func (rb *BackupStatus) CloseSnapshot(snapID, volumeID string) error {
 }
 
 func (rb *BackupStatus) CompareSnapshot(snapID, compareSnapID, volumeID string) (*backupstore.Mappings, error) {
-	id := GenerateSnapshotDiskName(snapID)
+	id := diskutil.GenerateSnapshotDiskName(snapID)
 	compareID := ""
 	if compareSnapID != "" {
-		compareID = GenerateSnapshotDiskName(compareSnapID)
+		compareID = diskutil.GenerateSnapshotDiskName(compareSnapID)
 	}
 	rb.lock.Lock()
 	if err := rb.assertOpen(id, volumeID); err != nil {
@@ -288,12 +290,12 @@ func (rb *BackupStatus) CompareSnapshot(snapID, compareSnapID, volumeID string) 
 
 	from := rb.findIndex(id)
 	if from < 0 {
-		return nil, fmt.Errorf("Failed to find snapshot %s in chain", id)
+		return nil, fmt.Errorf("failed to find snapshot %s in chain", id)
 	}
 
 	to := rb.findIndex(compareID)
 	if to < 0 {
-		return nil, fmt.Errorf("Failed to find snapshot %s in chain", compareID)
+		return nil, fmt.Errorf("failed to find snapshot %s in chain", compareID)
 	}
 
 	mappings := &backupstore.Mappings{
