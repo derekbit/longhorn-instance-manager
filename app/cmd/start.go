@@ -196,11 +196,13 @@ func start(c *cli.Context) (err error) {
 func getProxyAddress(listen string) (string, error) {
 	host, port, err := net.SplitHostPort(listen)
 	if err != nil {
+		logrus.Infof("Debug ========> listen=%v, host=%v, port=%v, err=%v", listen, host, port, err)
 		return "", err
 	}
 
 	intPort, err := strconv.Atoi(port)
 	if err != nil {
+		logrus.Infof("Debug =======> Atoi intPort=%v, err=%v", intPort, err)
 		return "", err
 	}
 
