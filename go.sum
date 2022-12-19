@@ -13,6 +13,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:ma
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/derekbit/longhorn-engine v1.3.1-0.20221219011210-f46bd76221b0 h1:YiG0prsQgNUclvf5zx7kyeIismR7SbRV+wmHm6BC7k0=
+github.com/derekbit/longhorn-engine v1.3.1-0.20221219011210-f46bd76221b0/go.mod h1:eRXXP696llMzAYi5v8fI3NJe7zOUYYPj/lCiyecL5ug=
 github.com/docker/go-units v0.3.3/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 h1:Ujru1hufTHVb++eG6OuNDKMxZnGIvF6o/u8q/8h2+I4=
@@ -51,10 +53,8 @@ github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxv
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
 github.com/longhorn/backupstore v0.0.0-20221114044558-19f4902cd4fd h1:dRGV5NNnYWoxtYHhm48YVwvhioU2U0Dote+vbgcR8WQ=
 github.com/longhorn/backupstore v0.0.0-20221114044558-19f4902cd4fd/go.mod h1:hvIVsrpjPey7KupirAh0WoPMg0ArWnE6fA5bI30X7AI=
-github.com/longhorn/go-iscsi-helper v0.0.0-20221109111031-ebff48f3632a h1:qinBI/kkZa7Lyy7jgSpox80YA/2lGtcogBClOMLmzVM=
-github.com/longhorn/go-iscsi-helper v0.0.0-20221109111031-ebff48f3632a/go.mod h1:9z/y9glKmWEdV50tjlUPxFwi1goQfIrrsoZbnMyIZbY=
-github.com/longhorn/longhorn-engine v1.3.1-0.20221130092917-14415fe1a108 h1:j9jJmpBmgdvwg/RwwOdE82mq1CGyswTxYzNh2TKRrT0=
-github.com/longhorn/longhorn-engine v1.3.1-0.20221130092917-14415fe1a108/go.mod h1:OMeItWCiLnNTx11q4OlFxi2BSFh5PfG8BgPIlR/nFac=
+github.com/longhorn/go-iscsi-helper v0.0.0-20221209140622-1eaf67c743d6 h1:yCUExj15NOSBiWyg19rI7P5Dz8sDa8iHHfddkTqcs6o=
+github.com/longhorn/go-iscsi-helper v0.0.0-20221209140622-1eaf67c743d6/go.mod h1:9z/y9glKmWEdV50tjlUPxFwi1goQfIrrsoZbnMyIZbY=
 github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003/go.mod h1:0CLeXlf59Lg6C0kjLSDf47ft73Dh37CwymYRKWwAn04=
 github.com/longhorn/sparse-tools v0.0.0-20221130075436-f6b8c1f51980 h1:cvnW+kTPwWsUD/KbMlOSbyqhEf6zvxcJpCJrj6Xy/g0=
 github.com/longhorn/sparse-tools v0.0.0-20221130075436-f6b8c1f51980/go.mod h1:PC6PdgrTPkma/TMx14GO/swm4UHC6PVKAI/U4fpTWFE=

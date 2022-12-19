@@ -26,7 +26,7 @@ require (
 	github.com/gorilla/handlers v1.4.2 // indirect
 	github.com/honestbee/jobq v1.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
-	github.com/longhorn/go-iscsi-helper v0.0.0-20221109111031-ebff48f3632a // indirect
+	github.com/longhorn/go-iscsi-helper v0.0.0-20221209140622-1eaf67c743d6 // indirect
 	github.com/longhorn/sparse-tools v0.0.0-20221130075436-f6b8c1f51980 // indirect
 	github.com/mschoch/smat v0.0.0-20160514031455-90eadee771ae // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
@@ -41,3 +41,5 @@ require (
 )
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
+
+replace github.com/longhorn/longhorn-engine v1.3.1-0.20221130092917-14415fe1a108 => github.com/derekbit/longhorn-engine v1.3.1-0.20221219011210-f46bd76221b0
