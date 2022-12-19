@@ -115,12 +115,14 @@ func start(c *cli.Context) (err error) {
 	// Start proxy server
 	proxyAddress, err := getProxyAddress(listen)
 	if err != nil {
+		logrus.Infof("Debug =========> listen=%v", listen)
 		return err
 	}
 
 	// TODO: skip proxy for replica instance manager pod
 	proxy, err := proxy.NewProxy(logsDir, shutdownCh)
 	if err != nil {
+		logrus.Infof("Debug =========> err1=%v", err)
 		return err
 	}
 	hcProxy := health.NewProxyHealthCheckServer(proxy)
@@ -132,6 +134,7 @@ func start(c *cli.Context) (err error) {
 		}),
 	)
 	if err != nil {
+		logrus.Infof("Debug =========> err2=%v", err)
 		return errors.Wrap(err, "failed to setup proxy gRPCserver")
 	}
 
