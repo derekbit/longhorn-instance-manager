@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -194,9 +195,11 @@ func start(c *cli.Context) (err error) {
 }
 
 func getProxyAddress(listen string) (string, error) {
-	host, port, err := net.SplitHostPort(listen)
+	address := strings.TrimPrefix(listen, "tcp://")
+
+	host, port, err := net.SplitHostPort(address)
 	if err != nil {
-		logrus.Infof("Debug ========> listen=%v, host=%v, port=%v, err=%v", listen, host, port, err)
+		logrus.Infof("Debug ========> address=%v, host=%v, port=%v, err=%v", address, host, port, err)
 		return "", err
 	}
 
