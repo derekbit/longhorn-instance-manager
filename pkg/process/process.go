@@ -126,6 +126,7 @@ func (p *Process) RPCResponse() *rpc.ProcessResponse {
 			ErrorMsg:  p.ErrorMsg,
 			PortStart: p.PortStart,
 			PortEnd:   p.PortEnd,
+			Uuid:      p.UUID,
 		},
 	}
 }
