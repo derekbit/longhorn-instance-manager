@@ -24,6 +24,7 @@ RUN wget https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v
 COPY bin/longhorn-instance-manager /usr/local/bin/
 
 COPY package/engine-manager /usr/local/bin/
+COPY package/replica-manager /usr/local/bin/
 
 # Build liblonghorn
 RUN cd /usr/src && \
