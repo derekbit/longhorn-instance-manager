@@ -108,6 +108,12 @@ github.com/longhorn/backupstore/vfs
 # github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
 ## explicit; go 1.13
 github.com/longhorn/go-iscsi-helper/util
+# github.com/longhorn/go-spdk-helper v0.0.0-20230412020937-75d1b9b8dbbf
+## explicit; go 1.17
+github.com/longhorn/go-spdk-helper/pkg/jsonrpc
+github.com/longhorn/go-spdk-helper/pkg/spdk/client
+github.com/longhorn/go-spdk-helper/pkg/spdk/types
+github.com/longhorn/go-spdk-helper/pkg/types
 # github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230324082117-c0a20c2ccfe1
 ## explicit; go 1.17
 github.com/longhorn/longhorn-engine/pkg/backingfile
