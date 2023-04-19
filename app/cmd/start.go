@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -18,12 +19,19 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/longhorn/longhorn-instance-manager/pkg/disk"
 	"github.com/longhorn/longhorn-instance-manager/pkg/health"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/process"
 	"github.com/longhorn/longhorn-instance-manager/pkg/proxy"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-instance-manager/pkg/util"
+)
+
+const (
+	processManagerGrpcService = "ProcessManager"
+	proxyGrpcService          = "Proxy"
+	diskGrpcService           = "Disk"
 )
 
 func StartCmd() cli.Command {
@@ -113,84 +121,72 @@ func start(c *cli.Context) (err error) {
 	shutdownCh := make(chan error)
 
 	// Start proxy server
-	proxyAddress, err := getProxyAddress(listen)
+	proxyAddress, err := getServiceAddress(proxyGrpcService, listen)
 	if err != nil {
 		return err
 	}
-
-	// TODO: skip proxy for replica instance manager pod
-	proxy, err := proxy.NewProxy(logsDir, shutdownCh)
+	proxyRpcServer, proxyRpcListener, err := setupProxyGrpcServer(logsDir, proxyAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
-	hcProxy := health.NewProxyHealthCheckServer(proxy)
-
-	rpcProxyService, proxyServer, err := util.NewServer(proxyAddress, tlsConfig,
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             10 * time.Second,
-			PermitWithoutStream: true,
-		}),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to setup proxy gRPCserver")
-	}
-
-	rpc.RegisterProxyEngineServiceServer(rpcProxyService, proxy)
-	healthpb.RegisterHealthServer(rpcProxyService, hcProxy)
-	reflection.Register(rpcProxyService)
-
 	go func() {
-		if err := rpcProxyService.Serve(proxyServer); err != nil {
-			logrus.Errorf("Stopping proxy gRPCserver due to %v", err)
+		if err := proxyRpcServer.Serve(proxyRpcListener); err != nil {
+			logrus.WithError(err).Error("Stopping proxy gRPC server")
 		}
 		// graceful shutdown before exit
 		close(shutdownCh)
 	}()
 	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyAddress)
 
-	// Start process server
-	pm, err := process.NewManager(portRange, logsDir, shutdownCh)
+	// Start process manager server
+	processManagerAddress, err := getServiceAddress(processManagerGrpcService, listen)
 	if err != nil {
 		return err
 	}
-	hc := health.NewHealthCheckServer(pm)
-
-	rpcService, listenAt, err := util.NewServer(listen, tlsConfig,
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             10 * time.Second,
-			PermitWithoutStream: true,
-		}),
-	)
+	pm, pmRpcServer, pmRpcListener, err := setupProcessManagerGrpcServer(portRange, logsDir, processManagerAddress, tlsConfig, shutdownCh)
 	if err != nil {
-		return errors.Wrap(err, "failed to setup process gRPC server")
+		return err
 	}
-
-	rpc.RegisterProcessManagerServiceServer(rpcService, pm)
-	healthpb.RegisterHealthServer(rpcService, hc)
-	reflection.Register(rpcService)
-
 	go func() {
-		if err := rpcService.Serve(listenAt); err != nil {
-			logrus.Errorf("Stopping process gRPC server due to %v", err)
+		if err := pmRpcServer.Serve(pmRpcListener); err != nil {
+			logrus.WithError(err).Error("Stopping process manager gRPC server")
 		}
 		// graceful shutdown before exit
 		cleanup(pm)
 		close(shutdownCh)
 	}()
-	logrus.Infof("Instance Manager process gRPC server listening to %v", listen)
+	logrus.Infof("Instance Manager process manager gRPC server listening to %v", listen)
+
+	// Start disk server
+	diskServiceAddress, err := getServiceAddress(diskGrpcService, listen)
+	if err != nil {
+		return err
+	}
+	diskRpcServer, diskRpcListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, shutdownCh)
+	if err != nil {
+		return err
+	}
+	go func() {
+		if err := diskRpcServer.Serve(diskRpcListener); err != nil {
+			logrus.WithError(err).Error("Stopping disk gRPC server")
+		}
+		// graceful shutdown before exit
+		close(shutdownCh)
+	}()
+	logrus.Infof("Instance Manager disk gRPC server listening to %v", diskServiceAddress)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
 		logrus.Infof("Instance Manager received %v to exit", sig)
-		rpcService.Stop()
+		pmRpcServer.Stop()
 	}()
 
 	return <-shutdownCh
 }
 
-func getProxyAddress(listen string) (string, error) {
+func getServiceAddress(service, listen string) (string, error) {
 	host, port, err := net.SplitHostPort(listen)
 	if err != nil {
 		return "", err
@@ -201,5 +197,87 @@ func getProxyAddress(listen string) (string, error) {
 		return "", err
 	}
 
-	return net.JoinHostPort(host, strconv.Itoa(intPort+1)), nil
+	switch service {
+	case processManagerGrpcService:
+		return net.JoinHostPort(host, strconv.Itoa(intPort)), nil
+	case proxyGrpcService:
+		return net.JoinHostPort(host, strconv.Itoa(intPort+1)), nil
+	case diskGrpcService:
+		return net.JoinHostPort(host, strconv.Itoa(intPort+2)), nil
+	default:
+		return "", fmt.Errorf("unknown service %v", service)
+	}
+}
+
+func setupDiskGrpcServer(listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	ds, err := disk.NewServer(shutdownCh)
+	if err != nil {
+		return nil, nil, err
+	}
+	hc := health.NewDiskHealthCheckServer(ds)
+
+	rpcServer, rpcListener, err := util.NewServer(listen, tlsConfig,
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to setup disk gRPC server")
+	}
+
+	rpc.RegisterDiskServiceServer(rpcServer, ds)
+	healthpb.RegisterHealthServer(rpcServer, hc)
+	reflection.Register(rpcServer)
+
+	return rpcServer, rpcListener, nil
+}
+
+func setupProxyGrpcServer(logsDir, listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	// TODO: skip proxy for replica instance manager pod
+	proxy, err := proxy.NewProxy(logsDir, shutdownCh)
+	if err != nil {
+		return nil, nil, err
+	}
+	hc := health.NewProxyHealthCheckServer(proxy)
+
+	rpcProxyServer, rpcProxyListener, err := util.NewServer(listen, tlsConfig,
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to setup proxy gRPC server")
+	}
+
+	rpc.RegisterProxyEngineServiceServer(rpcProxyServer, proxy)
+	healthpb.RegisterHealthServer(rpcProxyServer, hc)
+	reflection.Register(rpcProxyServer)
+
+	return rpcProxyServer, rpcProxyListener, nil
+}
+
+func setupProcessManagerGrpcServer(portRange, logsDir, listen string, tlsConfig *tls.Config, shutdownCh chan error) (*process.Manager, *grpc.Server, net.Listener, error) {
+	pm, err := process.NewManager(portRange, logsDir, shutdownCh)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	hc := health.NewHealthCheckServer(pm)
+
+	rpcServer, rpcListener, err := util.NewServer(listen, tlsConfig,
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to setup process manager gRPC server")
+	}
+
+	rpc.RegisterProcessManagerServiceServer(rpcServer, pm)
+	healthpb.RegisterHealthServer(rpcServer, hc)
+	reflection.Register(rpcServer)
+
+	return pm, rpcServer, rpcListener, nil
 }
