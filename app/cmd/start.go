@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/longhorn/longhorn-instance-manager/pkg/disk"
 	"github.com/longhorn/longhorn-instance-manager/pkg/health"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/process"
@@ -179,6 +180,41 @@ func start(c *cli.Context) (err error) {
 	}()
 	logrus.Infof("Instance Manager process gRPC server listening to %v", listen)
 
+	// Start disk server
+	diskServiceAddress, err := getDiskServiceAddress(listen)
+	if err != nil {
+		return err
+	}
+
+	ds, err := disk.NewServer(shutdownCh)
+	if err != nil {
+		return err
+	}
+	hcDiskServer := health.NewDiskHealthCheckServer(ds)
+
+	rpcDiskService, diskServer, err := util.NewServer(diskServiceAddress, tlsConfig,
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to setup disk gRPC server")
+	}
+
+	rpc.RegisterDiskServiceServer(rpcDiskService, ds)
+	healthpb.RegisterHealthServer(rpcDiskService, hcDiskServer)
+	reflection.Register(rpcDiskService)
+
+	go func() {
+		if err := rpcDiskService.Serve(diskServer); err != nil {
+			logrus.Errorf("Stopping disk gRPC server due to %v", err)
+		}
+		// graceful shutdown before exit
+		close(shutdownCh)
+	}()
+	logrus.Infof("Instance Manager disk gRPC server listening to %v", listen)
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -202,4 +238,18 @@ func getProxyAddress(listen string) (string, error) {
 	}
 
 	return net.JoinHostPort(host, strconv.Itoa(intPort+1)), nil
+}
+
+func getDiskServiceAddress(listen string) (string, error) {
+	host, port, err := net.SplitHostPort(listen)
+	if err != nil {
+		return "", err
+	}
+
+	intPort, err := strconv.Atoi(port)
+	if err != nil {
+		return "", err
+	}
+
+	return net.JoinHostPort(host, strconv.Itoa(intPort+2)), nil
 }
