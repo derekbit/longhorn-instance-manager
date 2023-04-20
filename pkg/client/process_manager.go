@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/api"
@@ -72,7 +73,15 @@ func NewProcessManagerClientWithTLS(serviceURL, caFile, certFile, keyFile, peerN
 	return NewProcessManagerClient(serviceURL, tlsConfig)
 }
 
-func (c *ProcessManagerClient) ProcessCreate(name, binary string, portCount int, args, portArgs []string) (*api.Process, error) {
+func (c *ProcessManagerClient) ProcessCreate(name, binary string, portCount int, args, portArgs []string) (*rpc.ProcessResponse, error) {
+	logrus.WithFields(logrus.Fields{
+		"name":      name,
+		"binary":    binary,
+		"args":      args,
+		"portCount": portCount,
+		"portArgs":  portArgs,
+	}).Info("Creating process")
+
 	if name == "" || binary == "" {
 		return nil, fmt.Errorf("failed to start process: missing required parameter")
 	}
@@ -81,7 +90,7 @@ func (c *ProcessManagerClient) ProcessCreate(name, binary string, portCount int,
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	p, err := client.ProcessCreate(ctx, &rpc.ProcessCreateRequest{
+	return client.ProcessCreate(ctx, &rpc.ProcessCreateRequest{
 		Spec: &rpc.ProcessSpec{
 			Name:      name,
 			Binary:    binary,
@@ -90,11 +99,6 @@ func (c *ProcessManagerClient) ProcessCreate(name, binary string, portCount int,
 			PortArgs:  portArgs,
 		},
 	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start process")
-	}
-
-	return api.RPCToProcess(p), nil
 }
 
 func (c *ProcessManagerClient) ProcessDelete(name string) (*api.Process, error) {

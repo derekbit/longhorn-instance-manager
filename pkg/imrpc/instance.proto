@@ -16,12 +16,22 @@ service InstanceService {
 	rpc VersionGet(google.protobuf.Empty) returns(InstanceVersionResponse);
 }
 
+message Process {
+	string binary = 1;
+	repeated string args = 2;
+}
+
 message InstanceSpec {
 	string name = 1;
-	string binary = 2;
-	repeated string args = 3;
-	int32 port_count = 4;
-	repeated string port_args = 5;
+	string type = 2;
+	string backend_store_driver = 3;
+	int64 size = 4;
+	string disk_uuid = 5;
+
+	int32 port_count = 6;
+	repeated string port_args = 7;
+
+	Process process = 8;
 }
 
 message InstanceStatus {

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -22,16 +21,11 @@ import (
 	"github.com/longhorn/longhorn-instance-manager/pkg/disk"
 	"github.com/longhorn/longhorn-instance-manager/pkg/health"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/instance"
 	"github.com/longhorn/longhorn-instance-manager/pkg/process"
 	"github.com/longhorn/longhorn-instance-manager/pkg/proxy"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-instance-manager/pkg/util"
-)
-
-const (
-	processManagerGrpcService = "ProcessManager"
-	proxyGrpcService          = "Proxy"
-	diskGrpcService           = "Disk"
 )
 
 func StartCmd() cli.Command {
@@ -120,12 +114,28 @@ func start(c *cli.Context) (err error) {
 
 	shutdownCh := make(chan error)
 
-	// Start proxy server
-	proxyAddress, err := getServiceAddress(proxyGrpcService, listen)
+	processManagerServiceAddress, proxyServiceAddress, diskServiceAddress, instanceServiceAddress, err := getServiceAddresses(listen)
 	if err != nil {
 		return err
 	}
-	proxyRpcServer, proxyRpcListener, err := setupProxyGrpcServer(logsDir, proxyAddress, tlsConfig, shutdownCh)
+
+	// Start instance server
+	instanceRpcServer, instanceRpcListener, err := setupInstanceGrpcServer(logsDir,
+		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, tlsConfig, shutdownCh)
+	if err != nil {
+		return err
+	}
+	go func() {
+		if err := instanceRpcServer.Serve(instanceRpcListener); err != nil {
+			logrus.WithError(err).Error("Stopping instance gRPC server")
+		}
+		// graceful shutdown before exit
+		close(shutdownCh)
+	}()
+	logrus.Infof("Instance Manager instance gRPC server listening to %v", instanceServiceAddress)
+
+	// Start proxy server
+	proxyRpcServer, proxyRpcListener, err := setupProxyGrpcServer(logsDir, proxyServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -136,14 +146,10 @@ func start(c *cli.Context) (err error) {
 		// graceful shutdown before exit
 		close(shutdownCh)
 	}()
-	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyAddress)
+	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyServiceAddress)
 
 	// Start process manager server
-	processManagerAddress, err := getServiceAddress(processManagerGrpcService, listen)
-	if err != nil {
-		return err
-	}
-	pm, pmRpcServer, pmRpcListener, err := setupProcessManagerGrpcServer(portRange, logsDir, processManagerAddress, tlsConfig, shutdownCh)
+	pm, pmRpcServer, pmRpcListener, err := setupProcessManagerGrpcServer(portRange, logsDir, processManagerServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -158,10 +164,6 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager process manager gRPC server listening to %v", listen)
 
 	// Start disk server
-	diskServiceAddress, err := getServiceAddress(diskGrpcService, listen)
-	if err != nil {
-		return err
-	}
 	diskRpcServer, diskRpcListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
@@ -186,27 +188,22 @@ func start(c *cli.Context) (err error) {
 	return <-shutdownCh
 }
 
-func getServiceAddress(service, listen string) (string, error) {
+func getServiceAddresses(listen string) (processManagerServiceAddress, proxyServiceAddress, diskServiceAddress, instanceServiceAddress string, err error) {
 	host, port, err := net.SplitHostPort(listen)
 	if err != nil {
-		return "", err
+		return "", "", "", "", err
 	}
 
 	intPort, err := strconv.Atoi(port)
 	if err != nil {
-		return "", err
+		return "", "", "", "", err
 	}
 
-	switch service {
-	case processManagerGrpcService:
-		return net.JoinHostPort(host, strconv.Itoa(intPort)), nil
-	case proxyGrpcService:
-		return net.JoinHostPort(host, strconv.Itoa(intPort+1)), nil
-	case diskGrpcService:
-		return net.JoinHostPort(host, strconv.Itoa(intPort+2)), nil
-	default:
-		return "", fmt.Errorf("unknown service %v", service)
-	}
+	return net.JoinHostPort(host, strconv.Itoa(intPort)),
+		net.JoinHostPort(host, strconv.Itoa(intPort+1)),
+		net.JoinHostPort(host, strconv.Itoa(intPort+2)),
+		net.JoinHostPort(host, strconv.Itoa(intPort+3)),
+		nil
 }
 
 func setupDiskGrpcServer(listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
@@ -280,4 +277,28 @@ func setupProcessManagerGrpcServer(portRange, logsDir, listen string, tlsConfig 
 	reflection.Register(rpcServer)
 
 	return pm, rpcServer, rpcListener, nil
+}
+
+func setupInstanceGrpcServer(logsDir, listen, processManagerServiceAddress, diskServiceAddress string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	srv, err := instance.NewServer(logsDir, processManagerServiceAddress, diskServiceAddress, shutdownCh)
+	if err != nil {
+		return nil, nil, err
+	}
+	hc := health.NewInstanceHealthCheckServer(srv)
+
+	rpcServer, rpcListener, err := util.NewServer(listen, tlsConfig,
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to setup instance gRPC server")
+	}
+
+	rpc.RegisterInstanceServiceServer(rpcServer, srv)
+	healthpb.RegisterHealthServer(rpcServer, hc)
+	reflection.Register(rpcServer)
+
+	return rpcServer, rpcListener, nil
 }
