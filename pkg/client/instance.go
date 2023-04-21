@@ -163,14 +163,16 @@ func (c *InstanceServiceClient) InstanceList() (map[string]*api.Instance, error)
 	return api.RPCToInstanceList(instances), nil
 }
 
-func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name string) (*api.LogStream, error) {
+func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name, instanceType, backendStoreDriver string) (*api.LogStream, error) {
 	if name == "" {
 		return nil, fmt.Errorf("failed to get instance: missing required parameter name")
 	}
 
 	client := c.getControllerServiceClient()
 	stream, err := client.InstanceLog(ctx, &rpc.InstanceLogRequest{
-		Name: name,
+		Name:               name,
+		Type:               instanceType,
+		BackendStoreDriver: backendStoreDriver,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get instance log of %v", name)

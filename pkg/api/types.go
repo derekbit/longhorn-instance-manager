@@ -81,24 +81,6 @@ func (s *InstanceStream) Recv() (*Instance, error) {
 	return RPCToInstance(resp), nil
 }
 
-func NewInstanceLogStream(stream rpc.InstanceService_InstanceLogClient) *InstanceLogStream {
-	return &InstanceLogStream{
-		stream,
-	}
-}
-
-type InstanceLogStream struct {
-	stream rpc.InstanceService_InstanceLogClient
-}
-
-func (s *InstanceLogStream) Recv() (string, error) {
-	resp, err := s.stream.Recv()
-	if err != nil {
-		return "", err
-	}
-	return resp.Line, nil
-}
-
 func RPCToProcess(obj *rpc.ProcessResponse) *Process {
 	return &Process{
 		Name:          obj.Spec.Name,
