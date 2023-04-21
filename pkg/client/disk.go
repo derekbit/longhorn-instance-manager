@@ -61,6 +61,15 @@ func NewDiskServiceClient(serviceURL string, tlsConfig *tls.Config) (*DiskServic
 	}, nil
 }
 
+func NewDiskServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peerName string) (*DiskServiceClient, error) {
+	tlsConfig, err := util.LoadClientTLS(caFile, certFile, keyFile, peerName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load tls key pair from file")
+	}
+
+	return NewDiskServiceClient(serviceURL, tlsConfig)
+}
+
 func (c *DiskServiceClient) DiskCreate(diskName, diskPath string) (*DiskInfo, error) {
 	if diskName == "" || diskPath == "" {
 		return nil, fmt.Errorf("failed to create disk: missing required parameter")
