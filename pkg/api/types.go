@@ -126,12 +126,8 @@ func NewProcessStream(stream rpc.ProcessManagerService_ProcessWatchClient) *Proc
 	}
 }
 
-func (s *ProcessStream) Recv() (*Process, error) {
-	resp, err := s.stream.Recv()
-	if err != nil {
-		return nil, err
-	}
-	return RPCToProcess(resp), nil
+func (s *ProcessStream) Recv() (*rpc.ProcessResponse, error) {
+	return s.stream.Recv()
 }
 
 func NewLogStream(stream rpc.ProcessManagerService_ProcessLogClient) *LogStream {

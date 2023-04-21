@@ -338,5 +338,42 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 }
 
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
-	return nil
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return err
+	}
+	defer pmClient.Close()
+
+	notifier, err := pmClient.ProcessWatch(context.Background())
+	if err != nil {
+		return err
+	}
+	for {
+		if process, err := notifier.Recv(); err != nil {
+			// TODO: Should it error out here?
+			logrus.WithError(err).Error("Failed to receive next item in engine process watch")
+		} else {
+			instance := &rpc.InstanceResponse{
+				Spec: &rpc.InstanceSpec{
+					Name: process.Spec.Name,
+					Process: &rpc.Process{
+						Binary: process.Spec.Binary,
+						Args:   process.Spec.Args,
+					},
+					PortCount: int32(process.Spec.PortCount),
+					PortArgs:  process.Spec.PortArgs,
+				},
+				Status: &rpc.InstanceStatus{
+					State:     process.Status.State,
+					PortStart: process.Status.PortStart,
+					PortEnd:   process.Status.PortEnd,
+					ErrorMsg:  process.Status.ErrorMsg,
+				},
+				Deleted: process.Deleted,
+			}
+			if err := srv.Send(instance); err != nil {
+				return err
+			}
+		}
+	}
 }
