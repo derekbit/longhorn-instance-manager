@@ -2,14 +2,12 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
@@ -17,11 +15,7 @@ import (
 )
 
 type DiskServiceContext struct {
-	cc *grpc.ClientConn
-
-	ctx  context.Context
-	quit context.CancelFunc
-
+	cc      *grpc.ClientConn
 	service rpc.DiskServiceClient
 }
 
@@ -37,41 +31,33 @@ func (c *DiskServiceClient) getDiskServiceClient() rpc.DiskServiceClient {
 }
 
 type DiskServiceClient struct {
-	ServiceURL string
+	serviceURL string
+	tlsConfig  *tls.Config
 	DiskServiceContext
 }
 
-func NewDiskServiceClient(ctx context.Context, ctxCancel context.CancelFunc, address string, port int) (*DiskServiceClient, error) {
-	getServiceCtx := func(serviceUrl string) (DiskServiceContext, error) {
-		dialOptions := []grpc.DialOption{
-			grpc.WithInsecure(),
-			grpc.WithKeepaliveParams(keepalive.ClientParameters{
-				Time:                time.Second * 10,
-				PermitWithoutStream: true,
-			}),
-		}
-		connection, err := grpc.Dial(serviceUrl, dialOptions...)
+func NewDiskServiceClient(serviceURL string, tlsConfig *tls.Config) (*DiskServiceClient, error) {
+	getDiskServiceContext := func(serviceUrl string, tlsConfig *tls.Config) (DiskServiceContext, error) {
+		connection, err := util.Connect(serviceUrl, tlsConfig)
 		if err != nil {
-			return DiskServiceContext{}, errors.Wrapf(err, "cannot connect to DiskService %v", serviceUrl)
+			return DiskServiceContext{}, errors.Wrapf(err, "cannot connect to Disk Service %v", serviceUrl)
 		}
+
 		return DiskServiceContext{
 			cc:      connection,
-			ctx:     ctx,
-			quit:    ctxCancel,
 			service: rpc.NewDiskServiceClient(connection),
 		}, nil
 	}
 
-	serviceURL := util.GetURL(address, port)
-	serviceCtx, err := getServiceCtx(serviceURL)
+	serviceContext, err := getDiskServiceContext(serviceURL, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
-	logrus.Tracef("Connected to disk service on %v", serviceURL)
 
 	return &DiskServiceClient{
-		ServiceURL:         serviceURL,
-		DiskServiceContext: serviceCtx,
+		serviceURL:         serviceURL,
+		tlsConfig:          tlsConfig,
+		DiskServiceContext: serviceContext,
 	}, nil
 }
 
