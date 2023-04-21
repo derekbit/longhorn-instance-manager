@@ -12,6 +12,7 @@ import (
 	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
+	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 )
 
 const (
@@ -98,7 +99,32 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		}
 		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
-		return nil, nil
+		/*
+			spdkServiceClient, err := client.NewSpdkServiceClient("tcp://"+s.spdkServiceAddress, nil)
+			if err != nil {
+				return nil, err
+			}
+			defer spdkServiceClient.Close()
+
+
+			spdkInstance, err = spdkServiceClient.InstanceCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
+			if err != nil {
+				return nil, err
+			}
+
+			return spdkInstanceResponseToInstanceResponse(process), nil
+		*/
+		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer diskClient.Close()
+
+		replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
+		if err != nil {
+			return nil, err
+		}
+		return replicaInfoToInstanceResponse(replica), nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
 	}
@@ -109,6 +135,7 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 		"name":               req.Name,
 		"type":               req.Type,
 		"backendStoreDriver": req.BackendStoreDriver,
+		"diskUuid":           req.DiskUuid,
 	}).Info("Deleting instance")
 
 	switch req.BackendStoreDriver {
@@ -125,7 +152,41 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 		}
 		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
-		return nil, nil
+		/*
+			spdkServiceClient, err := client.NewSpdkServiceClient("tcp://"+s.spdkServiceAddress, nil)
+			if err != nil {
+				return nil, err
+			}
+			defer spdkServiceClient.Close()
+
+
+			spdkInstance, err = spdkServiceClient.InstanceDelete(req.Name, req.DiskUuid)
+			if err != nil {
+				return nil, err
+			}
+
+			return spdkInstanceResponseToInstanceResponse(process), nil
+		*/
+
+		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer diskClient.Close()
+
+		err = diskClient.ReplicaDelete(req.Name, req.DiskUuid)
+		if err != nil {
+			return nil, err
+		}
+		return &rpc.InstanceResponse{
+			Spec: &rpc.InstanceSpec{
+				Name: req.Name,
+			},
+			Status: &rpc.InstanceStatus{
+				State: types.ProcessStateStopped,
+			},
+			Deleted: true,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
@@ -238,6 +299,9 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 			line, err := stream.Recv()
 			if err == io.EOF {
 				break
+			} else if err != nil {
+				logrus.WithError(err).Error("Failed to receive log")
+				return err
 			}
 
 			if err := srv.Send(&rpc.LogResponse{Line: line}); err != nil {
@@ -294,5 +358,16 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 			ErrorMsg:  p.Status.ErrorMsg,
 		},
 		Deleted: p.Deleted,
+	}
+}
+
+func replicaInfoToInstanceResponse(r *rpc.ReplicaInfo) *rpc.InstanceResponse {
+	return &rpc.InstanceResponse{
+		Spec: &rpc.InstanceSpec{
+			Name: r.Name,
+		},
+		Status: &rpc.InstanceStatus{
+			State: types.ProcessStateRunning,
+		},
 	}
 }
