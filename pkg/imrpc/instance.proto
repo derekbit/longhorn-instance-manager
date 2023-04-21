@@ -25,6 +25,7 @@ message InstanceSpec {
 	string name = 1;
 	string type = 2;
 	string backend_store_driver = 3;
+
 	int64 size = 4;
 	string disk_uuid = 5;
 
@@ -47,10 +48,14 @@ message InstanceCreateRequest {
 
 message InstanceDeleteRequest {
 	string name = 1;
+	string type = 2;
+	string backend_store_driver = 3;
 }
 
 message InstanceGetRequest {
 	string name = 1;
+	string type = 2;
+	string backend_store_driver = 3;
 }
 
 message InstanceResponse {
@@ -65,6 +70,8 @@ message InstanceListResponse{
 
 message InstanceLogRequest {
 	string name = 1;
+	string type = 2;
+	string backend_store_driver = 3;
 }
 
 message InstanceLogResponse{

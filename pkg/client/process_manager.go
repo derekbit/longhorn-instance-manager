@@ -101,7 +101,7 @@ func (c *ProcessManagerClient) ProcessCreate(name, binary string, portCount int,
 	})
 }
 
-func (c *ProcessManagerClient) ProcessDelete(name string) (*api.Process, error) {
+func (c *ProcessManagerClient) ProcessDelete(name string) (*rpc.ProcessResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("failed to delete process: missing required parameter name")
 	}
@@ -110,16 +110,12 @@ func (c *ProcessManagerClient) ProcessDelete(name string) (*api.Process, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	p, err := client.ProcessDelete(ctx, &rpc.ProcessDeleteRequest{
+	return client.ProcessDelete(ctx, &rpc.ProcessDeleteRequest{
 		Name: name,
 	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to delete process %v", name)
-	}
-	return api.RPCToProcess(p), nil
 }
 
-func (c *ProcessManagerClient) ProcessGet(name string) (*api.Process, error) {
+func (c *ProcessManagerClient) ProcessGet(name string) (*rpc.ProcessResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("failed to get process: missing required parameter name")
 	}
@@ -128,13 +124,9 @@ func (c *ProcessManagerClient) ProcessGet(name string) (*api.Process, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	p, err := client.ProcessGet(ctx, &rpc.ProcessGetRequest{
+	return client.ProcessGet(ctx, &rpc.ProcessGetRequest{
 		Name: name,
 	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get process %v", name)
-	}
-	return api.RPCToProcess(p), nil
 }
 
 func (c *ProcessManagerClient) ProcessList() (map[string]*api.Process, error) {

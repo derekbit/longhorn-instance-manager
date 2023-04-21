@@ -103,11 +103,93 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 }
 
 func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequest) (*rpc.InstanceResponse, error) {
-	return nil, nil
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Name,
+		"type":               req.Type,
+		"backendStoreDriver": req.BackendStoreDriver,
+	}).Info("Deleting instance")
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	switch req.BackendStoreDriver {
+	case BackendStoreDriverTypeLonghorn:
+		process, err := pmClient.ProcessDelete(req.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return &rpc.InstanceResponse{
+			Spec: &rpc.InstanceSpec{
+				Name: process.Spec.Name,
+				Process: &rpc.Process{
+					Binary: process.Spec.Binary,
+					Args:   process.Spec.Args,
+				},
+				PortCount: int32(process.Spec.PortCount),
+				PortArgs:  process.Spec.PortArgs,
+			},
+			Status: &rpc.InstanceStatus{
+				State:     process.Status.State,
+				PortStart: process.Status.PortStart,
+				PortEnd:   process.Status.PortEnd,
+				ErrorMsg:  process.Status.ErrorMsg,
+			},
+			Deleted: process.Deleted,
+		}, nil
+	case BackendStoreDriverTypeSpdkAio:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
 }
 
 func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
-	return nil, nil
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Name,
+		"type":               req.Type,
+		"backendStoreDriver": req.BackendStoreDriver,
+	}).Info("Getting instance")
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	switch req.BackendStoreDriver {
+	case BackendStoreDriverTypeLonghorn:
+		process, err := pmClient.ProcessGet(req.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return &rpc.InstanceResponse{
+			Spec: &rpc.InstanceSpec{
+				Name: process.Spec.Name,
+				Process: &rpc.Process{
+					Binary: process.Spec.Binary,
+					Args:   process.Spec.Args,
+				},
+				PortCount: int32(process.Spec.PortCount),
+				PortArgs:  process.Spec.PortArgs,
+			},
+			Status: &rpc.InstanceStatus{
+				State:     process.Status.State,
+				PortStart: process.Status.PortStart,
+				PortEnd:   process.Status.PortEnd,
+				ErrorMsg:  process.Status.ErrorMsg,
+			},
+			Deleted: process.Deleted,
+		}, nil
+	case BackendStoreDriverTypeSpdkAio:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
 }
 
 func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.InstanceListResponse, error) {

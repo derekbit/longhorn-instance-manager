@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0einstance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\"\'\n\x07Process\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xb1\x01\n\x0cInstanceSpec\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x11\n\tdisk_uuid\x18\x05 \x01(\t\x12\x12\n\nport_count\x18\x06 \x01(\x05\x12\x11\n\tport_args\x18\x07 \x03(\t\x12\x1f\n\x07process\x18\x08 \x01(\x0b\x32\x0e.imrpc.Process\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"%\n\x15InstanceDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\"\n\x12InstanceGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"\"\n\x12InstanceLogRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"#\n\x13InstanceLogResponse\x12\x0c\n\x04line\x18\x02 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t\"\xec\x01\n\x17InstanceVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\tgitCommit\x18\x02 \x01(\t\x12\x11\n\tbuildDate\x18\x03 \x01(\t\x12!\n\x19instanceManagerAPIVersion\x18\x04 \x01(\x03\x12$\n\x1cinstanceManagerAPIMinVersion\x18\x05 \x01(\x03\x12&\n\x1einstanceManagerProxyAPIVersion\x18\x06 \x01(\x03\x12)\n!instanceManagerProxyAPIMinVersion\x18\x07 \x01(\x03\x32\xd6\x04\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12H\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x1a.imrpc.InstanceLogResponse\"\x00\x30\x01\x12\x44\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x17.imrpc.InstanceResponse\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x44\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x1e.imrpc.InstanceVersionResponseb\x06proto3')
+  serialized_pb=_b('\n\x0einstance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\"\'\n\x07Process\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xb1\x01\n\x0cInstanceSpec\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x11\n\tdisk_uuid\x18\x05 \x01(\t\x12\x12\n\nport_count\x18\x06 \x01(\x05\x12\x11\n\tport_args\x18\x07 \x03(\t\x12\x1f\n\x07process\x18\x08 \x01(\x0b\x32\x0e.imrpc.Process\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"Q\n\x15InstanceDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"N\n\x12InstanceGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"N\n\x12InstanceLogRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"#\n\x13InstanceLogResponse\x12\x0c\n\x04line\x18\x02 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t\"\xec\x01\n\x17InstanceVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\tgitCommit\x18\x02 \x01(\t\x12\x11\n\tbuildDate\x18\x03 \x01(\t\x12!\n\x19instanceManagerAPIVersion\x18\x04 \x01(\x03\x12$\n\x1cinstanceManagerAPIMinVersion\x18\x05 \x01(\x03\x12&\n\x1einstanceManagerProxyAPIVersion\x18\x06 \x01(\x03\x12)\n!instanceManagerProxyAPIMinVersion\x18\x07 \x01(\x03\x32\xd6\x04\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12H\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x1a.imrpc.InstanceLogResponse\"\x00\x30\x01\x12\x44\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x17.imrpc.InstanceResponse\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x44\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x1e.imrpc.InstanceVersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -243,6 +243,20 @@ _INSTANCEDELETEREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='type', full_name='imrpc.InstanceDeleteRequest.type', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='backend_store_driver', full_name='imrpc.InstanceDeleteRequest.backend_store_driver', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -256,7 +270,7 @@ _INSTANCEDELETEREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=425,
-  serialized_end=462,
+  serialized_end=506,
 )
 
 
@@ -274,6 +288,20 @@ _INSTANCEGETREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='type', full_name='imrpc.InstanceGetRequest.type', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='backend_store_driver', full_name='imrpc.InstanceGetRequest.backend_store_driver', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -286,8 +314,8 @@ _INSTANCEGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=464,
-  serialized_end=498,
+  serialized_start=508,
+  serialized_end=586,
 )
 
 
@@ -331,8 +359,8 @@ _INSTANCERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=500,
-  serialized_end=609,
+  serialized_start=588,
+  serialized_end=697,
 )
 
 
@@ -369,8 +397,8 @@ _INSTANCELISTRESPONSE_INSTANCESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=699,
-  serialized_end=772,
+  serialized_start=787,
+  serialized_end=860,
 )
 
 _INSTANCELISTRESPONSE = _descriptor.Descriptor(
@@ -399,8 +427,8 @@ _INSTANCELISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=612,
-  serialized_end=772,
+  serialized_start=700,
+  serialized_end=860,
 )
 
 
@@ -418,6 +446,20 @@ _INSTANCELOGREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='type', full_name='imrpc.InstanceLogRequest.type', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='backend_store_driver', full_name='imrpc.InstanceLogRequest.backend_store_driver', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -430,8 +472,8 @@ _INSTANCELOGREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=774,
-  serialized_end=808,
+  serialized_start=862,
+  serialized_end=940,
 )
 
 
@@ -461,8 +503,8 @@ _INSTANCELOGRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=810,
-  serialized_end=845,
+  serialized_start=942,
+  serialized_end=977,
 )
 
 
@@ -499,8 +541,8 @@ _INSTANCEREPLACEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=847,
-  serialized_end=932,
+  serialized_start=979,
+  serialized_end=1064,
 )
 
 
@@ -572,8 +614,8 @@ _INSTANCEVERSIONRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=935,
-  serialized_end=1171,
+  serialized_start=1067,
+  serialized_end=1303,
 )
 
 _INSTANCESPEC.fields_by_name['process'].message_type = _PROCESS
@@ -699,8 +741,8 @@ _INSTANCESERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1174,
-  serialized_end=1772,
+  serialized_start=1306,
+  serialized_end=1904,
   methods=[
   _descriptor.MethodDescriptor(
     name='InstanceCreate',
