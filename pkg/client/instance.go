@@ -79,7 +79,7 @@ func NewInstanceServiceClient(ctx context.Context, ctxCancel context.CancelFunc,
 
 func (c *InstanceServiceClient) InstanceCreate(name, instanceType, backendStoreDriver, diskUUID string, size int64,
 	binary string, args []string, portCount int, portArgs []string) (*api.Instance, error) {
-	if name == "" || instanceType == "" || backendStoreDriver == "" || diskUUID == "" || binary == "" {
+	if name == "" || instanceType == "" || backendStoreDriver == "" {
 		return nil, fmt.Errorf("failed to create instance: missing required parameter")
 	}
 
