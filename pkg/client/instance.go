@@ -238,5 +238,8 @@ func (c *InstanceServiceClient) VersionGet() (*meta.VersionOutput, error) {
 
 		InstanceManagerProxyAPIVersion:    int(resp.InstanceManagerProxyAPIVersion),
 		InstanceManagerProxyAPIMinVersion: int(resp.InstanceManagerProxyAPIMinVersion),
+
+		InstanceManagerDiskServiceAPIVersion:    int(resp.InstanceManagerDiskServiceAPIVersion),
+		InstanceManagerDiskServiceAPIMinVersion: int(resp.InstanceManagerDiskServiceAPIMinVersion),
 	}, nil
 }

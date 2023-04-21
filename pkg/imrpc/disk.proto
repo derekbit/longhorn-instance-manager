@@ -3,6 +3,7 @@ syntax="proto3";
 package imrpc;
 
 import "google/protobuf/empty.proto";
+import "imrpc.proto";
 
 service DiskService {
     rpc DiskCreate(DiskCreateRequest) returns (DiskCreateResponse);
@@ -93,13 +94,4 @@ message ReplicaInfoResponse {
 
 message ReplicaListResponse{
 	map<string, ReplicaInfo> replica_infos = 1;
-}
-
-message VersionResponse {
-    string version = 1;
-    string gitCommit = 2;
-    string buildDate = 3;
-
-    int64 instanceManagerDiskServiceVersion = 4;
-    int64 instanceManagerDiskServiceMinVersion = 5;
 }

@@ -3,6 +3,7 @@ import grpc
 
 import disk_pb2 as disk__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+import imrpc_pb2 as imrpc__pb2
 
 
 class DiskServiceStub(object):
@@ -48,7 +49,7 @@ class DiskServiceStub(object):
     self.VersionGet = channel.unary_unary(
         '/imrpc.DiskService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=disk__pb2.VersionResponse.FromString,
+        response_deserializer=imrpc__pb2.VersionResponse.FromString,
         )
 
 
@@ -141,7 +142,7 @@ def add_DiskServiceServicer_to_server(servicer, server):
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=disk__pb2.VersionResponse.SerializeToString,
+          response_serializer=imrpc__pb2.VersionResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

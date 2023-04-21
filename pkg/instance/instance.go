@@ -56,9 +56,9 @@ func (s *Server) startMonitoring() {
 	}
 }
 
-func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.InstanceVersionResponse, error) {
+func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.VersionResponse, error) {
 	v := meta.GetVersion()
-	return &rpc.InstanceVersionResponse{
+	return &rpc.VersionResponse{
 		Version:   v.Version,
 		GitCommit: v.GitCommit,
 		BuildDate: v.BuildDate,
@@ -68,6 +68,9 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Instanc
 
 		InstanceManagerProxyAPIVersion:    int64(v.InstanceManagerProxyAPIVersion),
 		InstanceManagerProxyAPIMinVersion: int64(v.InstanceManagerProxyAPIMinVersion),
+
+		InstanceManagerDiskServiceAPIVersion:    int64(v.InstanceManagerDiskServiceAPIVersion),
+		InstanceManagerDiskServiceAPIMinVersion: int64(v.InstanceManagerDiskServiceAPIMinVersion),
 	}, nil
 }
 

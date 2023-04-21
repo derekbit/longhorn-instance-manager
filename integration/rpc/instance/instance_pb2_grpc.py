@@ -54,7 +54,7 @@ class InstanceServiceStub(object):
     self.VersionGet = channel.unary_unary(
         '/imrpc.InstanceService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=instance__pb2.InstanceVersionResponse.FromString,
+        response_deserializer=imrpc__pb2.VersionResponse.FromString,
         )
 
 
@@ -159,7 +159,7 @@ def add_InstanceServiceServicer_to_server(servicer, server):
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=instance__pb2.InstanceVersionResponse.SerializeToString,
+          response_serializer=imrpc__pb2.VersionResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

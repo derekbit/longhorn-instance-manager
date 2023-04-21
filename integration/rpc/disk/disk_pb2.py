@@ -14,6 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+import imrpc_pb2 as imrpc__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -21,9 +22,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\"\xce\x01\n\x08\x44iskInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xb7\x01\n\x0bReplicaInfo\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x16\n\x0ethin_provision\x18\x08 \x01(\x08\x12\r\n\x05state\x18\t \x01(\t\"9\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\"8\n\x12\x44iskCreateResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"$\n\x0f\x44iskInfoRequest\x12\x11\n\tdisk_path\x18\x01 \x01(\t\"6\n\x10\x44iskInfoResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"H\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\"A\n\x15ReplicaCreateResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"8\n\x12ReplicaInfoRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"?\n\x13ReplicaInfoResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"\xa3\x01\n\x13ReplicaListResponse\x12\x43\n\rreplica_infos\x18\x01 \x03(\x0b\x32,.imrpc.ReplicaListResponse.ReplicaInfosEntry\x1aG\n\x11ReplicaInfosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0b\x32\x12.imrpc.ReplicaInfo:\x02\x38\x01\"\xa1\x01\n\x0fVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\tgitCommit\x18\x02 \x01(\t\x12\x11\n\tbuildDate\x18\x03 \x01(\t\x12)\n!instanceManagerDiskServiceVersion\x18\x04 \x01(\x03\x12,\n$instanceManagerDiskServiceMinVersion\x18\x05 \x01(\x03\x32\xe6\x03\n\x0b\x44iskService\x12\x41\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x19.imrpc.DiskCreateResponse\x12;\n\x08\x44iskInfo\x12\x16.imrpc.DiskInfoRequest\x1a\x17.imrpc.DiskInfoResponse\x12J\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x1c.imrpc.ReplicaCreateResponse\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x44\n\x0bReplicaInfo\x12\x19.imrpc.ReplicaInfoRequest\x1a\x1a.imrpc.ReplicaInfoResponse\x12<\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x16.imrpc.VersionResponseb\x06proto3')
+  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xce\x01\n\x08\x44iskInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xb7\x01\n\x0bReplicaInfo\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x16\n\x0ethin_provision\x18\x08 \x01(\x08\x12\r\n\x05state\x18\t \x01(\t\"9\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\"8\n\x12\x44iskCreateResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"$\n\x0f\x44iskInfoRequest\x12\x11\n\tdisk_path\x18\x01 \x01(\t\"6\n\x10\x44iskInfoResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"H\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\"A\n\x15ReplicaCreateResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"8\n\x12ReplicaInfoRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"?\n\x13ReplicaInfoResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"\xa3\x01\n\x13ReplicaListResponse\x12\x43\n\rreplica_infos\x18\x01 \x03(\x0b\x32,.imrpc.ReplicaListResponse.ReplicaInfosEntry\x1aG\n\x11ReplicaInfosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0b\x32\x12.imrpc.ReplicaInfo:\x02\x38\x01\x32\xe0\x03\n\x0b\x44iskService\x12\x41\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x19.imrpc.DiskCreateResponse\x12;\n\x08\x44iskInfo\x12\x16.imrpc.DiskInfoRequest\x1a\x17.imrpc.DiskInfoResponse\x12J\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x1c.imrpc.ReplicaCreateResponse\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x44\n\x0bReplicaInfo\x12\x19.imrpc.ReplicaInfoRequest\x1a\x1a.imrpc.ReplicaInfoResponse\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
-  dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
+  dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,imrpc__pb2.DESCRIPTOR,])
 
 
 
@@ -124,8 +125,8 @@ _DISKINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=51,
-  serialized_end=257,
+  serialized_start=64,
+  serialized_end=270,
 )
 
 
@@ -211,8 +212,8 @@ _REPLICAINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=260,
-  serialized_end=443,
+  serialized_start=273,
+  serialized_end=456,
 )
 
 
@@ -249,8 +250,8 @@ _DISKCREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=445,
-  serialized_end=502,
+  serialized_start=458,
+  serialized_end=515,
 )
 
 
@@ -280,8 +281,8 @@ _DISKCREATERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=504,
-  serialized_end=560,
+  serialized_start=517,
+  serialized_end=573,
 )
 
 
@@ -311,8 +312,8 @@ _DISKINFOREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=562,
-  serialized_end=598,
+  serialized_start=575,
+  serialized_end=611,
 )
 
 
@@ -342,8 +343,8 @@ _DISKINFORESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=600,
-  serialized_end=654,
+  serialized_start=613,
+  serialized_end=667,
 )
 
 
@@ -387,8 +388,8 @@ _REPLICACREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=656,
-  serialized_end=728,
+  serialized_start=669,
+  serialized_end=741,
 )
 
 
@@ -418,8 +419,8 @@ _REPLICACREATERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=730,
-  serialized_end=795,
+  serialized_start=743,
+  serialized_end=808,
 )
 
 
@@ -456,8 +457,8 @@ _REPLICAINFOREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=797,
-  serialized_end=853,
+  serialized_start=810,
+  serialized_end=866,
 )
 
 
@@ -494,8 +495,8 @@ _REPLICADELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=855,
-  serialized_end=913,
+  serialized_start=868,
+  serialized_end=926,
 )
 
 
@@ -525,8 +526,8 @@ _REPLICAINFORESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=915,
-  serialized_end=978,
+  serialized_start=928,
+  serialized_end=991,
 )
 
 
@@ -563,8 +564,8 @@ _REPLICALISTRESPONSE_REPLICAINFOSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1073,
-  serialized_end=1144,
+  serialized_start=1086,
+  serialized_end=1157,
 )
 
 _REPLICALISTRESPONSE = _descriptor.Descriptor(
@@ -593,67 +594,8 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=981,
-  serialized_end=1144,
-)
-
-
-_VERSIONRESPONSE = _descriptor.Descriptor(
-  name='VersionResponse',
-  full_name='imrpc.VersionResponse',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='version', full_name='imrpc.VersionResponse.version', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='gitCommit', full_name='imrpc.VersionResponse.gitCommit', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='buildDate', full_name='imrpc.VersionResponse.buildDate', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerDiskServiceVersion', full_name='imrpc.VersionResponse.instanceManagerDiskServiceVersion', index=3,
-      number=4, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerDiskServiceMinVersion', full_name='imrpc.VersionResponse.instanceManagerDiskServiceMinVersion', index=4,
-      number=5, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1147,
-  serialized_end=1308,
+  serialized_start=994,
+  serialized_end=1157,
 )
 
 _DISKCREATERESPONSE.fields_by_name['disk_info'].message_type = _DISKINFO
@@ -675,7 +617,6 @@ DESCRIPTOR.message_types_by_name['ReplicaInfoRequest'] = _REPLICAINFOREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaDeleteRequest'] = _REPLICADELETEREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaInfoResponse'] = _REPLICAINFORESPONSE
 DESCRIPTOR.message_types_by_name['ReplicaListResponse'] = _REPLICALISTRESPONSE
-DESCRIPTOR.message_types_by_name['VersionResponse'] = _VERSIONRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 DiskInfo = _reflection.GeneratedProtocolMessageType('DiskInfo', (_message.Message,), {
@@ -770,13 +711,6 @@ ReplicaListResponse = _reflection.GeneratedProtocolMessageType('ReplicaListRespo
 _sym_db.RegisterMessage(ReplicaListResponse)
 _sym_db.RegisterMessage(ReplicaListResponse.ReplicaInfosEntry)
 
-VersionResponse = _reflection.GeneratedProtocolMessageType('VersionResponse', (_message.Message,), {
-  'DESCRIPTOR' : _VERSIONRESPONSE,
-  '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.VersionResponse)
-  })
-_sym_db.RegisterMessage(VersionResponse)
-
 
 _REPLICALISTRESPONSE_REPLICAINFOSENTRY._options = None
 
@@ -786,8 +720,8 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1311,
-  serialized_end=1797,
+  serialized_start=1160,
+  serialized_end=1640,
   methods=[
   _descriptor.MethodDescriptor(
     name='DiskCreate',
@@ -849,7 +783,7 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
     index=6,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
-    output_type=_VERSIONRESPONSE,
+    output_type=imrpc__pb2._VERSIONRESPONSE,
     serialized_options=None,
   ),
 ])

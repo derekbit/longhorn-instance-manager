@@ -18,6 +18,7 @@ import (
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 )
 
@@ -455,4 +456,22 @@ func getLvolNameFromUUID(lvstoreInfos []spdktypes.LvstoreInfo, lvstoreUUID strin
 		}
 	}
 	return lvstoreName
+}
+
+func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.VersionResponse, error) {
+	v := meta.GetVersion()
+	return &rpc.VersionResponse{
+		Version:   v.Version,
+		GitCommit: v.GitCommit,
+		BuildDate: v.BuildDate,
+
+		InstanceManagerAPIVersion:    int64(v.InstanceManagerAPIVersion),
+		InstanceManagerAPIMinVersion: int64(v.InstanceManagerAPIMinVersion),
+
+		InstanceManagerProxyAPIVersion:    int64(v.InstanceManagerProxyAPIVersion),
+		InstanceManagerProxyAPIMinVersion: int64(v.InstanceManagerProxyAPIMinVersion),
+
+		InstanceManagerDiskServiceAPIVersion:    int64(v.InstanceManagerDiskServiceAPIVersion),
+		InstanceManagerDiskServiceAPIMinVersion: int64(v.InstanceManagerDiskServiceAPIMinVersion),
+	}, nil
 }
