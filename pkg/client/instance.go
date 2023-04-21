@@ -141,7 +141,9 @@ func (c *InstanceServiceClient) InstanceGet(name, instanceType, backendStoreDriv
 	defer cancel()
 
 	p, err := client.InstanceGet(ctx, &rpc.InstanceGetRequest{
-		Name: name,
+		Name:               name,
+		Type:               instanceType,
+		BackendStoreDriver: backendStoreDriver,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get instance %v", name)
