@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 
@@ -300,7 +301,40 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 }
 
 func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
-	return nil
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Name,
+		"type":               req.Type,
+		"backendStoreDriver": req.BackendStoreDriver,
+	}).Info("Getting instance log")
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return err
+	}
+	defer pmClient.Close()
+
+	switch req.BackendStoreDriver {
+	case BackendStoreDriverTypeLonghorn:
+		stream, err := pmClient.ProcessLog(context.Background(), req.Name)
+		if err != nil {
+			return err
+		}
+		for {
+			line, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+
+			if err := srv.Send(&rpc.LogResponse{Line: line}); err != nil {
+				return err
+			}
+		}
+		return nil
+	case BackendStoreDriverTypeSpdkAio:
+		return nil
+	default:
+		return fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
 }
 
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {

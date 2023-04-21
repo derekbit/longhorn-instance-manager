@@ -3,13 +3,14 @@ syntax="proto3";
 package imrpc;
 
 import "google/protobuf/empty.proto";
+import "imrpc.proto";
 
 service InstanceService {
     rpc InstanceCreate(InstanceCreateRequest) returns (InstanceResponse) {}
 	rpc InstanceDelete(InstanceDeleteRequest) returns (InstanceResponse) {}
 	rpc InstanceGet(InstanceGetRequest) returns (InstanceResponse) {}
 	rpc InstanceList(google.protobuf.Empty) returns (InstanceListResponse) {}
-	rpc InstanceLog(InstanceLogRequest) returns (stream InstanceLogResponse) {}
+	rpc InstanceLog(InstanceLogRequest) returns (stream LogResponse) {}
 	rpc InstanceWatch(google.protobuf.Empty) returns (stream InstanceResponse) {}
 	rpc InstanceReplace(InstanceReplaceRequest) returns (InstanceResponse) {}
 
@@ -72,10 +73,6 @@ message InstanceLogRequest {
 	string name = 1;
 	string type = 2;
 	string backend_store_driver = 3;
-}
-
-message InstanceLogResponse{
-	string line = 2;
 }
 
 message InstanceReplaceRequest {

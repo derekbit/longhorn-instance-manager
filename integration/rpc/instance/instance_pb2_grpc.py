@@ -2,6 +2,7 @@
 import grpc
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+import imrpc_pb2 as imrpc__pb2
 import instance_pb2 as instance__pb2
 
 
@@ -38,7 +39,7 @@ class InstanceServiceStub(object):
     self.InstanceLog = channel.unary_stream(
         '/imrpc.InstanceService/InstanceLog',
         request_serializer=instance__pb2.InstanceLogRequest.SerializeToString,
-        response_deserializer=instance__pb2.InstanceLogResponse.FromString,
+        response_deserializer=imrpc__pb2.LogResponse.FromString,
         )
     self.InstanceWatch = channel.unary_stream(
         '/imrpc.InstanceService/InstanceWatch',
@@ -143,7 +144,7 @@ def add_InstanceServiceServicer_to_server(servicer, server):
       'InstanceLog': grpc.unary_stream_rpc_method_handler(
           servicer.InstanceLog,
           request_deserializer=instance__pb2.InstanceLogRequest.FromString,
-          response_serializer=instance__pb2.InstanceLogResponse.SerializeToString,
+          response_serializer=imrpc__pb2.LogResponse.SerializeToString,
       ),
       'InstanceWatch': grpc.unary_stream_rpc_method_handler(
           servicer.InstanceWatch,

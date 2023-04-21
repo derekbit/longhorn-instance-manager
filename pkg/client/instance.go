@@ -163,7 +163,7 @@ func (c *InstanceServiceClient) InstanceList() (map[string]*api.Instance, error)
 	return api.RPCToInstanceList(instances), nil
 }
 
-func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name string) (*api.InstanceLogStream, error) {
+func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name string) (*api.LogStream, error) {
 	if name == "" {
 		return nil, fmt.Errorf("failed to get instance: missing required parameter name")
 	}
@@ -175,7 +175,7 @@ func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name string) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get instance log of %v", name)
 	}
-	return api.NewInstanceLogStream(stream), nil
+	return api.NewLogStream(stream), nil
 }
 
 func (c *InstanceServiceClient) InstanceWatch(ctx context.Context) (*api.InstanceStream, error) {
