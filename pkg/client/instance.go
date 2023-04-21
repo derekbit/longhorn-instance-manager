@@ -63,6 +63,15 @@ func NewInstanceServiceClient(serviceURL string, tlsConfig *tls.Config) (*Instan
 	}, nil
 }
 
+func NewInstanceServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peerName string) (*InstanceServiceClient, error) {
+	tlsConfig, err := util.LoadClientTLS(caFile, certFile, keyFile, peerName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load tls key pair from file")
+	}
+
+	return NewInstanceServiceClient(serviceURL, tlsConfig)
+}
+
 func (c *InstanceServiceClient) InstanceCreate(name, instanceType, backendStoreDriver, diskUUID string, size int64,
 	binary string, args []string, portCount int, portArgs []string) (*api.Instance, error) {
 	if name == "" || instanceType == "" || backendStoreDriver == "" {
