@@ -10,6 +10,7 @@ import (
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
 )
 
 const (
@@ -52,6 +53,21 @@ func (s *Server) startMonitoring() {
 			break
 		}
 	}
+}
+
+func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.InstanceVersionResponse, error) {
+	v := meta.GetVersion()
+	return &rpc.InstanceVersionResponse{
+		Version:   v.Version,
+		GitCommit: v.GitCommit,
+		BuildDate: v.BuildDate,
+
+		InstanceManagerAPIVersion:    int64(v.InstanceManagerAPIVersion),
+		InstanceManagerAPIMinVersion: int64(v.InstanceManagerAPIMinVersion),
+
+		InstanceManagerProxyAPIVersion:    int64(v.InstanceManagerProxyAPIVersion),
+		InstanceManagerProxyAPIMinVersion: int64(v.InstanceManagerProxyAPIMinVersion),
+	}, nil
 }
 
 func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequest) (*rpc.InstanceResponse, error) {
@@ -234,18 +250,59 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 	}, nil
 }
 
+func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Spec.Name,
+		"type":               req.Spec.Type,
+		"backendStoreDriver": req.Spec.BackendStoreDriver,
+	}).Info("Replacing instance")
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	switch req.Spec.BackendStoreDriver {
+	case BackendStoreDriverTypeLonghorn:
+		if req.Spec.Process == nil {
+			return nil, fmt.Errorf("process is required for longhorn backend store driver")
+		}
+
+		process, err := pmClient.ProcessReplace(req.Spec.Name, req.Spec.Process.Binary, int(req.Spec.PortCount), req.Spec.Process.Args, req.Spec.PortArgs, req.TerminateSignal)
+		if err != nil {
+			return nil, err
+		}
+
+		return &rpc.InstanceResponse{
+			Spec: &rpc.InstanceSpec{
+				Name: process.Spec.Name,
+				Process: &rpc.Process{
+					Binary: process.Spec.Binary,
+					Args:   process.Spec.Args,
+				},
+				PortCount: int32(process.Spec.PortCount),
+				PortArgs:  process.Spec.PortArgs,
+			},
+			Status: &rpc.InstanceStatus{
+				State:     process.Status.State,
+				PortStart: process.Status.PortStart,
+				PortEnd:   process.Status.PortEnd,
+				ErrorMsg:  process.Status.ErrorMsg,
+			},
+			Deleted: process.Deleted,
+		}, nil
+	case BackendStoreDriverTypeSpdkAio:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
+	}
+}
+
 func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
 	return nil
 }
 
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	return nil
-}
-
-func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
-	return nil, nil
-}
-
-func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.InstanceVersionResponse, error) {
-	return nil, nil
 }

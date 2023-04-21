@@ -188,9 +188,9 @@ func (c *InstanceServiceClient) InstanceWatch(ctx context.Context) (*api.Instanc
 	return api.NewInstanceStream(stream), nil
 }
 
-func (c *InstanceServiceClient) InstanceReplace(name, binary string, portCount int, args, portArgs []string, terminateSignal string) (*api.Instance, error) {
+func (c *InstanceServiceClient) InstanceReplace(name, instanceType, backendStoreDriver, binary string, portCount int, args, portArgs []string, terminateSignal string) (*api.Instance, error) {
 	if name == "" || binary == "" {
-		return nil, fmt.Errorf("failed to start instance: missing required parameter")
+		return nil, fmt.Errorf("failed to replace instance: missing required parameter")
 	}
 	if terminateSignal != "SIGHUP" {
 		return nil, fmt.Errorf("unsupported terminate signal %v", terminateSignal)
@@ -202,7 +202,9 @@ func (c *InstanceServiceClient) InstanceReplace(name, binary string, portCount i
 
 	p, err := client.InstanceReplace(ctx, &rpc.InstanceReplaceRequest{
 		Spec: &rpc.InstanceSpec{
-			Name: name,
+			Name:               name,
+			Type:               instanceType,
+			BackendStoreDriver: backendStoreDriver,
 			Process: &rpc.Process{
 				Binary: binary,
 				Args:   args,
@@ -213,7 +215,7 @@ func (c *InstanceServiceClient) InstanceReplace(name, binary string, portCount i
 		TerminateSignal: terminateSignal,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to start instance")
+		return nil, errors.Wrap(err, "failed to replace instance")
 	}
 	return api.RPCToInstance(p), nil
 }

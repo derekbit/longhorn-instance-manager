@@ -166,7 +166,7 @@ func (c *ProcessManagerClient) ProcessWatch(ctx context.Context) (*api.ProcessSt
 	return api.NewProcessStream(stream), nil
 }
 
-func (c *ProcessManagerClient) ProcessReplace(name, binary string, portCount int, args, portArgs []string, terminateSignal string) (*api.Process, error) {
+func (c *ProcessManagerClient) ProcessReplace(name, binary string, portCount int, args, portArgs []string, terminateSignal string) (*rpc.ProcessResponse, error) {
 	if name == "" || binary == "" {
 		return nil, fmt.Errorf("failed to start process: missing required parameter")
 	}
@@ -178,7 +178,7 @@ func (c *ProcessManagerClient) ProcessReplace(name, binary string, portCount int
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	p, err := client.ProcessReplace(ctx, &rpc.ProcessReplaceRequest{
+	return client.ProcessReplace(ctx, &rpc.ProcessReplaceRequest{
 		Spec: &rpc.ProcessSpec{
 			Name:      name,
 			Binary:    binary,
@@ -188,10 +188,6 @@ func (c *ProcessManagerClient) ProcessReplace(name, binary string, portCount int
 		},
 		TerminateSignal: terminateSignal,
 	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start process")
-	}
-	return api.RPCToProcess(p), nil
 }
 
 func (c *ProcessManagerClient) VersionGet() (*meta.VersionOutput, error) {
