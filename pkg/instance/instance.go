@@ -78,14 +78,14 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		"backendStoreDriver": req.Spec.BackendStoreDriver,
 	}).Info("Creating instance")
 
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer pmClient.Close()
-
 	switch req.Spec.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
+		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer pmClient.Close()
+
 		if req.Spec.Process == nil {
 			return nil, fmt.Errorf("process is required for longhorn backend store driver")
 		}
@@ -93,25 +93,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		if err != nil {
 			return nil, err
 		}
-
-		return &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: process.Spec.Name,
-				Process: &rpc.Process{
-					Binary: process.Spec.Binary,
-					Args:   process.Spec.Args,
-				},
-				PortCount: int32(process.Spec.PortCount),
-				PortArgs:  process.Spec.PortArgs,
-			},
-			Status: &rpc.InstanceStatus{
-				State:     process.Status.State,
-				PortStart: process.Status.PortStart,
-				PortEnd:   process.Status.PortEnd,
-				ErrorMsg:  process.Status.ErrorMsg,
-			},
-			Deleted: process.Deleted,
-		}, nil
+		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
 		return nil, nil
 	default:
@@ -126,37 +108,19 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 		"backendStoreDriver": req.BackendStoreDriver,
 	}).Info("Deleting instance")
 
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer pmClient.Close()
-
 	switch req.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
+		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer pmClient.Close()
+
 		process, err := pmClient.ProcessDelete(req.Name)
 		if err != nil {
 			return nil, err
 		}
-
-		return &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: process.Spec.Name,
-				Process: &rpc.Process{
-					Binary: process.Spec.Binary,
-					Args:   process.Spec.Args,
-				},
-				PortCount: int32(process.Spec.PortCount),
-				PortArgs:  process.Spec.PortArgs,
-			},
-			Status: &rpc.InstanceStatus{
-				State:     process.Status.State,
-				PortStart: process.Status.PortStart,
-				PortEnd:   process.Status.PortEnd,
-				ErrorMsg:  process.Status.ErrorMsg,
-			},
-			Deleted: process.Deleted,
-		}, nil
+		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
 		return nil, nil
 	default:
@@ -171,37 +135,19 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 		"backendStoreDriver": req.BackendStoreDriver,
 	}).Info("Getting instance")
 
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer pmClient.Close()
-
 	switch req.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
+		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer pmClient.Close()
+
 		process, err := pmClient.ProcessGet(req.Name)
 		if err != nil {
 			return nil, err
 		}
-
-		return &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: process.Spec.Name,
-				Process: &rpc.Process{
-					Binary: process.Spec.Binary,
-					Args:   process.Spec.Args,
-				},
-				PortCount: int32(process.Spec.PortCount),
-				PortArgs:  process.Spec.PortArgs,
-			},
-			Status: &rpc.InstanceStatus{
-				State:     process.Status.State,
-				PortStart: process.Status.PortStart,
-				PortEnd:   process.Status.PortEnd,
-				ErrorMsg:  process.Status.ErrorMsg,
-			},
-			Deleted: process.Deleted,
-		}, nil
+		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
 		return nil, nil
 	default:
@@ -226,24 +172,7 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 	instances := map[string]*rpc.InstanceResponse{}
 
 	for _, process := range processes {
-		instances[process.Spec.Name] = &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: process.Spec.Name,
-				Process: &rpc.Process{
-					Binary: process.Spec.Binary,
-					Args:   process.Spec.Args,
-				},
-				PortCount: int32(process.Spec.PortCount),
-				PortArgs:  process.Spec.PortArgs,
-			},
-			Status: &rpc.InstanceStatus{
-				State:     process.Status.State,
-				PortStart: process.Status.PortStart,
-				PortEnd:   process.Status.PortEnd,
-				ErrorMsg:  process.Status.ErrorMsg,
-			},
-			Deleted: process.Deleted,
-		}
+		instances[process.Spec.Name] = processResponseToInstanceResponse(process)
 	}
 
 	return &rpc.InstanceListResponse{
@@ -258,41 +187,24 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 		"backendStoreDriver": req.Spec.BackendStoreDriver,
 	}).Info("Replacing instance")
 
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer pmClient.Close()
-
 	switch req.Spec.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
 		if req.Spec.Process == nil {
 			return nil, fmt.Errorf("process is required for longhorn backend store driver")
 		}
 
+		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer pmClient.Close()
+
 		process, err := pmClient.ProcessReplace(req.Spec.Name, req.Spec.Process.Binary, int(req.Spec.PortCount), req.Spec.Process.Args, req.Spec.PortArgs, req.TerminateSignal)
 		if err != nil {
 			return nil, err
 		}
 
-		return &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: process.Spec.Name,
-				Process: &rpc.Process{
-					Binary: process.Spec.Binary,
-					Args:   process.Spec.Args,
-				},
-				PortCount: int32(process.Spec.PortCount),
-				PortArgs:  process.Spec.PortArgs,
-			},
-			Status: &rpc.InstanceStatus{
-				State:     process.Status.State,
-				PortStart: process.Status.PortStart,
-				PortEnd:   process.Status.PortEnd,
-				ErrorMsg:  process.Status.ErrorMsg,
-			},
-			Deleted: process.Deleted,
-		}, nil
+		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
 		return nil, nil
 	default:
@@ -307,14 +219,14 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 		"backendStoreDriver": req.BackendStoreDriver,
 	}).Info("Getting instance log")
 
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-	if err != nil {
-		return err
-	}
-	defer pmClient.Close()
-
 	switch req.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
+		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+		if err != nil {
+			return err
+		}
+		defer pmClient.Close()
+
 		stream, err := pmClient.ProcessLog(context.Background(), req.Name)
 		if err != nil {
 			return err
@@ -353,27 +265,31 @@ func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_Instanc
 			// TODO: Should it error out here?
 			logrus.WithError(err).Error("Failed to receive next item in engine process watch")
 		} else {
-			instance := &rpc.InstanceResponse{
-				Spec: &rpc.InstanceSpec{
-					Name: process.Spec.Name,
-					Process: &rpc.Process{
-						Binary: process.Spec.Binary,
-						Args:   process.Spec.Args,
-					},
-					PortCount: int32(process.Spec.PortCount),
-					PortArgs:  process.Spec.PortArgs,
-				},
-				Status: &rpc.InstanceStatus{
-					State:     process.Status.State,
-					PortStart: process.Status.PortStart,
-					PortEnd:   process.Status.PortEnd,
-					ErrorMsg:  process.Status.ErrorMsg,
-				},
-				Deleted: process.Deleted,
-			}
+			instance := processResponseToInstanceResponse(process)
 			if err := srv.Send(instance); err != nil {
 				return err
 			}
 		}
+	}
+}
+
+func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResponse {
+	return &rpc.InstanceResponse{
+		Spec: &rpc.InstanceSpec{
+			Name: p.Spec.Name,
+			Process: &rpc.Process{
+				Binary: p.Spec.Binary,
+				Args:   p.Spec.Args,
+			},
+			PortCount: int32(p.Spec.PortCount),
+			PortArgs:  p.Spec.PortArgs,
+		},
+		Status: &rpc.InstanceStatus{
+			State:     p.Status.State,
+			PortStart: p.Status.PortStart,
+			PortEnd:   p.Status.PortEnd,
+			ErrorMsg:  p.Status.ErrorMsg,
+		},
+		Deleted: p.Deleted,
 	}
 }
