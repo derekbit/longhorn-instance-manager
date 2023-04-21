@@ -154,11 +154,11 @@ func (c *InstanceServiceClient) InstanceList() (map[string]*api.Instance, error)
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	ps, err := client.InstanceList(ctx, &empty.Empty{})
+	instances, err := client.InstanceList(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list instances")
 	}
-	return api.RPCToInstanceList(ps), nil
+	return api.RPCToInstanceList(instances), nil
 }
 
 func (c *InstanceServiceClient) InstanceLog(ctx context.Context, name string) (*api.InstanceLogStream, error) {

@@ -129,16 +129,16 @@ func (c *ProcessManagerClient) ProcessGet(name string) (*rpc.ProcessResponse, er
 	})
 }
 
-func (c *ProcessManagerClient) ProcessList() (map[string]*api.Process, error) {
+func (c *ProcessManagerClient) ProcessList() (map[string]*rpc.ProcessResponse, error) {
 	client := c.getControllerServiceClient()
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
-	ps, err := client.ProcessList(ctx, &rpc.ProcessListRequest{})
+	resp, err := client.ProcessList(ctx, &rpc.ProcessListRequest{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list processes")
 	}
-	return api.RPCToProcessList(ps), nil
+	return resp.Processes, nil
 }
 
 func (c *ProcessManagerClient) ProcessLog(ctx context.Context, name string) (*api.LogStream, error) {

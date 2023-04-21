@@ -193,7 +193,45 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 }
 
 func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.InstanceListResponse, error) {
-	return nil, nil
+	logrus.WithFields(logrus.Fields{}).Info("Listing instances")
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	processes, err := pmClient.ProcessList()
+	if err != nil {
+		return nil, err
+	}
+
+	instances := map[string]*rpc.InstanceResponse{}
+
+	for _, process := range processes {
+		instances[process.Spec.Name] = &rpc.InstanceResponse{
+			Spec: &rpc.InstanceSpec{
+				Name: process.Spec.Name,
+				Process: &rpc.Process{
+					Binary: process.Spec.Binary,
+					Args:   process.Spec.Args,
+				},
+				PortCount: int32(process.Spec.PortCount),
+				PortArgs:  process.Spec.PortArgs,
+			},
+			Status: &rpc.InstanceStatus{
+				State:     process.Status.State,
+				PortStart: process.Status.PortStart,
+				PortEnd:   process.Status.PortEnd,
+				ErrorMsg:  process.Status.ErrorMsg,
+			},
+			Deleted: process.Deleted,
+		}
+	}
+
+	return &rpc.InstanceListResponse{
+		Instances: instances,
+	}, nil
 }
 
 func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
