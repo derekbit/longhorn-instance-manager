@@ -45,6 +45,10 @@ func StartCmd() cli.Command {
 				Name:  "port-range",
 				Value: "10000-30000",
 			},
+			cli.BoolFlag{
+				Name:  "spdk-enabled",
+				Usage: "enable SPDK support",
+			},
 		},
 		Action: func(c *cli.Context) {
 			if err := start(c); err != nil {
@@ -87,6 +91,7 @@ func start(c *cli.Context) (err error) {
 	listen := c.String("listen")
 	logsDir := c.String("logs-dir")
 	portRange := c.String("port-range")
+	spdkEnabled := c.Bool("spdk-enabled")
 
 	if err := util.SetUpLogger(logsDir); err != nil {
 		return err
@@ -121,7 +126,7 @@ func start(c *cli.Context) (err error) {
 
 	// Start instance server
 	instanceRpcServer, instanceRpcListener, err := setupInstanceGrpcServer(logsDir,
-		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, tlsConfig, shutdownCh)
+		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -279,8 +284,8 @@ func setupProcessManagerGrpcServer(portRange, logsDir, listen string, tlsConfig 
 	return pm, rpcServer, rpcListener, nil
 }
 
-func setupInstanceGrpcServer(logsDir, listen, processManagerServiceAddress, diskServiceAddress string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
-	srv, err := instance.NewServer(logsDir, processManagerServiceAddress, diskServiceAddress, shutdownCh)
+func setupInstanceGrpcServer(logsDir, listen, processManagerServiceAddress, diskServiceAddress string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	srv, err := instance.NewServer(logsDir, processManagerServiceAddress, diskServiceAddress, spdkEnabled, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}

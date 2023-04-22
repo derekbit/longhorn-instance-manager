@@ -22,29 +22,29 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0einstance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\'\n\x07Process\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xb1\x01\n\x0cInstanceSpec\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x11\n\tdisk_uuid\x18\x05 \x01(\t\x12\x12\n\nport_count\x18\x06 \x01(\x05\x12\x11\n\tport_args\x18\x07 \x03(\t\x12\x1f\n\x07process\x18\x08 \x01(\x0b\x32\x0e.imrpc.Process\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"d\n\x15InstanceDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x11\n\tdisk_uuid\x18\x04 \x01(\t\"N\n\x12InstanceGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"N\n\x12InstanceLogRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t2\xba\x04\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12:\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x0c.LogResponse\"\x00\x30\x01\x12\x44\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x17.imrpc.InstanceResponse\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
+  serialized_pb=_b('\n\x0einstance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"/\n\x0fProcessSpecific\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xa3\x01\n\x0cSpdkSpecific\x12G\n\x13replica_address_map\x18\x01 \x03(\x0b\x32*.imrpc.SpdkSpecific.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x02 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xee\x01\n\x0cInstanceSpec\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x03\x12\x11\n\tdisk_uuid\x18\x05 \x01(\t\x12\x12\n\nport_count\x18\x06 \x01(\x05\x12\x11\n\tport_args\x18\x07 \x03(\t\x12\x30\n\x10process_specific\x18\x08 \x01(\x0b\x32\x16.imrpc.ProcessSpecific\x12*\n\rspdk_specific\x18\t \x01(\x0b\x32\x13.imrpc.SpdkSpecific\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"d\n\x15InstanceDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\x12\x11\n\tdisk_uuid\x18\x04 \x01(\t\"N\n\x12InstanceGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"N\n\x12InstanceLogRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x1c\n\x14\x62\x61\x63kend_store_driver\x18\x03 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t2\xba\x04\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12:\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x0c.LogResponse\"\x00\x30\x01\x12\x44\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x17.imrpc.InstanceResponse\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,imrpc__pb2.DESCRIPTOR,])
 
 
 
 
-_PROCESS = _descriptor.Descriptor(
-  name='Process',
-  full_name='imrpc.Process',
+_PROCESSSPECIFIC = _descriptor.Descriptor(
+  name='ProcessSpecific',
+  full_name='imrpc.ProcessSpecific',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='binary', full_name='imrpc.Process.binary', index=0,
+      name='binary', full_name='imrpc.ProcessSpecific.binary', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='args', full_name='imrpc.Process.args', index=1,
+      name='args', full_name='imrpc.ProcessSpecific.args', index=1,
       number=2, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -63,7 +63,82 @@ _PROCESS = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=67,
-  serialized_end=106,
+  serialized_end=114,
+)
+
+
+_SPDKSPECIFIC_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaAddressMapEntry',
+  full_name='imrpc.SpdkSpecific.ReplicaAddressMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.SpdkSpecific.ReplicaAddressMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.SpdkSpecific.ReplicaAddressMapEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=224,
+  serialized_end=280,
+)
+
+_SPDKSPECIFIC = _descriptor.Descriptor(
+  name='SpdkSpecific',
+  full_name='imrpc.SpdkSpecific',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='replica_address_map', full_name='imrpc.SpdkSpecific.replica_address_map', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend', full_name='imrpc.SpdkSpecific.frontend', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_SPDKSPECIFIC_REPLICAADDRESSMAPENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=117,
+  serialized_end=280,
 )
 
 
@@ -124,8 +199,15 @@ _INSTANCESPEC = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='process', full_name='imrpc.InstanceSpec.process', index=7,
+      name='process_specific', full_name='imrpc.InstanceSpec.process_specific', index=7,
       number=8, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='spdk_specific', full_name='imrpc.InstanceSpec.spdk_specific', index=8,
+      number=9, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -142,8 +224,8 @@ _INSTANCESPEC = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=109,
-  serialized_end=286,
+  serialized_start=283,
+  serialized_end=521,
 )
 
 
@@ -194,8 +276,8 @@ _INSTANCESTATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=288,
-  serialized_end=376,
+  serialized_start=523,
+  serialized_end=611,
 )
 
 
@@ -225,8 +307,8 @@ _INSTANCECREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=378,
-  serialized_end=436,
+  serialized_start=613,
+  serialized_end=671,
 )
 
 
@@ -277,8 +359,8 @@ _INSTANCEDELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=438,
-  serialized_end=538,
+  serialized_start=673,
+  serialized_end=773,
 )
 
 
@@ -322,8 +404,8 @@ _INSTANCEGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=540,
-  serialized_end=618,
+  serialized_start=775,
+  serialized_end=853,
 )
 
 
@@ -367,8 +449,8 @@ _INSTANCERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=620,
-  serialized_end=729,
+  serialized_start=855,
+  serialized_end=964,
 )
 
 
@@ -405,8 +487,8 @@ _INSTANCELISTRESPONSE_INSTANCESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=819,
-  serialized_end=892,
+  serialized_start=1054,
+  serialized_end=1127,
 )
 
 _INSTANCELISTRESPONSE = _descriptor.Descriptor(
@@ -435,8 +517,8 @@ _INSTANCELISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=732,
-  serialized_end=892,
+  serialized_start=967,
+  serialized_end=1127,
 )
 
 
@@ -480,8 +562,8 @@ _INSTANCELOGREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=894,
-  serialized_end=972,
+  serialized_start=1129,
+  serialized_end=1207,
 )
 
 
@@ -518,11 +600,14 @@ _INSTANCEREPLACEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=974,
-  serialized_end=1059,
+  serialized_start=1209,
+  serialized_end=1294,
 )
 
-_INSTANCESPEC.fields_by_name['process'].message_type = _PROCESS
+_SPDKSPECIFIC_REPLICAADDRESSMAPENTRY.containing_type = _SPDKSPECIFIC
+_SPDKSPECIFIC.fields_by_name['replica_address_map'].message_type = _SPDKSPECIFIC_REPLICAADDRESSMAPENTRY
+_INSTANCESPEC.fields_by_name['process_specific'].message_type = _PROCESSSPECIFIC
+_INSTANCESPEC.fields_by_name['spdk_specific'].message_type = _SPDKSPECIFIC
 _INSTANCECREATEREQUEST.fields_by_name['spec'].message_type = _INSTANCESPEC
 _INSTANCERESPONSE.fields_by_name['spec'].message_type = _INSTANCESPEC
 _INSTANCERESPONSE.fields_by_name['status'].message_type = _INSTANCESTATUS
@@ -530,7 +615,8 @@ _INSTANCELISTRESPONSE_INSTANCESENTRY.fields_by_name['value'].message_type = _INS
 _INSTANCELISTRESPONSE_INSTANCESENTRY.containing_type = _INSTANCELISTRESPONSE
 _INSTANCELISTRESPONSE.fields_by_name['instances'].message_type = _INSTANCELISTRESPONSE_INSTANCESENTRY
 _INSTANCEREPLACEREQUEST.fields_by_name['spec'].message_type = _INSTANCESPEC
-DESCRIPTOR.message_types_by_name['Process'] = _PROCESS
+DESCRIPTOR.message_types_by_name['ProcessSpecific'] = _PROCESSSPECIFIC
+DESCRIPTOR.message_types_by_name['SpdkSpecific'] = _SPDKSPECIFIC
 DESCRIPTOR.message_types_by_name['InstanceSpec'] = _INSTANCESPEC
 DESCRIPTOR.message_types_by_name['InstanceStatus'] = _INSTANCESTATUS
 DESCRIPTOR.message_types_by_name['InstanceCreateRequest'] = _INSTANCECREATEREQUEST
@@ -542,12 +628,27 @@ DESCRIPTOR.message_types_by_name['InstanceLogRequest'] = _INSTANCELOGREQUEST
 DESCRIPTOR.message_types_by_name['InstanceReplaceRequest'] = _INSTANCEREPLACEREQUEST
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-Process = _reflection.GeneratedProtocolMessageType('Process', (_message.Message,), {
-  'DESCRIPTOR' : _PROCESS,
+ProcessSpecific = _reflection.GeneratedProtocolMessageType('ProcessSpecific', (_message.Message,), {
+  'DESCRIPTOR' : _PROCESSSPECIFIC,
   '__module__' : 'instance_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.Process)
+  # @@protoc_insertion_point(class_scope:imrpc.ProcessSpecific)
   })
-_sym_db.RegisterMessage(Process)
+_sym_db.RegisterMessage(ProcessSpecific)
+
+SpdkSpecific = _reflection.GeneratedProtocolMessageType('SpdkSpecific', (_message.Message,), {
+
+  'ReplicaAddressMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaAddressMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _SPDKSPECIFIC_REPLICAADDRESSMAPENTRY,
+    '__module__' : 'instance_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.SpdkSpecific.ReplicaAddressMapEntry)
+    })
+  ,
+  'DESCRIPTOR' : _SPDKSPECIFIC,
+  '__module__' : 'instance_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.SpdkSpecific)
+  })
+_sym_db.RegisterMessage(SpdkSpecific)
+_sym_db.RegisterMessage(SpdkSpecific.ReplicaAddressMapEntry)
 
 InstanceSpec = _reflection.GeneratedProtocolMessageType('InstanceSpec', (_message.Message,), {
   'DESCRIPTOR' : _INSTANCESPEC,
@@ -621,6 +722,7 @@ InstanceReplaceRequest = _reflection.GeneratedProtocolMessageType('InstanceRepla
 _sym_db.RegisterMessage(InstanceReplaceRequest)
 
 
+_SPDKSPECIFIC_REPLICAADDRESSMAPENTRY._options = None
 _INSTANCELISTRESPONSE_INSTANCESENTRY._options = None
 
 _INSTANCESERVICE = _descriptor.ServiceDescriptor(
@@ -629,8 +731,8 @@ _INSTANCESERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1062,
-  serialized_end=1632,
+  serialized_start=1297,
+  serialized_end=1867,
   methods=[
   _descriptor.MethodDescriptor(
     name='InstanceCreate',

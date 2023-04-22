@@ -475,3 +475,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
 	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }
+
+func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineListResponse, error) {
+	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
+}

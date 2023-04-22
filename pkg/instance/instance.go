@@ -24,15 +24,17 @@ type Server struct {
 	logsDir                      string
 	processManagerServiceAddress string
 	diskServiceAddress           string
+	spdkEnabled                  bool
 	shutdownCh                   chan error
 	HealthChecker                HealthChecker
 }
 
-func NewServer(logsDir, processManagerServiceAddress, diskServiceAddress string, shutdownCh chan error) (*Server, error) {
+func NewServer(logsDir, processManagerServiceAddress, diskServiceAddress string, spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 	s := &Server{
 		logsDir:                      logsDir,
 		processManagerServiceAddress: processManagerServiceAddress,
 		diskServiceAddress:           diskServiceAddress,
+		spdkEnabled:                  spdkEnabled,
 		shutdownCh:                   shutdownCh,
 		HealthChecker:                &GRPCHealthChecker{},
 	}
@@ -90,10 +92,10 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		}
 		defer pmClient.Close()
 
-		if req.Spec.Process == nil {
+		if req.Spec.ProcessSpecific == nil {
 			return nil, fmt.Errorf("process is required for longhorn backend store driver")
 		}
-		process, err := pmClient.ProcessCreate(req.Spec.Name, req.Spec.Process.Binary, int(req.Spec.PortCount), req.Spec.Process.Args, req.Spec.PortArgs)
+		process, err := pmClient.ProcessCreate(req.Spec.Name, req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +109,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 
 		switch req.Spec.Type {
 		case "Engine":
-			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.Size)
+			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Frontend, req.Spec.DiskUuid, req.Spec.SpdkSpecific.ReplicaAddressMap)
 			if err != nil {
 				return nil, err
 			}
@@ -202,21 +204,46 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.InstanceListResponse, error) {
 	logrus.WithFields(logrus.Fields{}).Info("Listing instances")
 
+	instances := map[string]*rpc.InstanceResponse{}
+
+	// Collect engine and replica processes as instances
 	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer pmClient.Close()
 
-	processes, err := pmClient.ProcessList()
-	if err != nil {
+	if processes, err := pmClient.ProcessList(); err != nil {
 		return nil, err
+	} else {
+		for _, process := range processes {
+			instances[process.Spec.Name] = processResponseToInstanceResponse(process)
+		}
 	}
 
-	instances := map[string]*rpc.InstanceResponse{}
+	// Collect spdk instances as instances
+	if s.spdkEnabled {
+		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer diskClient.Close()
 
-	for _, process := range processes {
-		instances[process.Spec.Name] = processResponseToInstanceResponse(process)
+		if replicas, err := diskClient.ReplicaList(); err != nil {
+			return nil, err
+		} else {
+			for _, replica := range replicas {
+				instances[replica.Name] = replicaInfoToInstanceResponse(replica)
+			}
+		}
+
+		if engines, err := diskClient.EngineList(); err != nil {
+			return nil, err
+		} else {
+			for _, engine := range engines {
+				instances[engine.Name] = engineInfoToInstanceResponse(engine)
+			}
+		}
 	}
 
 	return &rpc.InstanceListResponse{
@@ -233,7 +260,7 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 
 	switch req.Spec.BackendStoreDriver {
 	case BackendStoreDriverTypeLonghorn:
-		if req.Spec.Process == nil {
+		if req.Spec.ProcessSpecific == nil {
 			return nil, fmt.Errorf("process is required for longhorn backend store driver")
 		}
 
@@ -243,7 +270,8 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 		}
 		defer pmClient.Close()
 
-		process, err := pmClient.ProcessReplace(req.Spec.Name, req.Spec.Process.Binary, int(req.Spec.PortCount), req.Spec.Process.Args, req.Spec.PortArgs, req.TerminateSignal)
+		process, err := pmClient.ProcessReplace(req.Spec.Name,
+			req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs, req.TerminateSignal)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +352,7 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: p.Spec.Name,
-			Process: &rpc.Process{
+			ProcessSpecific: &rpc.ProcessSpecific{
 				Binary: p.Spec.Binary,
 				Args:   p.Spec.Args,
 			},
@@ -345,6 +373,7 @@ func replicaInfoToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: r.Name,
+			Type: types.InstanceTypeReplica,
 		},
 		Status: &rpc.InstanceStatus{
 			State: types.ProcessStateRunning,
@@ -356,6 +385,7 @@ func engineInfoToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: e.Name,
+			Type: types.InstanceTypeEngine,
 		},
 		Status: &rpc.InstanceStatus{
 			State: types.ProcessStateRunning,
