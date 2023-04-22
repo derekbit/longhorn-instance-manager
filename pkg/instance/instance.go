@@ -108,13 +108,13 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		defer diskClient.Close()
 
 		switch req.Spec.Type {
-		case "Engine":
+		case types.InstanceTypeEngine:
 			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Frontend, req.Spec.DiskUuid, req.Spec.SpdkSpecific.ReplicaAddressMap)
 			if err != nil {
 				return nil, err
 			}
 			return engineInfoToInstanceResponse(engine), nil
-		case "Replica":
+		case types.InstanceTypeReplica:
 			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
 			if err != nil {
 				return nil, err
