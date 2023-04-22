@@ -50,7 +50,7 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/bits-and-blooms/bitset v1.2.0
 ## explicit; go 1.14
 github.com/bits-and-blooms/bitset
-# github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b
+# github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8
 ## explicit
 github.com/c9s/goprocinfo/linux
 # github.com/cpuguy83/go-md2man/v2 v2.0.2
@@ -108,7 +108,7 @@ github.com/longhorn/backupstore/vfs
 # github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
 ## explicit; go 1.13
 github.com/longhorn/go-iscsi-helper/util
-# github.com/longhorn/go-spdk-helper v0.0.0-20230419153556-f8cf5121b95f
+# github.com/longhorn/go-spdk-helper v0.0.0-20230421020944-49138aa44ec0
 ## explicit; go 1.17
 github.com/longhorn/go-spdk-helper/pkg/jsonrpc
 github.com/longhorn/go-spdk-helper/pkg/spdk/client

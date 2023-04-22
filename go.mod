@@ -7,7 +7,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230324160313-e1d0b33c2f82
-	github.com/longhorn/go-spdk-helper v0.0.0-20230419153556-f8cf5121b95f
+	github.com/longhorn/go-spdk-helper v0.0.0-20230421020944-49138aa44ec0
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230413074927-aeff7b57a163
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
@@ -20,7 +20,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go v1.34.2 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
-	github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b // indirect
+	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
