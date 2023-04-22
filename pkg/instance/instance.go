@@ -195,7 +195,17 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 		}
 		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
-		return nil, nil
+		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer diskClient.Close()
+
+		replica, err := diskClient.ReplicaGet(req.Name, req.DiskUuid)
+		if err != nil {
+			return nil, err
+		}
+		return replicaInfoToInstanceResponse(replica), nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
