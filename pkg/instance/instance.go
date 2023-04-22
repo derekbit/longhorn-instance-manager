@@ -109,13 +109,13 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 
 		switch req.Spec.Type {
 		case types.InstanceTypeEngine:
-			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Frontend, req.Spec.DiskUuid, req.Spec.SpdkSpecific.ReplicaAddressMap)
+			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Frontend, req.Spec.SpdkSpecific.DiskUuid, req.Spec.SpdkSpecific.ReplicaAddressMap)
 			if err != nil {
 				return nil, err
 			}
 			return engineInfoToInstanceResponse(engine), nil
 		case types.InstanceTypeReplica:
-			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
+			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size)
 			if err != nil {
 				return nil, err
 			}
