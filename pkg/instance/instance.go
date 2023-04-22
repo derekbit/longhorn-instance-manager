@@ -115,7 +115,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 			}
 			return engineInfoToInstanceResponse(engine), nil
 		case types.InstanceTypeReplica:
-			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, 4420)
+			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, req.Spec.SpdkSpecific.Address)
 			if err != nil {
 				return nil, err
 			}
@@ -386,7 +386,9 @@ func replicaInfoToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 			Type: types.InstanceTypeReplica,
 		},
 		Status: &rpc.InstanceStatus{
-			State: types.ProcessStateRunning,
+			State:     types.ProcessStateRunning,
+			PortStart: r.Port,
+			PortEnd:   r.Port,
 		},
 	}
 }

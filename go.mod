@@ -31,6 +31,7 @@ require (
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b // indirect
+	github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003 // indirect
 	github.com/longhorn/sparse-tools v0.0.0-20230408015858-c849def39d3c // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect

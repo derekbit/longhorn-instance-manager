@@ -14,6 +14,7 @@ import (
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 
+	spdknvme "github.com/longhorn/go-spdk-helper/pkg/nvme"
 	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
 	spdkutil "github.com/longhorn/go-spdk-helper/pkg/types"
@@ -195,6 +196,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
 		"size":        req.Size,
+		"address":     req.Address,
 	})
 
 	log.Info("Creating replica")
@@ -228,7 +230,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	}
 
 	nqn := spdkutil.GetNQN(req.Name)
-	err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, "0.0.0.0", "4420")
+	err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
 	if err != nil {
 		log.WithError(err).Error("Failed to start exposing bdev")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -264,7 +266,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		TotalBlocks: int64(lvolInfo.NumBlocks),
 		BlockSize:   int64(lvolInfo.BlockSize),
 
-		ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
+		Port: 4420,
 
 		State: types.ProcessStateRunning,
 	}, nil
@@ -370,7 +372,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 		TotalBlocks: int64(lvolInfo.NumBlocks),
 		BlockSize:   int64(lvolInfo.BlockSize),
 
-		ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
+		Port: 4420,
 
 		State: types.ProcessStateRunning,
 	}, nil
@@ -414,7 +416,7 @@ func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.Replic
 			TotalBlocks: int64(info.NumBlocks),
 			BlockSize:   int64(info.BlockSize),
 
-			ThinProvision: info.DriverSpecific.Lvol.ThinProvision,
+			Port: 4420,
 
 			State: types.ProcessStateRunning,
 		}
@@ -477,6 +479,66 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Version
 }
 
 func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest) (*rpc.Engine, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"name":              req.Name,
+		"address":           req.Address,
+		"replicaAddressMap": req.ReplicaAddressMap,
+		"frontend":          req.Frontend,
+	})
+
+	log.Info("Deleting replica")
+
+	spdkCli, err := spdkclient.NewClient()
+	if err != nil {
+		log.WithError(err).Error("Failed to create SPDK client")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	bdevs := []string{}
+	for name, addr := range req.ReplicaAddressMap {
+		nqn := spdkutil.GetNQN(name)
+		addressComponents := strings.Split(addr, ":")
+		if len(addressComponents) != 2 {
+			return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "Invalid address %v", addr)
+		}
+
+		bdevNameList, err := spdkCli.BdevNvmeAttachController(name, nqn, addressComponents[0], addressComponents[1], spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
+		if err != nil {
+			log.WithError(err).Error("Failed to attach NVMe controller")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		bdevs = append(bdevs, bdevNameList...)
+	}
+
+	created, err := spdkCli.BdevRaidCreate(req.Name, spdktypes.BdevRaidLevelRaid1, 0, bdevs)
+	if err != nil {
+		log.WithError(err).Error("Failed to create RAID")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	if created {
+		log.Info("Created RAID")
+	}
+
+	raidNQN := spdkutil.GetNQN(req.Name)
+	err = spdkCli.StartExposeBdev(raidNQN, req.Name, "127.0.0.1", "4422")
+	if err != nil {
+		log.WithError(err).Error("Failed to start exposing bdev")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	nvmeCli, err := spdknvme.NewInitiator(raidNQN, "4422")
+	if err != nil {
+		log.WithError(err).Error("Failed to create NVMe initiator")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	err = nvmeCli.StartInitiator()
+	if err != nil {
+		log.WithError(err).Error("Failed to start NVMe initiator")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
 	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }
 
@@ -485,5 +547,7 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 }
 
 func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineListResponse, error) {
-	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
+	return &rpc.EngineListResponse{
+		Engines: map[string]*rpc.Engine{},
+	}, nil
 }

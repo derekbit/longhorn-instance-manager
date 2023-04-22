@@ -111,9 +111,11 @@ github.com/longhorn/go-iscsi-helper/util
 # github.com/longhorn/go-spdk-helper v0.0.0-20230421020944-49138aa44ec0
 ## explicit; go 1.17
 github.com/longhorn/go-spdk-helper/pkg/jsonrpc
+github.com/longhorn/go-spdk-helper/pkg/nvme
 github.com/longhorn/go-spdk-helper/pkg/spdk/client
 github.com/longhorn/go-spdk-helper/pkg/spdk/types
 github.com/longhorn/go-spdk-helper/pkg/types
+github.com/longhorn/go-spdk-helper/pkg/util
 # github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230413074927-aeff7b57a163
 ## explicit; go 1.20
 github.com/longhorn/longhorn-engine/pkg/backingfile
@@ -127,6 +129,9 @@ github.com/longhorn/longhorn-engine/pkg/types
 github.com/longhorn/longhorn-engine/pkg/util
 github.com/longhorn/longhorn-engine/pkg/util/disk
 github.com/longhorn/longhorn-engine/proto/ptypes
+# github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003
+## explicit
+github.com/longhorn/nsfilelock
 # github.com/longhorn/sparse-tools v0.0.0-20230408015858-c849def39d3c
 ## explicit; go 1.17
 github.com/longhorn/sparse-tools/sparse
