@@ -115,7 +115,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 			}
 			return engineInfoToInstanceResponse(engine), nil
 		case types.InstanceTypeReplica:
-			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size)
+			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, 4420)
 			if err != nil {
 				return nil, err
 			}

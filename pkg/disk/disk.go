@@ -16,6 +16,7 @@ import (
 
 	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
+	spdkutil "github.com/longhorn/go-spdk-helper/pkg/types"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
@@ -223,6 +224,13 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	uuid, err := spdkCli.BdevLvolCreate(lvstoreInfo.Name, req.Name, "", sizeInMib, spdktypes.BdevLvolClearMethodUnmap, true)
 	if err != nil {
 		log.WithError(err).Error("Failed to create lvol")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	nqn := spdkutil.GetNQN(req.Name)
+	err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, "0.0.0.0", "4420")
+	if err != nil {
+		log.WithError(err).Error("Failed to start exposing bdev")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
