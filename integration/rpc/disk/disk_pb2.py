@@ -4,6 +4,7 @@
 
 import sys
 _b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
+from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
@@ -22,92 +23,122 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xce\x01\n\x08\x44iskInfo\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xb7\x01\n\x0bReplicaInfo\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x16\n\x0ethin_provision\x18\x08 \x01(\x08\x12\r\n\x05state\x18\t \x01(\t\"9\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\"8\n\x12\x44iskCreateResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"$\n\x0f\x44iskInfoRequest\x12\x11\n\tdisk_path\x18\x01 \x01(\t\"6\n\x10\x44iskInfoResponse\x12\"\n\tdisk_info\x18\x01 \x01(\x0b\x32\x0f.imrpc.DiskInfo\"H\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\"A\n\x15ReplicaCreateResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"8\n\x12ReplicaInfoRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"?\n\x13ReplicaInfoResponse\x12(\n\x0creplica_info\x18\x01 \x01(\x0b\x32\x12.imrpc.ReplicaInfo\"\xa3\x01\n\x13ReplicaListResponse\x12\x43\n\rreplica_infos\x18\x01 \x03(\x0b\x32,.imrpc.ReplicaListResponse.ReplicaInfosEntry\x1aG\n\x11ReplicaInfosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0b\x32\x12.imrpc.ReplicaInfo:\x02\x38\x01\x32\xe0\x03\n\x0b\x44iskService\x12\x41\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x19.imrpc.DiskCreateResponse\x12;\n\x08\x44iskInfo\x12\x16.imrpc.DiskInfoRequest\x1a\x17.imrpc.DiskInfoResponse\x12J\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x1c.imrpc.ReplicaCreateResponse\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x44\n\x0bReplicaInfo\x12\x19.imrpc.ReplicaInfoRequest\x1a\x1a.imrpc.ReplicaInfoResponse\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
+  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xca\x01\n\x04\x44isk\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xb3\x01\n\x07Replica\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x16\n\x0ethin_provision\x18\x08 \x01(\x08\x12\r\n\x05state\x18\t \x01(\t\"\x84\x03\n\x06\x45ngine\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x41\n\x13replica_address_map\x18\x05 \x03(\x0b\x32$.imrpc.Engine.ReplicaAddressMapEntry\x12;\n\x10replica_mode_map\x18\x06 \x03(\x0b\x32!.imrpc.Engine.ReplicaModeMapEntry\x12\x10\n\x08\x65ndpoint\x18\x07 \x01(\t\x12\x10\n\x08\x66rontend\x18\x08 \x01(\t\x12\x16\n\x0e\x66rontend_state\x18\t \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aI\n\x13ReplicaModeMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0e\x32\x12.imrpc.ReplicaMode:\x02\x38\x01\"9\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\"#\n\x0e\x44iskGetRequest\x12\x11\n\tdisk_path\x18\x01 \x01(\t\"H\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\"7\n\x11ReplicaGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"\x92\x01\n\x13ReplicaListResponse\x12:\n\x08replicas\x18\x01 \x03(\x0b\x32(.imrpc.ReplicaListResponse.ReplicasEntry\x1a?\n\rReplicasEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1d\n\x05value\x18\x02 \x01(\x0b\x32\x0e.imrpc.Replica:\x02\x38\x01\"\xd0\x01\n\x13\x45ngineCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\x12N\n\x13replica_address_map\x18\x03 \x03(\x0b\x32\x31.imrpc.EngineCreateRequest.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x04 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"#\n\x13\x45ngineDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t*&\n\x0bReplicaMode\x12\x06\n\x02WO\x10\x00\x12\x06\n\x02RW\x10\x01\x12\x07\n\x03\x45RR\x10\x02\x32\xa7\x04\n\x0b\x44iskService\x12\x33\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x0b.imrpc.Disk\x12-\n\x07\x44iskGet\x12\x15.imrpc.DiskGetRequest\x1a\x0b.imrpc.Disk\x12<\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x0e.imrpc.Replica\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nReplicaGet\x12\x18.imrpc.ReplicaGetRequest\x1a\x0e.imrpc.Replica\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x39\n\x0c\x45ngineCreate\x12\x1a.imrpc.EngineCreateRequest\x1a\r.imrpc.Engine\x12\x42\n\x0c\x45ngineDelete\x12\x1a.imrpc.EngineDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,imrpc__pb2.DESCRIPTOR,])
 
+_REPLICAMODE = _descriptor.EnumDescriptor(
+  name='ReplicaMode',
+  full_name='imrpc.ReplicaMode',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='WO', index=0, number=0,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='RW', index=1, number=1,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ERR', index=2, number=2,
+      serialized_options=None,
+      type=None),
+  ],
+  containing_type=None,
+  serialized_options=None,
+  serialized_start=1525,
+  serialized_end=1563,
+)
+_sym_db.RegisterEnumDescriptor(_REPLICAMODE)
+
+ReplicaMode = enum_type_wrapper.EnumTypeWrapper(_REPLICAMODE)
+WO = 0
+RW = 1
+ERR = 2
 
 
 
-_DISKINFO = _descriptor.Descriptor(
-  name='DiskInfo',
-  full_name='imrpc.DiskInfo',
+_DISK = _descriptor.Descriptor(
+  name='Disk',
+  full_name='imrpc.Disk',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='id', full_name='imrpc.DiskInfo.id', index=0,
+      name='id', full_name='imrpc.Disk.id', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='uuid', full_name='imrpc.DiskInfo.uuid', index=1,
+      name='uuid', full_name='imrpc.Disk.uuid', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='path', full_name='imrpc.DiskInfo.path', index=2,
+      name='path', full_name='imrpc.Disk.path', index=2,
       number=3, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='type', full_name='imrpc.DiskInfo.type', index=3,
+      name='type', full_name='imrpc.Disk.type', index=3,
       number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='total_size', full_name='imrpc.DiskInfo.total_size', index=4,
+      name='total_size', full_name='imrpc.Disk.total_size', index=4,
       number=5, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='free_size', full_name='imrpc.DiskInfo.free_size', index=5,
+      name='free_size', full_name='imrpc.Disk.free_size', index=5,
       number=6, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='total_blocks', full_name='imrpc.DiskInfo.total_blocks', index=6,
+      name='total_blocks', full_name='imrpc.Disk.total_blocks', index=6,
       number=7, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='free_blocks', full_name='imrpc.DiskInfo.free_blocks', index=7,
+      name='free_blocks', full_name='imrpc.Disk.free_blocks', index=7,
       number=8, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='block_size', full_name='imrpc.DiskInfo.block_size', index=8,
+      name='block_size', full_name='imrpc.Disk.block_size', index=8,
       number=9, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='cluster_size', full_name='imrpc.DiskInfo.cluster_size', index=9,
+      name='cluster_size', full_name='imrpc.Disk.cluster_size', index=9,
       number=10, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='readonly', full_name='imrpc.DiskInfo.readonly', index=10,
+      name='readonly', full_name='imrpc.Disk.readonly', index=10,
       number=11, type=8, cpp_type=7, label=1,
       has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
@@ -126,75 +157,75 @@ _DISKINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=64,
-  serialized_end=270,
+  serialized_end=266,
 )
 
 
-_REPLICAINFO = _descriptor.Descriptor(
-  name='ReplicaInfo',
-  full_name='imrpc.ReplicaInfo',
+_REPLICA = _descriptor.Descriptor(
+  name='Replica',
+  full_name='imrpc.Replica',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='name', full_name='imrpc.ReplicaInfo.name', index=0,
+      name='name', full_name='imrpc.Replica.name', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='uuid', full_name='imrpc.ReplicaInfo.uuid', index=1,
+      name='uuid', full_name='imrpc.Replica.uuid', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='bdev_name', full_name='imrpc.ReplicaInfo.bdev_name', index=2,
+      name='bdev_name', full_name='imrpc.Replica.bdev_name', index=2,
       number=3, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='lvstore_uuid', full_name='imrpc.ReplicaInfo.lvstore_uuid', index=3,
+      name='lvstore_uuid', full_name='imrpc.Replica.lvstore_uuid', index=3,
       number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='total_size', full_name='imrpc.ReplicaInfo.total_size', index=4,
+      name='total_size', full_name='imrpc.Replica.total_size', index=4,
       number=5, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='total_blocks', full_name='imrpc.ReplicaInfo.total_blocks', index=5,
+      name='total_blocks', full_name='imrpc.Replica.total_blocks', index=5,
       number=6, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='block_size', full_name='imrpc.ReplicaInfo.block_size', index=6,
+      name='block_size', full_name='imrpc.Replica.block_size', index=6,
       number=7, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='thin_provision', full_name='imrpc.ReplicaInfo.thin_provision', index=7,
+      name='thin_provision', full_name='imrpc.Replica.thin_provision', index=7,
       number=8, type=8, cpp_type=7, label=1,
       has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='state', full_name='imrpc.ReplicaInfo.state', index=8,
+      name='state', full_name='imrpc.Replica.state', index=8,
       number=9, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -212,8 +243,169 @@ _REPLICAINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=273,
-  serialized_end=456,
+  serialized_start=269,
+  serialized_end=448,
+)
+
+
+_ENGINE_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaAddressMapEntry',
+  full_name='imrpc.Engine.ReplicaAddressMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.Engine.ReplicaAddressMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.Engine.ReplicaAddressMapEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=708,
+  serialized_end=764,
+)
+
+_ENGINE_REPLICAMODEMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaModeMapEntry',
+  full_name='imrpc.Engine.ReplicaModeMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.Engine.ReplicaModeMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.Engine.ReplicaModeMapEntry.value', index=1,
+      number=2, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=766,
+  serialized_end=839,
+)
+
+_ENGINE = _descriptor.Descriptor(
+  name='Engine',
+  full_name='imrpc.Engine',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='imrpc.Engine.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='uuid', full_name='imrpc.Engine.uuid', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='size', full_name='imrpc.Engine.size', index=2,
+      number=3, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='address', full_name='imrpc.Engine.address', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='replica_address_map', full_name='imrpc.Engine.replica_address_map', index=4,
+      number=5, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='replica_mode_map', full_name='imrpc.Engine.replica_mode_map', index=5,
+      number=6, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='endpoint', full_name='imrpc.Engine.endpoint', index=6,
+      number=7, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend', full_name='imrpc.Engine.frontend', index=7,
+      number=8, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend_state', full_name='imrpc.Engine.frontend_state', index=8,
+      number=9, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_ENGINE_REPLICAADDRESSMAPENTRY, _ENGINE_REPLICAMODEMAPENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=451,
+  serialized_end=839,
 )
 
 
@@ -250,51 +442,20 @@ _DISKCREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=458,
-  serialized_end=515,
+  serialized_start=841,
+  serialized_end=898,
 )
 
 
-_DISKCREATERESPONSE = _descriptor.Descriptor(
-  name='DiskCreateResponse',
-  full_name='imrpc.DiskCreateResponse',
+_DISKGETREQUEST = _descriptor.Descriptor(
+  name='DiskGetRequest',
+  full_name='imrpc.DiskGetRequest',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='disk_info', full_name='imrpc.DiskCreateResponse.disk_info', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=517,
-  serialized_end=573,
-)
-
-
-_DISKINFOREQUEST = _descriptor.Descriptor(
-  name='DiskInfoRequest',
-  full_name='imrpc.DiskInfoRequest',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='disk_path', full_name='imrpc.DiskInfoRequest.disk_path', index=0,
+      name='disk_path', full_name='imrpc.DiskGetRequest.disk_path', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -312,39 +473,8 @@ _DISKINFOREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=575,
-  serialized_end=611,
-)
-
-
-_DISKINFORESPONSE = _descriptor.Descriptor(
-  name='DiskInfoResponse',
-  full_name='imrpc.DiskInfoResponse',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='disk_info', full_name='imrpc.DiskInfoResponse.disk_info', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=613,
-  serialized_end=667,
+  serialized_start=900,
+  serialized_end=935,
 )
 
 
@@ -388,58 +518,27 @@ _REPLICACREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=669,
-  serialized_end=741,
+  serialized_start=937,
+  serialized_end=1009,
 )
 
 
-_REPLICACREATERESPONSE = _descriptor.Descriptor(
-  name='ReplicaCreateResponse',
-  full_name='imrpc.ReplicaCreateResponse',
+_REPLICAGETREQUEST = _descriptor.Descriptor(
+  name='ReplicaGetRequest',
+  full_name='imrpc.ReplicaGetRequest',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='replica_info', full_name='imrpc.ReplicaCreateResponse.replica_info', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=743,
-  serialized_end=808,
-)
-
-
-_REPLICAINFOREQUEST = _descriptor.Descriptor(
-  name='ReplicaInfoRequest',
-  full_name='imrpc.ReplicaInfoRequest',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='name', full_name='imrpc.ReplicaInfoRequest.name', index=0,
+      name='name', full_name='imrpc.ReplicaGetRequest.name', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='lvstore_uuid', full_name='imrpc.ReplicaInfoRequest.lvstore_uuid', index=1,
+      name='lvstore_uuid', full_name='imrpc.ReplicaGetRequest.lvstore_uuid', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -457,8 +556,8 @@ _REPLICAINFOREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=810,
-  serialized_end=866,
+  serialized_start=1011,
+  serialized_end=1066,
 )
 
 
@@ -495,58 +594,27 @@ _REPLICADELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=868,
-  serialized_end=926,
+  serialized_start=1068,
+  serialized_end=1126,
 )
 
 
-_REPLICAINFORESPONSE = _descriptor.Descriptor(
-  name='ReplicaInfoResponse',
-  full_name='imrpc.ReplicaInfoResponse',
+_REPLICALISTRESPONSE_REPLICASENTRY = _descriptor.Descriptor(
+  name='ReplicasEntry',
+  full_name='imrpc.ReplicaListResponse.ReplicasEntry',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='replica_info', full_name='imrpc.ReplicaInfoResponse.replica_info', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=928,
-  serialized_end=991,
-)
-
-
-_REPLICALISTRESPONSE_REPLICAINFOSENTRY = _descriptor.Descriptor(
-  name='ReplicaInfosEntry',
-  full_name='imrpc.ReplicaListResponse.ReplicaInfosEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='imrpc.ReplicaListResponse.ReplicaInfosEntry.key', index=0,
+      name='key', full_name='imrpc.ReplicaListResponse.ReplicasEntry.key', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='value', full_name='imrpc.ReplicaListResponse.ReplicaInfosEntry.value', index=1,
+      name='value', full_name='imrpc.ReplicaListResponse.ReplicasEntry.value', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -564,8 +632,8 @@ _REPLICALISTRESPONSE_REPLICAINFOSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1086,
-  serialized_end=1157,
+  serialized_start=1212,
+  serialized_end=1275,
 )
 
 _REPLICALISTRESPONSE = _descriptor.Descriptor(
@@ -576,7 +644,7 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='replica_infos', full_name='imrpc.ReplicaListResponse.replica_infos', index=0,
+      name='replicas', full_name='imrpc.ReplicaListResponse.replicas', index=0,
       number=1, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -585,7 +653,7 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_REPLICALISTRESPONSE_REPLICAINFOSENTRY, ],
+  nested_types=[_REPLICALISTRESPONSE_REPLICASENTRY, ],
   enum_types=[
   ],
   serialized_options=None,
@@ -594,44 +662,190 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=994,
-  serialized_end=1157,
+  serialized_start=1129,
+  serialized_end=1275,
 )
 
-_DISKCREATERESPONSE.fields_by_name['disk_info'].message_type = _DISKINFO
-_DISKINFORESPONSE.fields_by_name['disk_info'].message_type = _DISKINFO
-_REPLICACREATERESPONSE.fields_by_name['replica_info'].message_type = _REPLICAINFO
-_REPLICAINFORESPONSE.fields_by_name['replica_info'].message_type = _REPLICAINFO
-_REPLICALISTRESPONSE_REPLICAINFOSENTRY.fields_by_name['value'].message_type = _REPLICAINFO
-_REPLICALISTRESPONSE_REPLICAINFOSENTRY.containing_type = _REPLICALISTRESPONSE
-_REPLICALISTRESPONSE.fields_by_name['replica_infos'].message_type = _REPLICALISTRESPONSE_REPLICAINFOSENTRY
-DESCRIPTOR.message_types_by_name['DiskInfo'] = _DISKINFO
-DESCRIPTOR.message_types_by_name['ReplicaInfo'] = _REPLICAINFO
+
+_ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaAddressMapEntry',
+  full_name='imrpc.EngineCreateRequest.ReplicaAddressMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.EngineCreateRequest.ReplicaAddressMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.EngineCreateRequest.ReplicaAddressMapEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=708,
+  serialized_end=764,
+)
+
+_ENGINECREATEREQUEST = _descriptor.Descriptor(
+  name='EngineCreateRequest',
+  full_name='imrpc.EngineCreateRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='imrpc.EngineCreateRequest.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='address', full_name='imrpc.EngineCreateRequest.address', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='replica_address_map', full_name='imrpc.EngineCreateRequest.replica_address_map', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend', full_name='imrpc.EngineCreateRequest.frontend', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1278,
+  serialized_end=1486,
+)
+
+
+_ENGINEDELETEREQUEST = _descriptor.Descriptor(
+  name='EngineDeleteRequest',
+  full_name='imrpc.EngineDeleteRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='imrpc.EngineDeleteRequest.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1488,
+  serialized_end=1523,
+)
+
+_ENGINE_REPLICAADDRESSMAPENTRY.containing_type = _ENGINE
+_ENGINE_REPLICAMODEMAPENTRY.fields_by_name['value'].enum_type = _REPLICAMODE
+_ENGINE_REPLICAMODEMAPENTRY.containing_type = _ENGINE
+_ENGINE.fields_by_name['replica_address_map'].message_type = _ENGINE_REPLICAADDRESSMAPENTRY
+_ENGINE.fields_by_name['replica_mode_map'].message_type = _ENGINE_REPLICAMODEMAPENTRY
+_REPLICALISTRESPONSE_REPLICASENTRY.fields_by_name['value'].message_type = _REPLICA
+_REPLICALISTRESPONSE_REPLICASENTRY.containing_type = _REPLICALISTRESPONSE
+_REPLICALISTRESPONSE.fields_by_name['replicas'].message_type = _REPLICALISTRESPONSE_REPLICASENTRY
+_ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY.containing_type = _ENGINECREATEREQUEST
+_ENGINECREATEREQUEST.fields_by_name['replica_address_map'].message_type = _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY
+DESCRIPTOR.message_types_by_name['Disk'] = _DISK
+DESCRIPTOR.message_types_by_name['Replica'] = _REPLICA
+DESCRIPTOR.message_types_by_name['Engine'] = _ENGINE
 DESCRIPTOR.message_types_by_name['DiskCreateRequest'] = _DISKCREATEREQUEST
-DESCRIPTOR.message_types_by_name['DiskCreateResponse'] = _DISKCREATERESPONSE
-DESCRIPTOR.message_types_by_name['DiskInfoRequest'] = _DISKINFOREQUEST
-DESCRIPTOR.message_types_by_name['DiskInfoResponse'] = _DISKINFORESPONSE
+DESCRIPTOR.message_types_by_name['DiskGetRequest'] = _DISKGETREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaCreateRequest'] = _REPLICACREATEREQUEST
-DESCRIPTOR.message_types_by_name['ReplicaCreateResponse'] = _REPLICACREATERESPONSE
-DESCRIPTOR.message_types_by_name['ReplicaInfoRequest'] = _REPLICAINFOREQUEST
+DESCRIPTOR.message_types_by_name['ReplicaGetRequest'] = _REPLICAGETREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaDeleteRequest'] = _REPLICADELETEREQUEST
-DESCRIPTOR.message_types_by_name['ReplicaInfoResponse'] = _REPLICAINFORESPONSE
 DESCRIPTOR.message_types_by_name['ReplicaListResponse'] = _REPLICALISTRESPONSE
+DESCRIPTOR.message_types_by_name['EngineCreateRequest'] = _ENGINECREATEREQUEST
+DESCRIPTOR.message_types_by_name['EngineDeleteRequest'] = _ENGINEDELETEREQUEST
+DESCRIPTOR.enum_types_by_name['ReplicaMode'] = _REPLICAMODE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-DiskInfo = _reflection.GeneratedProtocolMessageType('DiskInfo', (_message.Message,), {
-  'DESCRIPTOR' : _DISKINFO,
+Disk = _reflection.GeneratedProtocolMessageType('Disk', (_message.Message,), {
+  'DESCRIPTOR' : _DISK,
   '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.DiskInfo)
+  # @@protoc_insertion_point(class_scope:imrpc.Disk)
   })
-_sym_db.RegisterMessage(DiskInfo)
+_sym_db.RegisterMessage(Disk)
 
-ReplicaInfo = _reflection.GeneratedProtocolMessageType('ReplicaInfo', (_message.Message,), {
-  'DESCRIPTOR' : _REPLICAINFO,
+Replica = _reflection.GeneratedProtocolMessageType('Replica', (_message.Message,), {
+  'DESCRIPTOR' : _REPLICA,
   '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.ReplicaInfo)
+  # @@protoc_insertion_point(class_scope:imrpc.Replica)
   })
-_sym_db.RegisterMessage(ReplicaInfo)
+_sym_db.RegisterMessage(Replica)
+
+Engine = _reflection.GeneratedProtocolMessageType('Engine', (_message.Message,), {
+
+  'ReplicaAddressMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaAddressMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ENGINE_REPLICAADDRESSMAPENTRY,
+    '__module__' : 'disk_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaAddressMapEntry)
+    })
+  ,
+
+  'ReplicaModeMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaModeMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ENGINE_REPLICAMODEMAPENTRY,
+    '__module__' : 'disk_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaModeMapEntry)
+    })
+  ,
+  'DESCRIPTOR' : _ENGINE,
+  '__module__' : 'disk_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.Engine)
+  })
+_sym_db.RegisterMessage(Engine)
+_sym_db.RegisterMessage(Engine.ReplicaAddressMapEntry)
+_sym_db.RegisterMessage(Engine.ReplicaModeMapEntry)
 
 DiskCreateRequest = _reflection.GeneratedProtocolMessageType('DiskCreateRequest', (_message.Message,), {
   'DESCRIPTOR' : _DISKCREATEREQUEST,
@@ -640,26 +854,12 @@ DiskCreateRequest = _reflection.GeneratedProtocolMessageType('DiskCreateRequest'
   })
 _sym_db.RegisterMessage(DiskCreateRequest)
 
-DiskCreateResponse = _reflection.GeneratedProtocolMessageType('DiskCreateResponse', (_message.Message,), {
-  'DESCRIPTOR' : _DISKCREATERESPONSE,
+DiskGetRequest = _reflection.GeneratedProtocolMessageType('DiskGetRequest', (_message.Message,), {
+  'DESCRIPTOR' : _DISKGETREQUEST,
   '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.DiskCreateResponse)
+  # @@protoc_insertion_point(class_scope:imrpc.DiskGetRequest)
   })
-_sym_db.RegisterMessage(DiskCreateResponse)
-
-DiskInfoRequest = _reflection.GeneratedProtocolMessageType('DiskInfoRequest', (_message.Message,), {
-  'DESCRIPTOR' : _DISKINFOREQUEST,
-  '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.DiskInfoRequest)
-  })
-_sym_db.RegisterMessage(DiskInfoRequest)
-
-DiskInfoResponse = _reflection.GeneratedProtocolMessageType('DiskInfoResponse', (_message.Message,), {
-  'DESCRIPTOR' : _DISKINFORESPONSE,
-  '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.DiskInfoResponse)
-  })
-_sym_db.RegisterMessage(DiskInfoResponse)
+_sym_db.RegisterMessage(DiskGetRequest)
 
 ReplicaCreateRequest = _reflection.GeneratedProtocolMessageType('ReplicaCreateRequest', (_message.Message,), {
   'DESCRIPTOR' : _REPLICACREATEREQUEST,
@@ -668,19 +868,12 @@ ReplicaCreateRequest = _reflection.GeneratedProtocolMessageType('ReplicaCreateRe
   })
 _sym_db.RegisterMessage(ReplicaCreateRequest)
 
-ReplicaCreateResponse = _reflection.GeneratedProtocolMessageType('ReplicaCreateResponse', (_message.Message,), {
-  'DESCRIPTOR' : _REPLICACREATERESPONSE,
+ReplicaGetRequest = _reflection.GeneratedProtocolMessageType('ReplicaGetRequest', (_message.Message,), {
+  'DESCRIPTOR' : _REPLICAGETREQUEST,
   '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.ReplicaCreateResponse)
+  # @@protoc_insertion_point(class_scope:imrpc.ReplicaGetRequest)
   })
-_sym_db.RegisterMessage(ReplicaCreateResponse)
-
-ReplicaInfoRequest = _reflection.GeneratedProtocolMessageType('ReplicaInfoRequest', (_message.Message,), {
-  'DESCRIPTOR' : _REPLICAINFOREQUEST,
-  '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.ReplicaInfoRequest)
-  })
-_sym_db.RegisterMessage(ReplicaInfoRequest)
+_sym_db.RegisterMessage(ReplicaGetRequest)
 
 ReplicaDeleteRequest = _reflection.GeneratedProtocolMessageType('ReplicaDeleteRequest', (_message.Message,), {
   'DESCRIPTOR' : _REPLICADELETEREQUEST,
@@ -689,19 +882,12 @@ ReplicaDeleteRequest = _reflection.GeneratedProtocolMessageType('ReplicaDeleteRe
   })
 _sym_db.RegisterMessage(ReplicaDeleteRequest)
 
-ReplicaInfoResponse = _reflection.GeneratedProtocolMessageType('ReplicaInfoResponse', (_message.Message,), {
-  'DESCRIPTOR' : _REPLICAINFORESPONSE,
-  '__module__' : 'disk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.ReplicaInfoResponse)
-  })
-_sym_db.RegisterMessage(ReplicaInfoResponse)
-
 ReplicaListResponse = _reflection.GeneratedProtocolMessageType('ReplicaListResponse', (_message.Message,), {
 
-  'ReplicaInfosEntry' : _reflection.GeneratedProtocolMessageType('ReplicaInfosEntry', (_message.Message,), {
-    'DESCRIPTOR' : _REPLICALISTRESPONSE_REPLICAINFOSENTRY,
+  'ReplicasEntry' : _reflection.GeneratedProtocolMessageType('ReplicasEntry', (_message.Message,), {
+    'DESCRIPTOR' : _REPLICALISTRESPONSE_REPLICASENTRY,
     '__module__' : 'disk_pb2'
-    # @@protoc_insertion_point(class_scope:imrpc.ReplicaListResponse.ReplicaInfosEntry)
+    # @@protoc_insertion_point(class_scope:imrpc.ReplicaListResponse.ReplicasEntry)
     })
   ,
   'DESCRIPTOR' : _REPLICALISTRESPONSE,
@@ -709,10 +895,35 @@ ReplicaListResponse = _reflection.GeneratedProtocolMessageType('ReplicaListRespo
   # @@protoc_insertion_point(class_scope:imrpc.ReplicaListResponse)
   })
 _sym_db.RegisterMessage(ReplicaListResponse)
-_sym_db.RegisterMessage(ReplicaListResponse.ReplicaInfosEntry)
+_sym_db.RegisterMessage(ReplicaListResponse.ReplicasEntry)
+
+EngineCreateRequest = _reflection.GeneratedProtocolMessageType('EngineCreateRequest', (_message.Message,), {
+
+  'ReplicaAddressMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaAddressMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY,
+    '__module__' : 'disk_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.EngineCreateRequest.ReplicaAddressMapEntry)
+    })
+  ,
+  'DESCRIPTOR' : _ENGINECREATEREQUEST,
+  '__module__' : 'disk_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.EngineCreateRequest)
+  })
+_sym_db.RegisterMessage(EngineCreateRequest)
+_sym_db.RegisterMessage(EngineCreateRequest.ReplicaAddressMapEntry)
+
+EngineDeleteRequest = _reflection.GeneratedProtocolMessageType('EngineDeleteRequest', (_message.Message,), {
+  'DESCRIPTOR' : _ENGINEDELETEREQUEST,
+  '__module__' : 'disk_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.EngineDeleteRequest)
+  })
+_sym_db.RegisterMessage(EngineDeleteRequest)
 
 
-_REPLICALISTRESPONSE_REPLICAINFOSENTRY._options = None
+_ENGINE_REPLICAADDRESSMAPENTRY._options = None
+_ENGINE_REPLICAMODEMAPENTRY._options = None
+_REPLICALISTRESPONSE_REPLICASENTRY._options = None
+_ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY._options = None
 
 _DISKSERVICE = _descriptor.ServiceDescriptor(
   name='DiskService',
@@ -720,8 +931,8 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1160,
-  serialized_end=1640,
+  serialized_start=1566,
+  serialized_end=2117,
   methods=[
   _descriptor.MethodDescriptor(
     name='DiskCreate',
@@ -729,16 +940,16 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_DISKCREATEREQUEST,
-    output_type=_DISKCREATERESPONSE,
+    output_type=_DISK,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='DiskInfo',
-    full_name='imrpc.DiskService.DiskInfo',
+    name='DiskGet',
+    full_name='imrpc.DiskService.DiskGet',
     index=1,
     containing_service=None,
-    input_type=_DISKINFOREQUEST,
-    output_type=_DISKINFORESPONSE,
+    input_type=_DISKGETREQUEST,
+    output_type=_DISK,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
@@ -747,7 +958,7 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
     index=2,
     containing_service=None,
     input_type=_REPLICACREATEREQUEST,
-    output_type=_REPLICACREATERESPONSE,
+    output_type=_REPLICA,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
@@ -760,27 +971,45 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
+    name='ReplicaGet',
+    full_name='imrpc.DiskService.ReplicaGet',
+    index=4,
+    containing_service=None,
+    input_type=_REPLICAGETREQUEST,
+    output_type=_REPLICA,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
     name='ReplicaList',
     full_name='imrpc.DiskService.ReplicaList',
-    index=4,
+    index=5,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=_REPLICALISTRESPONSE,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='ReplicaInfo',
-    full_name='imrpc.DiskService.ReplicaInfo',
-    index=5,
+    name='EngineCreate',
+    full_name='imrpc.DiskService.EngineCreate',
+    index=6,
     containing_service=None,
-    input_type=_REPLICAINFOREQUEST,
-    output_type=_REPLICAINFORESPONSE,
+    input_type=_ENGINECREATEREQUEST,
+    output_type=_ENGINE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='EngineDelete',
+    full_name='imrpc.DiskService.EngineDelete',
+    index=7,
+    containing_service=None,
+    input_type=_ENGINEDELETEREQUEST,
+    output_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
     name='VersionGet',
     full_name='imrpc.DiskService.VersionGet',
-    index=6,
+    index=8,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=imrpc__pb2._VERSIONRESPONSE,

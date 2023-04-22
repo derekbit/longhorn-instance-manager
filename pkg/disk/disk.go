@@ -57,7 +57,7 @@ func (s *Server) startMonitoring() {
 	}
 }
 
-func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*rpc.DiskCreateResponse, error) {
+func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*rpc.Disk, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"diskName": req.DiskName,
 		"diskPath": req.DiskPath,
@@ -104,24 +104,22 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 
 	info := lvstoreInfos[0]
 
-	return &rpc.DiskCreateResponse{
-		DiskInfo: &rpc.DiskInfo{
-			Id:          diskID,
-			Uuid:        info.UUID,
-			Path:        req.DiskPath,
-			Type:        "block",
-			TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
-			FreeSize:    int64(info.FreeClusters * info.ClusterSize),
-			TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
-			FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
-			BlockSize:   int64(info.BlockSize),
-			ClusterSize: int64(info.ClusterSize),
-			Readonly:    false,
-		},
+	return &rpc.Disk{
+		Id:          diskID,
+		Uuid:        info.UUID,
+		Path:        req.DiskPath,
+		Type:        "block",
+		TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
+		FreeSize:    int64(info.FreeClusters * info.ClusterSize),
+		TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
+		FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
+		BlockSize:   int64(info.BlockSize),
+		ClusterSize: int64(info.ClusterSize),
+		Readonly:    false,
 	}, nil
 }
 
-func (s *Server) DiskInfo(ctx context.Context, req *rpc.DiskInfoRequest) (*rpc.DiskInfoResponse, error) {
+func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Disk, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"diskPath": req.DiskPath,
 	})
@@ -176,24 +174,22 @@ func (s *Server) DiskInfo(ctx context.Context, req *rpc.DiskInfoRequest) (*rpc.D
 
 	info := lvstoreInfos[0]
 
-	return &rpc.DiskInfoResponse{
-		DiskInfo: &rpc.DiskInfo{
-			Id:          diskID,
-			Uuid:        info.UUID,
-			Path:        req.DiskPath,
-			Type:        "block",
-			TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
-			FreeSize:    int64(info.FreeClusters * info.ClusterSize),
-			TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
-			FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
-			BlockSize:   int64(info.BlockSize),
-			ClusterSize: int64(info.ClusterSize),
-			Readonly:    false,
-		},
+	return &rpc.Disk{
+		Id:          diskID,
+		Uuid:        info.UUID,
+		Path:        req.DiskPath,
+		Type:        "block",
+		TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
+		FreeSize:    int64(info.FreeClusters * info.ClusterSize),
+		TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
+		FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
+		BlockSize:   int64(info.BlockSize),
+		ClusterSize: int64(info.ClusterSize),
+		Readonly:    false,
 	}, nil
 }
 
-func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateRequest) (*rpc.ReplicaCreateResponse, error) {
+func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateRequest) (*rpc.Replica, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
@@ -250,21 +246,19 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		return nil, grpcstatus.Error(grpccodes.NotFound, "failed to get name from alias")
 	}
 
-	return &rpc.ReplicaCreateResponse{
-		ReplicaInfo: &rpc.ReplicaInfo{
-			Name:        name,
-			Uuid:        lvolInfo.UUID,
-			BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
-			LvstoreUuid: lvolInfo.DriverSpecific.Lvol.LvolStoreUUID,
+	return &rpc.Replica{
+		Name:        name,
+		Uuid:        lvolInfo.UUID,
+		BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
+		LvstoreUuid: lvolInfo.DriverSpecific.Lvol.LvolStoreUUID,
 
-			TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
-			TotalBlocks: int64(lvolInfo.NumBlocks),
-			BlockSize:   int64(lvolInfo.BlockSize),
+		TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		TotalBlocks: int64(lvolInfo.NumBlocks),
+		BlockSize:   int64(lvolInfo.BlockSize),
 
-			ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
+		ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
 
-			State: types.ProcessStateRunning,
-		},
+		State: types.ProcessStateRunning,
 	}, nil
 }
 
@@ -311,7 +305,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	return &empty.Empty{}, nil
 }
 
-func (s *Server) ReplicaInfo(ctx context.Context, req *rpc.ReplicaInfoRequest) (*rpc.ReplicaInfoResponse, error) {
+func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*rpc.Replica, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
@@ -358,21 +352,19 @@ func (s *Server) ReplicaInfo(ctx context.Context, req *rpc.ReplicaInfoRequest) (
 		return nil, grpcstatus.Error(grpccodes.NotFound, "failed to get name from alias")
 	}
 
-	return &rpc.ReplicaInfoResponse{
-		ReplicaInfo: &rpc.ReplicaInfo{
-			Name:        name,
-			Uuid:        lvolInfo.UUID,
-			BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
-			LvstoreUuid: lvolInfo.DriverSpecific.Lvol.BaseBdev,
+	return &rpc.Replica{
+		Name:        name,
+		Uuid:        lvolInfo.UUID,
+		BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
+		LvstoreUuid: lvolInfo.DriverSpecific.Lvol.BaseBdev,
 
-			TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
-			TotalBlocks: int64(lvolInfo.NumBlocks),
-			BlockSize:   int64(lvolInfo.BlockSize),
+		TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		TotalBlocks: int64(lvolInfo.NumBlocks),
+		BlockSize:   int64(lvolInfo.BlockSize),
 
-			ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
+		ThinProvision: lvolInfo.DriverSpecific.Lvol.ThinProvision,
 
-			State: types.ProcessStateRunning,
-		},
+		State: types.ProcessStateRunning,
 	}, nil
 }
 
@@ -396,7 +388,7 @@ func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.Replic
 	log.Info("Got replica list")
 
 	resp := &rpc.ReplicaListResponse{
-		ReplicaInfos: map[string]*rpc.ReplicaInfo{},
+		Replicas: map[string]*rpc.Replica{},
 	}
 	for _, info := range lvolInfos {
 		name := getNameFromAlias(info.Aliases)
@@ -404,7 +396,7 @@ func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.Replic
 			return nil, grpcstatus.Error(grpccodes.Internal, "Failed to get name from alias")
 		}
 
-		resp.ReplicaInfos[info.Name] = &rpc.ReplicaInfo{
+		resp.Replicas[info.Name] = &rpc.Replica{
 			Name:        name,
 			Uuid:        info.UUID,
 			BdevName:    info.DriverSpecific.Lvol.BaseBdev,
@@ -474,4 +466,12 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Version
 		InstanceManagerDiskServiceAPIVersion:    int64(v.InstanceManagerDiskServiceAPIVersion),
 		InstanceManagerDiskServiceAPIMinVersion: int64(v.InstanceManagerDiskServiceAPIMinVersion),
 	}, nil
+}
+
+func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest) (*rpc.Engine, error) {
+	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
+}
+
+func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
+	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }

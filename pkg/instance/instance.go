@@ -99,32 +99,28 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		}
 		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
-		/*
-			spdkServiceClient, err := client.NewSpdkServiceClient("tcp://"+s.spdkServiceAddress, nil)
-			if err != nil {
-				return nil, err
-			}
-			defer spdkServiceClient.Close()
-
-
-			spdkInstance, err = spdkServiceClient.InstanceCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
-			if err != nil {
-				return nil, err
-			}
-
-			return spdkInstanceResponseToInstanceResponse(process), nil
-		*/
 		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 		if err != nil {
 			return nil, err
 		}
 		defer diskClient.Close()
 
-		replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
-		if err != nil {
-			return nil, err
+		switch req.Spec.Type {
+		case "Engine":
+			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.Size)
+			if err != nil {
+				return nil, err
+			}
+			return engineInfoToInstanceResponse(engine), nil
+		case "Replica":
+			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.DiskUuid, req.Spec.Size)
+			if err != nil {
+				return nil, err
+			}
+			return replicaInfoToInstanceResponse(replica), nil
+		default:
+			return nil, fmt.Errorf("unknown instance type %v", req.Spec.Type)
 		}
-		return replicaInfoToInstanceResponse(replica), nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
 	}
@@ -152,22 +148,6 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 		}
 		return processResponseToInstanceResponse(process), nil
 	case BackendStoreDriverTypeSpdkAio:
-		/*
-			spdkServiceClient, err := client.NewSpdkServiceClient("tcp://"+s.spdkServiceAddress, nil)
-			if err != nil {
-				return nil, err
-			}
-			defer spdkServiceClient.Close()
-
-
-			spdkInstance, err = spdkServiceClient.InstanceDelete(req.Name, req.DiskUuid)
-			if err != nil {
-				return nil, err
-			}
-
-			return spdkInstanceResponseToInstanceResponse(process), nil
-		*/
-
 		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -361,10 +341,21 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	}
 }
 
-func replicaInfoToInstanceResponse(r *rpc.ReplicaInfo) *rpc.InstanceResponse {
+func replicaInfoToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: r.Name,
+		},
+		Status: &rpc.InstanceStatus{
+			State: types.ProcessStateRunning,
+		},
+	}
+}
+
+func engineInfoToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
+	return &rpc.InstanceResponse{
+		Spec: &rpc.InstanceSpec{
+			Name: e.Name,
 		},
 		Status: &rpc.InstanceStatus{
 			State: types.ProcessStateRunning,
