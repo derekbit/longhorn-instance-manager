@@ -229,13 +229,14 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	nqn := spdkutil.GetNQN(req.Name)
-	err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
-	if err != nil {
-		log.WithError(err).Error("Failed to start exposing bdev")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
+	/*
+		nqn := spdkutil.GetNQN(req.Name)
+		err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
+		if err != nil {
+			log.WithError(err).Error("Failed to start exposing bdev")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+	*/
 	log.Info("Created replica")
 
 	lvolInfos, err := spdkCli.BdevLvolGet(uuid, 30)
@@ -495,20 +496,32 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	}
 
 	bdevs := []string{}
-	for name, addr := range req.ReplicaAddressMap {
-		nqn := spdkutil.GetNQN(name)
-		addressComponents := strings.Split(addr, ":")
-		if len(addressComponents) != 2 {
-			return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "Invalid address %v", addr)
-		}
 
-		bdevNameList, err := spdkCli.BdevNvmeAttachController(name, nqn, addressComponents[0], addressComponents[1], spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
-		if err != nil {
-			log.WithError(err).Error("Failed to attach NVMe controller")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-		bdevs = append(bdevs, bdevNameList...)
+	lvolInfos, err := spdkCli.BdevLvolGet("", 30)
+	if err != nil {
+		log.WithError(err).Error("Failed to get lvol infos")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
+	for _, info := range lvolInfos {
+		bdevs = append(bdevs, info.Aliases[0])
+	}
+
+	/*
+		for name, addr := range req.ReplicaAddressMap {
+			nqn := spdkutil.GetNQN(name)
+			addressComponents := strings.Split(addr, ":")
+			if len(addressComponents) != 2 {
+				return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "Invalid address %v", addr)
+			}
+
+			bdevNameList, err := spdkCli.BdevNvmeAttachController(name, nqn, addressComponents[0], addressComponents[1], spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
+			if err != nil {
+				log.WithError(err).Error("Failed to attach NVMe controller")
+				return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+			}
+			bdevs = append(bdevs, bdevNameList...)
+		}
+	*/
 
 	created, err := spdkCli.BdevRaidCreate(req.Name, spdktypes.BdevRaidLevelRaid1, 0, bdevs)
 	if err != nil {
@@ -539,7 +552,14 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
+	logrus.Infof("Debug ===> nvmeCli=%+v", nvmeCli)
+
+	return &rpc.Engine{
+		Name:              req.Name,
+		Address:           req.Address,
+		ReplicaAddressMap: req.ReplicaAddressMap,
+		Frontend:          req.Frontend,
+	}, nil
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {

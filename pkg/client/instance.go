@@ -226,7 +226,6 @@ func (c *InstanceServiceClient) InstanceReplace(name, instanceType, backendStore
 }
 
 func (c *InstanceServiceClient) VersionGet() (*meta.VersionOutput, error) {
-
 	client := c.getControllerServiceClient()
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
