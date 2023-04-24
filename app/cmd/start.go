@@ -169,7 +169,7 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager process manager gRPC server listening to %v", listen)
 
 	// Start disk server
-	diskRpcServer, diskRpcListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, shutdownCh)
+	diskRpcServer, diskRpcListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -211,8 +211,8 @@ func getServiceAddresses(listen string) (processManagerServiceAddress, proxyServ
 		nil
 }
 
-func setupDiskGrpcServer(listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
-	ds, err := disk.NewServer(shutdownCh)
+func setupDiskGrpcServer(listen string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	ds, err := disk.NewServer(spdkEnabled, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}

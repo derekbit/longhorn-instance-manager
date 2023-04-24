@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
@@ -29,16 +31,21 @@ import (
 const (
 	defaultClusterSize = 4 * 1024 * 1024 // 4MB
 
-	devPath = "/dev/longhorn/"
+	devPath = "/dev/longhorn"
 )
 
 type Server struct {
 	shutdownCh    chan error
 	HealthChecker HealthChecker
+
+	spdkEnabled bool
+	spdkClient  *spdkclient.Client
+	sync.Mutex
 }
 
-func NewServer(shutdownCh chan error) (*Server, error) {
+func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 	s := &Server{
+		spdkEnabled:   spdkEnabled,
 		shutdownCh:    shutdownCh,
 		HealthChecker: &GRPCHealthChecker{},
 	}
@@ -46,6 +53,21 @@ func NewServer(shutdownCh chan error) (*Server, error) {
 	go s.startMonitoring()
 
 	return s, nil
+}
+
+func (s *Server) getSpdkClient() (*spdkclient.Client, error) {
+	if s.spdkEnabled {
+		if s.spdkClient == nil {
+			spdkClient, err := spdkclient.NewClient()
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to create spdk client")
+			}
+
+			s.spdkClient = spdkClient
+		}
+	}
+
+	return s.spdkClient, nil
 }
 
 func (s *Server) startMonitoring() {
@@ -63,88 +85,39 @@ func (s *Server) startMonitoring() {
 	}
 }
 
-func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*rpc.Disk, error) {
-	log := logrus.WithFields(logrus.Fields{
-		"diskName": req.DiskName,
-		"diskPath": req.DiskPath,
-	})
-
-	log.Info("Creating disk")
-
-	spdkCli, err := spdkclient.NewClient()
+func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInfo, error) {
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	diskPath := getDiskPath(req.DiskPath)
-	bdevName, err := spdkCli.BdevAioCreate(diskPath, req.DiskName, 4096)
-	if err != nil {
-		log.WithError(err).Error("Failed to create AIO bdev")
-		return nil, grpcstatus.Error(grpccodes.NotFound, err.Error())
+	if spdkClient == nil {
+		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, "SPDK is not enabled")
 	}
 
-	uuid, err := spdkCli.BdevLvolCreateLvstore(bdevName, req.DiskName, defaultClusterSize)
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore(lvsName, uuid)
 	if err != nil {
-		log.WithError(err).Error("Failed to create lvstore")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get lvstore info")
 	}
 
-	lvstoreInfos, err := spdkCli.BdevLvolGetLvstore("", uuid)
-	if err != nil {
-		log.WithError(err).Error("Failed to get lvstore info")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
 	if len(lvstoreInfos) != 1 {
-		log.WithError(err).Error("Number of lvstore info is not 1")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, fmt.Errorf("number of lvstores with UUID %v is not 1", uuid)
 	}
 
-	log.Info("Created disk")
-
-	diskID, err := getDeviceNumber(diskPath)
-	if err != nil {
-		log.WithError(err).Error("Failed to get disk ID")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	info := lvstoreInfos[0]
-
-	return &rpc.Disk{
-		Id:          diskID,
-		Uuid:        info.UUID,
-		Path:        req.DiskPath,
-		Type:        "block",
-		TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
-		FreeSize:    int64(info.FreeClusters * info.ClusterSize),
-		TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
-		FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
-		BlockSize:   int64(info.BlockSize),
-		ClusterSize: int64(info.ClusterSize),
-		Readonly:    false,
-	}, nil
+	return &lvstoreInfos[0], nil
 }
 
-func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Disk, error) {
-	log := logrus.WithFields(logrus.Fields{
-		"diskPath": req.DiskPath,
-	})
-
-	log.Info("Getting disk info")
-
-	spdkCli, err := spdkclient.NewClient()
+func (s *Server) getBdevNameFromDiskPath(diskPath string) (string, error) {
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return "", errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	bdevInfos, err := spdkCli.BdevGetBdevs("", 30)
+	bdevInfos, err := spdkClient.BdevGetBdevs("", 30)
 	if err != nil {
-		log.WithError(err).Error("Failed to get bdev infos")
-		return nil, grpcstatus.Error(grpccodes.NotFound, err.Error())
+		return "", grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdevs").Error())
 	}
 
-	diskPath := getDiskPath(req.DiskPath)
 	bdevName := ""
 	for _, info := range bdevInfos {
 		if info.DriverSpecific != nil &&
@@ -153,21 +126,100 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 			bdevName = info.Name
 		}
 	}
+
 	if bdevName == "" {
-		log.WithError(err).Error("Failed to find bdev name")
-		return nil, grpcstatus.Errorf(grpccodes.NotFound, "failed to find bdev name for disk path %v", diskPath)
+		return "", grpcstatus.Error(grpccodes.NotFound, errors.Errorf("failed to find bdev with disk path %v", diskPath).Error())
+	}
+
+	return bdevName, nil
+}
+
+func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*rpc.Disk, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	log := logrus.WithFields(logrus.Fields{
+		"diskName": req.DiskName,
+		"diskPath": req.DiskPath,
+	})
+
+	log.Info("Creating disk")
+
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spdk client")
+	}
+
+	diskPath := getDiskPath(req.DiskPath)
+
+	bdevName, err := spdkClient.BdevAioCreate(diskPath, req.DiskName, 4096)
+	if err != nil {
+		resp, parseErr := parseErrorMessage(err.Error())
+		if parseErr != nil || resp.Message == syscall.Errno(syscall.EEXIST).Error() {
+			log.WithError(err).Error("Failed to create AIO bdev")
+			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to create AIO bdev").Error())
+		}
+	}
+
+	uuid, err := spdkClient.BdevLvolCreateLvstore(bdevName, req.DiskName, defaultClusterSize)
+	if err != nil {
+		log.WithError(err).Error("Failed to create lvstore")
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create lvstore").Error())
+	}
+
+	lvstoreInfo, err := s.bdevLvolGetLvstore("", uuid)
+	if err != nil {
+		log.WithError(err).Error("Failed to get lvstore with name %v and UUID %v", req.DiskName, uuid)
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get lvstore with name %v and UUID %v", req.DiskName, uuid).Error())
+	}
+
+	log.Info("Created disk")
+
+	// A disk does not have a fsid, so we use the device number as the disk ID
+	diskID, err := getDeviceNumber(diskPath)
+	if err != nil {
+		log.WithError(err).Error("Failed to get disk ID")
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get disk ID").Error())
+	}
+
+	return &rpc.Disk{
+		Id:          diskID,
+		Uuid:        lvstoreInfo.UUID,
+		Path:        req.DiskPath,
+		Type:        DiskTypeBlock,
+		TotalSize:   int64(lvstoreInfo.TotalDataClusters * lvstoreInfo.ClusterSize),
+		FreeSize:    int64(lvstoreInfo.FreeClusters * lvstoreInfo.ClusterSize),
+		TotalBlocks: int64(lvstoreInfo.TotalDataClusters * lvstoreInfo.ClusterSize / lvstoreInfo.BlockSize),
+		FreeBlocks:  int64(lvstoreInfo.FreeClusters * lvstoreInfo.ClusterSize / lvstoreInfo.BlockSize),
+		BlockSize:   int64(lvstoreInfo.BlockSize),
+		ClusterSize: int64(lvstoreInfo.ClusterSize),
+		Readonly:    false,
+	}, nil
+}
+
+func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Disk, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	log := logrus.WithFields(logrus.Fields{
+		"diskPath": req.DiskPath,
+	})
+
+	log.Info("Getting disk info")
+
+	diskPath := getDiskPath(req.DiskPath)
+
+	bdevName, err := s.getBdevNameFromDiskPath(diskPath)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get bdev name for disk path %v", diskPath)
+		return nil, grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdev name for disk path %v", diskPath).Error())
 	}
 
 	lvstoreName := bdevName
-	lvstoreInfos, err := spdkCli.BdevLvolGetLvstore(lvstoreName, "")
+	lvstoreInfo, err := s.bdevLvolGetLvstore(lvstoreName, "")
 	if err != nil {
-		log.WithError(err).Error("Failed to get lvstore info")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	if len(lvstoreInfos) != 1 {
-		log.WithError(err).Error("Number of lvstore info is not 1")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		log.WithError(err).Errorf("Failed to get %v lvstore", lvstoreName)
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get %v lvstore", lvstoreName).Error())
 	}
 
 	log.Info("Got disk info")
@@ -175,27 +227,28 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 	diskID, err := getDeviceNumber(diskPath)
 	if err != nil {
 		log.WithError(err).Error("Failed to get disk ID")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get disk ID").Error())
 	}
-
-	info := lvstoreInfos[0]
 
 	return &rpc.Disk{
 		Id:          diskID,
-		Uuid:        info.UUID,
+		Uuid:        lvstoreInfo.UUID,
 		Path:        req.DiskPath,
-		Type:        "block",
-		TotalSize:   int64(info.TotalDataClusters * info.ClusterSize),
-		FreeSize:    int64(info.FreeClusters * info.ClusterSize),
-		TotalBlocks: int64(info.TotalDataClusters * info.ClusterSize / info.BlockSize),
-		FreeBlocks:  int64(info.FreeClusters * info.ClusterSize / info.BlockSize),
-		BlockSize:   int64(info.BlockSize),
-		ClusterSize: int64(info.ClusterSize),
+		Type:        DiskTypeBlock,
+		TotalSize:   int64(lvstoreInfo.TotalDataClusters * lvstoreInfo.ClusterSize),
+		FreeSize:    int64(lvstoreInfo.FreeClusters * lvstoreInfo.ClusterSize),
+		TotalBlocks: int64(lvstoreInfo.TotalDataClusters * lvstoreInfo.ClusterSize / lvstoreInfo.BlockSize),
+		FreeBlocks:  int64(lvstoreInfo.FreeClusters * lvstoreInfo.ClusterSize / lvstoreInfo.BlockSize),
+		BlockSize:   int64(lvstoreInfo.BlockSize),
+		ClusterSize: int64(lvstoreInfo.ClusterSize),
 		Readonly:    false,
 	}, nil
 }
 
 func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateRequest) (*rpc.Replica, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
@@ -205,14 +258,13 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 
 	log.Info("Creating replica")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
 	lvstoreUUID := req.LvstoreUuid
-	lvstoreInfos, err := spdkCli.BdevLvolGetLvstore("", lvstoreUUID)
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", lvstoreUUID)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvstore info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -227,7 +279,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 
 	sizeInMib := uint64(req.Size / 1024 / 1024)
 
-	uuid, err := spdkCli.BdevLvolCreate(lvstoreInfo.Name, req.Name, "", sizeInMib, spdktypes.BdevLvolClearMethodUnmap, true)
+	uuid, err := spdkClient.BdevLvolCreate(lvstoreInfo.Name, req.Name, "", sizeInMib, spdktypes.BdevLvolClearMethodUnmap, true)
 	if err != nil {
 		log.WithError(err).Error("Failed to create lvol")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -243,7 +295,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	*/
 	log.Info("Created replica")
 
-	lvolInfos, err := spdkCli.BdevLvolGet(uuid, 30)
+	lvolInfos, err := spdkClient.BdevLvolGet(uuid, 30)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -278,6 +330,9 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteRequest) (*empty.Empty, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
@@ -285,13 +340,12 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 
 	log.Info("Deleting replica")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	lvstoreInfos, err := spdkCli.BdevLvolGetLvstore("", req.LvstoreUuid)
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
 	if err != nil {
 		log.WithError(err).Error("Failed to list lvstore info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -304,7 +358,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	}
 
 	aliasName := lvstoreName + "/" + req.Name
-	deleted, err := spdkCli.BdevLvolDelete(aliasName)
+	deleted, err := spdkClient.BdevLvolDelete(aliasName)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete lvol")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -321,6 +375,9 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 }
 
 func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*rpc.Replica, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
@@ -328,13 +385,12 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 
 	log.Info("Getting replica info")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	lvstoreInfos, err := spdkCli.BdevLvolGetLvstore("", req.LvstoreUuid)
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
 	if err != nil {
 		log.WithError(err).Error("Failed to list lvstore info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -347,7 +403,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 	}
 
 	aliasName := lvstoreName + "/" + req.Name
-	lvolInfos, err := spdkCli.BdevLvolGet(aliasName, 30)
+	lvolInfos, err := spdkClient.BdevLvolGet(aliasName, 30)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -384,17 +440,19 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 }
 
 func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.ReplicaListResponse, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{})
 
 	log.Info("Getting replica list")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	lvolInfos, err := spdkCli.BdevLvolGet("", 30)
+	lvolInfos, err := spdkClient.BdevLvolGet("", 30)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -484,6 +542,9 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Version
 }
 
 func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest) (*rpc.Engine, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{
 		"name":              req.Name,
 		"volumeName":        req.VolumeName,
@@ -494,15 +555,14 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 
 	log.Info("Deleting replica")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
 	bdevs := []string{}
 
-	lvolInfos, err := spdkCli.BdevLvolGet("", 30)
+	lvolInfos, err := spdkClient.BdevLvolGet("", 30)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -528,7 +588,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		}
 	*/
 
-	created, err := spdkCli.BdevRaidCreate(req.Name, spdktypes.BdevRaidLevelRaid1, 0, bdevs)
+	created, err := spdkClient.BdevRaidCreate(req.Name, spdktypes.BdevRaidLevelRaid1, 0, bdevs)
 	if err != nil {
 		log.WithError(err).Error("Failed to create RAID")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -539,7 +599,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	}
 
 	raidNQN := spdkutil.GetNQN(req.Name)
-	err = spdkCli.StartExposeBdev(raidNQN, req.Name, "127.0.0.1", "4422")
+	err = spdkClient.StartExposeBdev(raidNQN, req.Name, "127.0.0.1", "4422")
 	if err != nil {
 		log.WithError(err).Error("Failed to start exposing bdev")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -574,23 +634,28 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }
 
 func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc.Engine, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{
 		"name": req.Name,
 	})
 
 	log.Info("Getting engine info")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
 
-	bdevRaidInfos, err := spdkCli.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	bdevRaidInfos, err := spdkClient.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
 	if err != nil {
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -625,22 +690,22 @@ func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc
 }
 
 func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineListResponse, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	log := logrus.WithFields(logrus.Fields{})
 
 	log.Info("Getting engine list")
 
-	spdkCli, err := spdkclient.NewClient()
+	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		log.WithError(err).Error("Failed to create SPDK client")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
-
-	log.Info("Got engine list")
 
 	resp := &rpc.EngineListResponse{
 		Engines: map[string]*rpc.Engine{},
 	}
-	bdevRaidInfos, err := spdkCli.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	bdevRaidInfos, err := spdkClient.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
 	if err != nil {
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -665,6 +730,8 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 
 		resp.Engines[info.Name] = engine
 	}
+
+	log.Info("Got engine list")
 
 	return resp, nil
 }
