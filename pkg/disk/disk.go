@@ -155,7 +155,8 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 	bdevName, err := spdkClient.BdevAioCreate(diskPath, req.DiskName, 4096)
 	if err != nil {
 		resp, parseErr := parseErrorMessage(err.Error())
-		if parseErr != nil || resp.Message == syscall.Errno(syscall.EEXIST).Error() {
+		logrus.Infof("Debug ===> resp=%+v", resp)
+		if parseErr != nil || !strings.EqualFold(resp.Message, syscall.Errno(syscall.EEXIST).Error()) {
 			log.WithError(err).Error("Failed to create AIO bdev")
 			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to create AIO bdev").Error())
 		}
