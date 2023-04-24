@@ -3,6 +3,7 @@ package disk
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -155,7 +156,6 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 	bdevName, err := spdkClient.BdevAioCreate(diskPath, req.DiskName, 4096)
 	if err != nil {
 		resp, parseErr := parseErrorMessage(err.Error())
-		logrus.Infof("Debug ===> resp=%+v", resp)
 		if parseErr != nil || !strings.EqualFold(resp.Message, syscall.Errno(syscall.EEXIST).Error()) {
 			log.WithError(err).Error("Failed to create AIO bdev")
 			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to create AIO bdev").Error())
@@ -286,14 +286,17 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
+	////
 	/*
 		nqn := spdkutil.GetNQN(req.Name)
-		err = spdkCli.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
+		err = spdkClient.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
 		if err != nil {
 			log.WithError(err).Error("Failed to start exposing bdev")
 			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 		}
 	*/
+	////
+
 	log.Info("Created replica")
 
 	lvolInfos, err := spdkClient.BdevLvolGet(uuid, 30)
@@ -554,7 +557,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		"frontend":          req.Frontend,
 	})
 
-	log.Info("Deleting replica")
+	log.Info("Creating engine")
 
 	spdkClient, err := s.getSpdkClient()
 	if err != nil {
@@ -622,7 +625,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 
 	err = createLonghornDevice(filepath.Join("/dev", nvmeCli.ControllerName)+"n1", req.VolumeName)
 	if err != nil {
-		log.WithError(err).Error("Failed to create device node")
+		log.WithError(err).Error("Failed to create longhorn device")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
@@ -637,6 +640,13 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
 	s.Lock()
 	defer s.Unlock()
+
+	log := logrus.WithFields(logrus.Fields{
+		"name": req.Name,
+	})
+
+	log.Info("Deleting engine")
+	log.Info("Deleted engine")
 
 	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }
@@ -739,6 +749,13 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 
 func createLonghornDevice(devicePath, name string) error {
 	logrus.Infof("Creating longhorn device: devicePath=%s, name=%s", devicePath, name)
+
+	if _, err := os.Stat(devPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(devPath, 0755); err != nil {
+			logrus.Fatalf("device %v: Cannot create directory %v", name, devPath)
+		}
+	}
+
 	// Get the major and minor numbers of the NVMe device.
 	major, minor, err := getDeviceNumbers(devicePath)
 	if err != nil {
@@ -779,4 +796,24 @@ func mknod(device string, major, minor uint32) error {
 
 	logrus.Infof("Creating device %s %d:%d", device, major, minor)
 	return unix.Mknod(device, uint32(fileMode), dev)
+}
+
+func isHostIP(ipStr string) (bool, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get interface addresses")
+	}
+
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false, fmt.Errorf("%s is not a valid IP address", ipStr)
+	}
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.Contains(ip) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
