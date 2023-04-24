@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -556,9 +557,11 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
+	time.Sleep(5 * time.Second)
+
 	logrus.Infof("Debug ===> nvmeCli=%+v", nvmeCli)
 
-	err = createLonghornDevice(nvmeCli.ControllerName+"n1", req.VolumeName)
+	err = createLonghornDevice(filepath.Join("/dev", nvmeCli.ControllerName)+"n1", req.VolumeName)
 	if err != nil {
 		log.WithError(err).Error("Failed to create device node")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
