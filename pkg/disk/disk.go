@@ -559,8 +559,6 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 
 	time.Sleep(5 * time.Second)
 
-	logrus.Infof("Debug ===> nvmeCli=%+v", nvmeCli)
-
 	err = createLonghornDevice(filepath.Join("/dev", nvmeCli.ControllerName)+"n1", req.VolumeName)
 	if err != nil {
 		log.WithError(err).Error("Failed to create device node")
@@ -579,10 +577,96 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
 }
 
+func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc.Engine, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"name": req.Name,
+	})
+
+	log.Info("Getting engine info")
+
+	spdkCli, err := spdkclient.NewClient()
+	if err != nil {
+		log.WithError(err).Error("Failed to create SPDK client")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	bdevRaidInfos, err := spdkCli.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	if err != nil {
+		log.WithError(err).Error("Failed to get bdev raid infos")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	for _, info := range bdevRaidInfos {
+		if info.Name != req.Name {
+			continue
+		}
+
+		engine := &rpc.Engine{
+			Name:              info.Name,
+			Uuid:              "",
+			Size:              0,
+			Address:           "",
+			ReplicaAddressMap: map[string]string{},
+			ReplicaModeMap:    map[string]rpc.ReplicaMode{},
+			Endpoint:          "",
+			Frontend:          "",
+		}
+
+		if info.State == spdktypes.BdevRaidCategoryOffline {
+			engine.FrontendState = "down"
+		} else {
+			engine.FrontendState = "up"
+		}
+
+		return engine, nil
+	}
+
+	return nil, grpcstatus.Error(grpccodes.NotFound, "")
+}
+
 func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineListResponse, error) {
-	return &rpc.EngineListResponse{
+	log := logrus.WithFields(logrus.Fields{})
+
+	log.Info("Getting engine list")
+
+	spdkCli, err := spdkclient.NewClient()
+	if err != nil {
+		log.WithError(err).Error("Failed to create SPDK client")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	log.Info("Got engine list")
+
+	resp := &rpc.EngineListResponse{
 		Engines: map[string]*rpc.Engine{},
-	}, nil
+	}
+	bdevRaidInfos, err := spdkCli.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	if err != nil {
+		log.WithError(err).Error("Failed to get bdev raid infos")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+	for _, info := range bdevRaidInfos {
+		engine := &rpc.Engine{
+			Name:              info.Name,
+			Uuid:              "",
+			Size:              0,
+			Address:           "",
+			ReplicaAddressMap: map[string]string{},
+			ReplicaModeMap:    map[string]rpc.ReplicaMode{},
+			Endpoint:          "",
+			Frontend:          "",
+		}
+
+		if info.State == spdktypes.BdevRaidCategoryOffline {
+			engine.FrontendState = "down"
+		} else {
+			engine.FrontendState = "up"
+		}
+
+		resp.Engines[info.Name] = engine
+	}
+
+	return resp, nil
 }
 
 func createLonghornDevice(devicePath, name string) error {

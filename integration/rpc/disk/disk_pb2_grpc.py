@@ -56,6 +56,11 @@ class DiskServiceStub(object):
         request_serializer=disk__pb2.EngineDeleteRequest.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
+    self.EngineGet = channel.unary_unary(
+        '/imrpc.DiskService/EngineGet',
+        request_serializer=disk__pb2.EngineGetRequest.SerializeToString,
+        response_deserializer=disk__pb2.Engine.FromString,
+        )
     self.EngineList = channel.unary_unary(
         '/imrpc.DiskService/EngineList',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -128,6 +133,13 @@ class DiskServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def EngineGet(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def EngineList(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -184,6 +196,11 @@ def add_DiskServiceServicer_to_server(servicer, server):
           servicer.EngineDelete,
           request_deserializer=disk__pb2.EngineDeleteRequest.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
+      'EngineGet': grpc.unary_unary_rpc_method_handler(
+          servicer.EngineGet,
+          request_deserializer=disk__pb2.EngineGetRequest.FromString,
+          response_serializer=disk__pb2.Engine.SerializeToString,
       ),
       'EngineList': grpc.unary_unary_rpc_method_handler(
           servicer.EngineList,

@@ -200,12 +200,22 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 			return nil, err
 		}
 		defer diskClient.Close()
-
-		replica, err := diskClient.ReplicaGet(req.Name, req.DiskUuid)
-		if err != nil {
-			return nil, err
+		switch req.Type {
+		case types.InstanceTypeEngine:
+			engine, err := diskClient.EngineGet(req.Name)
+			if err != nil {
+				return nil, err
+			}
+			return engineInfoToInstanceResponse(engine), nil
+		case types.InstanceTypeReplica:
+			replica, err := diskClient.ReplicaGet(req.Name, req.DiskUuid)
+			if err != nil {
+				return nil, err
+			}
+			return replicaInfoToInstanceResponse(replica), nil
+		default:
+			return nil, fmt.Errorf("unknown instance type %v", req.Type)
 		}
-		return replicaInfoToInstanceResponse(replica), nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
