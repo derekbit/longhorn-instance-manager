@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	grpccodes "google.golang.org/grpc/codes"
@@ -26,6 +27,8 @@ import (
 
 const (
 	defaultClusterSize = 4 * 1024 * 1024 // 4MB
+
+	devPath = "/dev/longhorn/"
 )
 
 type Server struct {
@@ -482,6 +485,7 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Version
 func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest) (*rpc.Engine, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"name":              req.Name,
+		"volumeName":        req.VolumeName,
 		"address":           req.Address,
 		"replicaAddressMap": req.ReplicaAddressMap,
 		"frontend":          req.Frontend,
@@ -554,6 +558,12 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 
 	logrus.Infof("Debug ===> nvmeCli=%+v", nvmeCli)
 
+	err = createLonghornDevice(nvmeCli.ControllerName+"n1", req.VolumeName)
+	if err != nil {
+		log.WithError(err).Error("Failed to create device node")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
 	return &rpc.Engine{
 		Name:              req.Name,
 		Address:           req.Address,
@@ -570,4 +580,48 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 	return &rpc.EngineListResponse{
 		Engines: map[string]*rpc.Engine{},
 	}, nil
+}
+
+func createLonghornDevice(devicePath, name string) error {
+	logrus.Infof("Creating longhorn device: devicePath=%s, name=%s", devicePath, name)
+	// Get the major and minor numbers of the NVMe device.
+	major, minor, err := getDeviceNumbers(devicePath)
+	if err != nil {
+		return err
+	}
+
+	longhornDevPath := filepath.Join(devPath, name)
+
+	return duplicateDevice(major, minor, longhornDevPath)
+}
+
+func getDeviceNumbers(devicePath string) (major, minor uint32, err error) {
+	fileInfo, err := os.Stat(devicePath)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	statT := fileInfo.Sys().(*syscall.Stat_t)
+	major = uint32(int(statT.Rdev) >> 8)
+	minor = uint32(int(statT.Rdev) & 0xFF)
+	return major, minor, nil
+}
+
+func duplicateDevice(major, minor uint32, dest string) error {
+	if err := mknod(dest, major, minor); err != nil {
+		return fmt.Errorf("couldn't create device %s: %w", dest, err)
+	}
+	if err := os.Chmod(dest, 0660); err != nil {
+		return fmt.Errorf("couldn't change permission of the device %s: %w", dest, err)
+	}
+	return nil
+}
+
+func mknod(device string, major, minor uint32) error {
+	var fileMode os.FileMode = 0660
+	fileMode |= unix.S_IFBLK
+	dev := int(unix.Mkdev(uint32(major), uint32(minor)))
+
+	logrus.Infof("Creating device %s %d:%d", device, major, minor)
+	return unix.Mknod(device, uint32(fileMode), dev)
 }
