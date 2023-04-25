@@ -113,13 +113,13 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 			if err != nil {
 				return nil, err
 			}
-			return engineInfoToInstanceResponse(engine), nil
+			return engineResponseToInstanceResponse(engine), nil
 		case types.InstanceTypeReplica:
 			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, req.Spec.SpdkSpecific.Address)
 			if err != nil {
 				return nil, err
 			}
-			return replicaInfoToInstanceResponse(replica), nil
+			return replicaResponseToInstanceResponse(replica), nil
 		default:
 			return nil, fmt.Errorf("unknown instance type %v", req.Spec.Type)
 		}
@@ -206,13 +206,13 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 			if err != nil {
 				return nil, err
 			}
-			return engineInfoToInstanceResponse(engine), nil
+			return engineResponseToInstanceResponse(engine), nil
 		case types.InstanceTypeReplica:
 			replica, err := diskClient.ReplicaGet(req.Name, req.DiskUuid)
 			if err != nil {
 				return nil, err
 			}
-			return replicaInfoToInstanceResponse(replica), nil
+			return replicaResponseToInstanceResponse(replica), nil
 		default:
 			return nil, fmt.Errorf("unknown instance type %v", req.Type)
 		}
@@ -253,7 +253,7 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 			return nil, err
 		} else {
 			for _, replica := range replicas {
-				instances[replica.Name] = replicaInfoToInstanceResponse(replica)
+				instances[replica.Name] = replicaResponseToInstanceResponse(replica)
 			}
 		}
 
@@ -261,7 +261,7 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 			return nil, err
 		} else {
 			for _, engine := range engines {
-				instances[engine.Name] = engineInfoToInstanceResponse(engine)
+				instances[engine.Name] = engineResponseToInstanceResponse(engine)
 			}
 		}
 	}
@@ -372,6 +372,9 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: p.Spec.Name,
+			// Set Type to empty string, and longhorn-manager will determine the type
+			Type:               "",
+			BackendStoreDriver: BackendStoreDriverTypeLonghorn,
 			ProcessSpecific: &rpc.ProcessSpecific{
 				Binary: p.Spec.Binary,
 				Args:   p.Spec.Args,
@@ -389,11 +392,12 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	}
 }
 
-func replicaInfoToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
+func replicaResponseToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
-			Name: r.Name,
-			Type: types.InstanceTypeReplica,
+			Name:               r.Name,
+			Type:               types.InstanceTypeReplica,
+			BackendStoreDriver: BackendStoreDriverTypeSpdkAio,
 		},
 		Status: &rpc.InstanceStatus{
 			State:     types.ProcessStateRunning,
@@ -403,14 +407,18 @@ func replicaInfoToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 	}
 }
 
-func engineInfoToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
+func engineResponseToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
-			Name: e.Name,
-			Type: types.InstanceTypeEngine,
+			Name:               e.Name,
+			Type:               types.InstanceTypeEngine,
+			BackendStoreDriver: BackendStoreDriverTypeSpdkAio,
 		},
 		Status: &rpc.InstanceStatus{
-			State: types.ProcessStateRunning,
+			State:     types.ProcessStateRunning,
+			ErrorMsg:  "",
+			PortStart: 0,
+			PortEnd:   0,
 		},
 	}
 }
