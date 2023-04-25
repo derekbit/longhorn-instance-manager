@@ -170,7 +170,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 
 	lvstoreInfo, err := s.bdevLvolGetLvstore("", uuid)
 	if err != nil {
-		log.WithError(err).Error("Failed to get lvstore with name %v and UUID %v", req.DiskName, uuid)
+		log.WithError(err).Errorf("Failed to get lvstore with name %v and UUID %v", req.DiskName, uuid)
 		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get lvstore with name %v and UUID %v", req.DiskName, uuid).Error())
 	}
 
