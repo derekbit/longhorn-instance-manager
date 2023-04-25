@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	BackendStoreDriverTypeLonghorn = "longhorn"
-	BackendStoreDriverTypeSpdkAio  = "spdk-aio"
+	BackendStoreDriverTypeUndefined = ""
+	BackendStoreDriverTypeLonghorn  = "longhorn"
+	BackendStoreDriverTypeSpdkAio   = "spdk-aio"
 )
 
 type Server struct {
@@ -233,12 +234,12 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 	}
 	defer pmClient.Close()
 
-	if processes, err := pmClient.ProcessList(); err != nil {
+	processes, err := pmClient.ProcessList()
+	if err != nil {
 		return nil, err
-	} else {
-		for _, process := range processes {
-			instances[process.Spec.Name] = processResponseToInstanceResponse(process)
-		}
+	}
+	for _, process := range processes {
+		instances[process.Spec.Name] = processResponseToInstanceResponse(process)
 	}
 
 	// Collect spdk instances as instances
@@ -249,20 +250,20 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 		}
 		defer diskClient.Close()
 
-		if replicas, err := diskClient.ReplicaList(); err != nil {
+		replicas, err := diskClient.ReplicaList()
+		if err != nil {
 			return nil, err
-		} else {
-			for _, replica := range replicas {
-				instances[replica.Name] = replicaResponseToInstanceResponse(replica)
-			}
+		}
+		for _, replica := range replicas {
+			instances[replica.Name] = replicaResponseToInstanceResponse(replica)
 		}
 
-		if engines, err := diskClient.EngineList(); err != nil {
+		engines, err := diskClient.EngineList()
+		if err != nil {
 			return nil, err
-		} else {
-			for _, engine := range engines {
-				instances[engine.Name] = engineResponseToInstanceResponse(engine)
-			}
+		}
+		for _, engine := range engines {
+			instances[engine.Name] = engineResponseToInstanceResponse(engine)
 		}
 	}
 
@@ -372,8 +373,8 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: p.Spec.Name,
-			// Set Type to empty string, and longhorn-manager will determine the type
-			Type:               "",
+			// Leave Type empty. It will be determined in longhorn manager.
+			Type:               BackendStoreDriverTypeUndefined,
 			BackendStoreDriver: BackendStoreDriverTypeLonghorn,
 			ProcessSpecific: &rpc.ProcessSpecific{
 				Binary: p.Spec.Binary,

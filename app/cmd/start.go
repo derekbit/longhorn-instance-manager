@@ -125,13 +125,13 @@ func start(c *cli.Context) (err error) {
 	}
 
 	// Start instance server
-	instanceRpcServer, instanceRpcListener, err := setupInstanceGrpcServer(logsDir,
+	instanceRPCServer, instanceRPCListener, err := setupInstanceGrpcServer(logsDir,
 		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
 	go func() {
-		if err := instanceRpcServer.Serve(instanceRpcListener); err != nil {
+		if err := instanceRPCServer.Serve(instanceRPCListener); err != nil {
 			logrus.WithError(err).Error("Stopping instance gRPC server")
 		}
 		// graceful shutdown before exit
@@ -140,12 +140,12 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager instance gRPC server listening to %v", instanceServiceAddress)
 
 	// Start proxy server
-	proxyRpcServer, proxyRpcListener, err := setupProxyGrpcServer(logsDir, proxyServiceAddress, tlsConfig, shutdownCh)
+	proxyRPCServer, proxyRPCListener, err := setupProxyGrpcServer(logsDir, proxyServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
 	go func() {
-		if err := proxyRpcServer.Serve(proxyRpcListener); err != nil {
+		if err := proxyRPCServer.Serve(proxyRPCListener); err != nil {
 			logrus.WithError(err).Error("Stopping proxy gRPC server")
 		}
 		// graceful shutdown before exit
@@ -154,12 +154,12 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyServiceAddress)
 
 	// Start process manager server
-	pm, pmRpcServer, pmRpcListener, err := setupProcessManagerGrpcServer(portRange, logsDir, processManagerServiceAddress, tlsConfig, shutdownCh)
+	pm, pmRPCServer, pmRPCListener, err := setupProcessManagerGrpcServer(portRange, logsDir, processManagerServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
 	go func() {
-		if err := pmRpcServer.Serve(pmRpcListener); err != nil {
+		if err := pmRPCServer.Serve(pmRPCListener); err != nil {
 			logrus.WithError(err).Error("Stopping process manager gRPC server")
 		}
 		// graceful shutdown before exit
@@ -169,12 +169,12 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager process manager gRPC server listening to %v", listen)
 
 	// Start disk server
-	diskRpcServer, diskRpcListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
+	diskRPCServer, diskRPCListener, err := setupDiskGrpcServer(diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
 	go func() {
-		if err := diskRpcServer.Serve(diskRpcListener); err != nil {
+		if err := diskRPCServer.Serve(diskRPCListener); err != nil {
 			logrus.WithError(err).Error("Stopping disk gRPC server")
 		}
 		// graceful shutdown before exit
@@ -187,7 +187,7 @@ func start(c *cli.Context) (err error) {
 	go func() {
 		sig := <-sigs
 		logrus.Infof("Instance Manager received %v to exit", sig)
-		pmRpcServer.Stop()
+		pmRPCServer.Stop()
 	}()
 
 	return <-shutdownCh
