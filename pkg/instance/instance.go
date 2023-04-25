@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -346,24 +349,85 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 }
 
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+	ctx := context.Background()
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return s.watchProcess(ctx, req, srv)
+	})
+
+	g.Go(func() error {
+		return s.watchSpdkReplica(ctx, req, srv)
+	})
+
+	if err := g.Wait(); err != nil {
+		return errors.Wrap(err, "failed to watch instances")
+	}
+
+	return nil
+}
+
+func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+	logrus.Info("Start watching SPDK replica")
+
+	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to create DiskServiceClient")
+	}
+	defer diskClient.Close()
+
+	notifier, err := diskClient.ReplicaWatch(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "failed to create SPDK replica watch notifier")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			logrus.Info("Stop watching SPDK replica")
+			return nil
+		default:
+			replica, err := notifier.Recv()
+			if err != nil {
+				logrus.WithError(err).Error("Failed to receive next item in SPDK replica watch")
+			} else {
+				instance := replicaResponseToInstanceResponse(replica)
+				if err := srv.Send(instance); err != nil {
+					return errors.Wrap(err, "failed to send instance response")
+				}
+			}
+		}
+	}
+}
+
+func (s *Server) watchProcess(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+	logrus.Info("Start watching processes")
+
 	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create ProcessManagerClient")
 	}
 	defer pmClient.Close()
 
 	notifier, err := pmClient.ProcessWatch(context.Background())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create process watch notifier")
 	}
+
 	for {
-		if process, err := notifier.Recv(); err != nil {
-			// TODO: Should it error out here?
-			logrus.WithError(err).Error("Failed to receive next item in engine process watch")
-		} else {
-			instance := processResponseToInstanceResponse(process)
-			if err := srv.Send(instance); err != nil {
-				return err
+		select {
+		case <-ctx.Done():
+			logrus.Info("Stop watching processes")
+			return nil
+		default:
+			process, err := notifier.Recv()
+			if err != nil {
+				logrus.WithError(err).Error("Failed to receive next item in process watch")
+			} else {
+				instance := processResponseToInstanceResponse(process)
+				if err := srv.Send(instance); err != nil {
+					return errors.Wrap(err, "failed to send instance response")
+				}
 			}
 		}
 	}

@@ -3,7 +3,6 @@ package disk
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +26,7 @@ import (
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
+	"github.com/longhorn/longhorn-instance-manager/pkg/util/broadcaster"
 )
 
 const (
@@ -42,6 +42,9 @@ type Server struct {
 	spdkEnabled bool
 	spdkClient  *spdkclient.Client
 	sync.Mutex
+
+	broadcaster *broadcaster.Broadcaster
+	broadcastCh chan interface{}
 }
 
 func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
@@ -798,22 +801,38 @@ func mknod(device string, major, minor uint32) error {
 	return unix.Mknod(device, uint32(fileMode), dev)
 }
 
-func isHostIP(ipStr string) (bool, error) {
-	addrs, err := net.InterfaceAddrs()
+func (s *Server) broadcastConnector() (chan interface{}, error) {
+	return s.broadcastCh, nil
+}
+
+func (s *Server) Subscribe() (<-chan interface{}, error) {
+	return s.broadcaster.Subscribe(context.TODO(), s.broadcastConnector)
+}
+
+func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.DiskService_ReplicaWatchServer) error {
+	responseChan, err := s.Subscribe()
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get interface addresses")
+		return err
 	}
 
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false, fmt.Errorf("%s is not a valid IP address", ipStr)
-	}
+	defer func() {
+		if err != nil {
+			logrus.WithError(err).Error("Disk service update watch errored out")
+		} else {
+			logrus.Info("Disk service update watch ended successfully")
+		}
+	}()
+	logrus.Info("Started new disk service update watch")
 
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.Contains(ip) {
-			return true, nil
+	for resp := range responseChan {
+		r, ok := resp.(*rpc.Replica)
+		if !ok {
+			return fmt.Errorf("BUG: cannot get Replica from channel")
+		}
+		if err := srv.Send(r); err != nil {
+			return err
 		}
 	}
 
-	return false, nil
+	return nil
 }
