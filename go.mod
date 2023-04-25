@@ -7,7 +7,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230324160313-e1d0b33c2f82
-	github.com/longhorn/go-spdk-helper v0.0.0-20230421020944-49138aa44ec0
+	github.com/longhorn/go-spdk-helper v0.0.0-20230425085157-65b128f7e43c
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230413074927-aeff7b57a163
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
@@ -16,6 +16,7 @@ require (
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.7.0
 	google.golang.org/grpc v1.53.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 )
 
@@ -45,7 +46,6 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
 	k8s.io/apimachinery v0.26.0 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/mount-utils v0.26.0 // indirect
