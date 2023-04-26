@@ -18,6 +18,7 @@ import (
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 
+	issiutil "github.com/longhorn/go-iscsi-helper/util"
 	spdknvme "github.com/longhorn/go-spdk-helper/pkg/nvme"
 	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
@@ -43,8 +44,13 @@ type Server struct {
 	spdkClient  *spdkclient.Client
 	sync.Mutex
 
-	broadcaster *broadcaster.Broadcaster
-	broadcastCh chan interface{}
+	replicaBroadcaster *broadcaster.Broadcaster
+	replicaBroadcastCh chan interface{}
+	replicaUpdateCh    chan interface{}
+
+	engineBroadcaster *broadcaster.Broadcaster
+	engineBroadcastCh chan interface{}
+	engineUpdateCh    chan interface{}
 }
 
 func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
@@ -52,8 +58,25 @@ func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 		spdkEnabled:   spdkEnabled,
 		shutdownCh:    shutdownCh,
 		HealthChecker: &GRPCHealthChecker{},
+
+		replicaBroadcaster: &broadcaster.Broadcaster{},
+		replicaBroadcastCh: make(chan interface{}),
+		replicaUpdateCh:    make(chan interface{}),
+
+		engineBroadcaster: &broadcaster.Broadcaster{},
+		engineBroadcastCh: make(chan interface{}),
+		engineUpdateCh:    make(chan interface{}),
 	}
 
+	c, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if _, err := s.replicaBroadcaster.Subscribe(c, s.replicaBroadcastConnector); err != nil {
+		return nil, err
+	}
+
+	if _, err := s.replicaBroadcaster.Subscribe(c, s.engineBroadcastConnector); err != nil {
+		return nil, err
+	}
 	go s.startMonitoring()
 
 	return s, nil
@@ -82,6 +105,16 @@ func (s *Server) startMonitoring() {
 			logrus.Info("Disk Server is shutting down")
 			done = true
 			break
+		case r := <-s.replicaUpdateCh:
+			//pm.lock.RLock()
+			// Modify response to indicate deletion.
+
+			//pm.lock.RUnlock()
+			s.replicaBroadcastCh <- interface{}(r)
+		case e := <-s.engineUpdateCh:
+			//pm.lock.RLock()
+			// Modify response to indicate deletion.
+			s.engineBroadcastCh <- interface{}(e)
 		}
 		if done {
 			break
@@ -320,7 +353,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		return nil, grpcstatus.Error(grpccodes.NotFound, "failed to get name from alias")
 	}
 
-	return &rpc.Replica{
+	r := &rpc.Replica{
 		Name:        name,
 		Uuid:        lvolInfo.UUID,
 		BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
@@ -333,7 +366,11 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		Port: 4420,
 
 		State: types.ProcessStateRunning,
-	}, nil
+	}
+
+	s.replicaUpdateCh <- interface{}(r)
+
+	return r, nil
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteRequest) (*empty.Empty, error) {
@@ -578,6 +615,12 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		bdevs = append(bdevs, info.Aliases[0])
 	}
 
+	localIP, err := issiutil.GetIPToHost()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get local IP")
+	}
+	localPort := "4422"
+
 	/*
 		for name, addr := range req.ReplicaAddressMap {
 			nqn := spdkutil.GetNQN(name)
@@ -606,13 +649,13 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	}
 
 	raidNQN := spdkutil.GetNQN(req.Name)
-	err = spdkClient.StartExposeBdev(raidNQN, req.Name, "127.0.0.1", "4422")
+	err = spdkClient.StartExposeBdev(raidNQN, req.Name, localIP, localPort)
 	if err != nil {
 		log.WithError(err).Error("Failed to start exposing bdev")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	nvmeCli, err := spdknvme.NewInitiator(raidNQN, "4422")
+	nvmeCli, err := spdknvme.NewInitiator(raidNQN, localIP, localPort)
 	if err != nil {
 		log.WithError(err).Error("Failed to create NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -632,12 +675,17 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	return &rpc.Engine{
+	e := &rpc.Engine{
 		Name:              req.Name,
 		Address:           req.Address,
 		ReplicaAddressMap: req.ReplicaAddressMap,
 		Frontend:          req.Frontend,
-	}, nil
+		Endpoint:          localIP,
+	}
+
+	s.engineUpdateCh <- interface{}(e)
+
+	return e, nil
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
@@ -724,6 +772,7 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
+
 	for _, info := range bdevRaidInfos {
 		engine := &rpc.Engine{
 			Name:              info.Name,
@@ -732,7 +781,7 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 			Address:           "",
 			ReplicaAddressMap: map[string]string{},
 			ReplicaModeMap:    map[string]rpc.ReplicaMode{},
-			Endpoint:          "",
+			Endpoint:          localIP,
 			Frontend:          "",
 		}
 
@@ -801,16 +850,27 @@ func mknod(device string, major, minor uint32) error {
 	return unix.Mknod(device, uint32(fileMode), dev)
 }
 
-func (s *Server) broadcastConnector() (chan interface{}, error) {
-	return s.broadcastCh, nil
+func (s *Server) replicaBroadcastConnector() (chan interface{}, error) {
+	return s.replicaBroadcastCh, nil
 }
 
-func (s *Server) Subscribe() (<-chan interface{}, error) {
-	return s.broadcaster.Subscribe(context.TODO(), s.broadcastConnector)
+func (s *Server) engineBroadcastConnector() (chan interface{}, error) {
+	return s.engineBroadcastCh, nil
+}
+
+func (s *Server) Subscribe(instanceType string) (<-chan interface{}, error) {
+	switch instanceType {
+	case types.InstanceTypeEngine:
+		return s.engineBroadcaster.Subscribe(context.TODO(), s.engineBroadcastConnector)
+	case types.InstanceTypeReplica:
+		return s.replicaBroadcaster.Subscribe(context.TODO(), s.replicaBroadcastConnector)
+	default:
+		return nil, fmt.Errorf("unknown instance type %v", instanceType)
+	}
 }
 
 func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.DiskService_ReplicaWatchServer) error {
-	responseChan, err := s.Subscribe()
+	responseChan, err := s.Subscribe(types.InstanceTypeReplica)
 	if err != nil {
 		return err
 	}
@@ -830,6 +890,34 @@ func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.DiskService_ReplicaWatch
 			return fmt.Errorf("BUG: cannot get Replica from channel")
 		}
 		if err := srv.Send(r); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) EngineWatch(req *empty.Empty, srv rpc.DiskService_EngineWatchServer) error {
+	responseChan, err := s.Subscribe(types.InstanceTypeEngine)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			logrus.WithError(err).Error("Disk service update watch errored out")
+		} else {
+			logrus.Info("Disk service update watch ended successfully")
+		}
+	}()
+	logrus.Info("Started new disk service update watch")
+
+	for resp := range responseChan {
+		e, ok := resp.(*rpc.Engine)
+		if !ok {
+			return fmt.Errorf("BUG: cannot get Engine from channel")
+		}
+		if err := srv.Send(e); err != nil {
 			return err
 		}
 	}

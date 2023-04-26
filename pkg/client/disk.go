@@ -265,6 +265,16 @@ func (c *DiskServiceClient) ReplicaWatch(ctx context.Context) (*api.ReplicaStrea
 	return api.NewReplicaStream(stream), nil
 }
 
+func (c *DiskServiceClient) EngineWatch(ctx context.Context) (*api.EngineStream, error) {
+	client := c.getControllerServiceClient()
+	stream, err := client.EngineWatch(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open engine update stream")
+	}
+
+	return api.NewEngineStream(stream), nil
+}
+
 func (c *DiskServiceClient) VersionGet() (*meta.VersionOutput, error) {
 	client := c.getControllerServiceClient()
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)

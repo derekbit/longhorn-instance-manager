@@ -7,7 +7,8 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230324160313-e1d0b33c2f82
-	github.com/longhorn/go-spdk-helper v0.0.0-20230425085157-65b128f7e43c
+	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
+	github.com/longhorn/go-spdk-helper v0.0.0-20230426053241-0bf92c67199f
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230413074927-aeff7b57a163
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
@@ -33,7 +34,6 @@ require (
 	github.com/honestbee/jobq v1.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b // indirect
 	github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003 // indirect
 	github.com/longhorn/sparse-tools v0.0.0-20230408015858-c849def39d3c // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect

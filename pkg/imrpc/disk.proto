@@ -20,6 +20,7 @@ service DiskService {
     rpc EngineList(google.protobuf.Empty) returns (EngineListResponse);
 
     rpc ReplicaWatch(google.protobuf.Empty) returns (stream Replica) {}
+    rpc EngineWatch(google.protobuf.Empty) returns (stream Engine) {}
 
     rpc VersionGet(google.protobuf.Empty) returns(VersionResponse);
 }

@@ -360,6 +360,10 @@ func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_Instanc
 		return s.watchSpdkReplica(ctx, req, srv)
 	})
 
+	g.Go(func() error {
+		return s.watchSpdkEngine(ctx, req, srv)
+	})
+
 	if err := g.Wait(); err != nil {
 		return errors.Wrap(err, "failed to watch instances")
 	}
@@ -387,11 +391,44 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 			logrus.Info("Stop watching SPDK replica")
 			return nil
 		default:
-			replica, err := notifier.Recv()
+			v, err := notifier.Recv()
 			if err != nil {
 				logrus.WithError(err).Error("Failed to receive next item in SPDK replica watch")
 			} else {
-				instance := replicaResponseToInstanceResponse(replica)
+				instance := replicaResponseToInstanceResponse(v)
+				if err := srv.Send(instance); err != nil {
+					return errors.Wrap(err, "failed to send instance response")
+				}
+			}
+		}
+	}
+}
+
+func (s *Server) watchSpdkEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+	logrus.Info("Start watching SPDK engine")
+
+	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to create DiskServiceClient")
+	}
+	defer diskClient.Close()
+
+	notifier, err := diskClient.EngineWatch(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "failed to create SPDK engine watch notifier")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			logrus.Info("Stop watching SPDK engine")
+			return nil
+		default:
+			v, err := notifier.Recv()
+			if err != nil {
+				logrus.WithError(err).Error("Failed to receive next item in SPDK engine watch")
+			} else {
+				instance := engineResponseToInstanceResponse(v)
 				if err := srv.Send(instance); err != nil {
 					return errors.Wrap(err, "failed to send instance response")
 				}
