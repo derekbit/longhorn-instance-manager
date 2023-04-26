@@ -68,6 +68,8 @@ message Engine {
     string endpoint = 7;
     string frontend = 8;
     string frontend_state = 9;
+    string ip = 10;
+    int32 port = 11;
 }
 
 enum ReplicaMode {

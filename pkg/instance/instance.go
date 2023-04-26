@@ -519,8 +519,8 @@ func engineResponseToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
 		Status: &rpc.InstanceStatus{
 			State:     types.ProcessStateRunning,
 			ErrorMsg:  "",
-			PortStart: 0,
-			PortEnd:   0,
+			PortStart: e.Port,
+			PortEnd:   e.Port,
 		},
 	}
 }
