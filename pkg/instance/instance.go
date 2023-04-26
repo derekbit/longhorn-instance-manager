@@ -18,12 +18,6 @@ import (
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 )
 
-const (
-	BackendStoreDriverTypeUndefined = ""
-	BackendStoreDriverTypeLonghorn  = "longhorn"
-	BackendStoreDriverTypeSpdkAio   = "spdk-aio"
-)
-
 type Server struct {
 	logsDir                      string
 	processManagerServiceAddress string
@@ -89,7 +83,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 	}).Info("Creating instance")
 
 	switch req.Spec.BackendStoreDriver {
-	case BackendStoreDriverTypeLonghorn:
+	case types.BackendStoreDriverTypeLonghorn:
 		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -104,7 +98,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 			return nil, err
 		}
 		return processResponseToInstanceResponse(process), nil
-	case BackendStoreDriverTypeSpdkAio:
+	case types.BackendStoreDriverTypeSpdkAio:
 		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -141,7 +135,7 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 	}).Info("Deleting instance")
 
 	switch req.BackendStoreDriver {
-	case BackendStoreDriverTypeLonghorn:
+	case types.BackendStoreDriverTypeLonghorn:
 		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -153,7 +147,7 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 			return nil, err
 		}
 		return processResponseToInstanceResponse(process), nil
-	case BackendStoreDriverTypeSpdkAio:
+	case types.BackendStoreDriverTypeSpdkAio:
 		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -186,7 +180,7 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 	}).Info("Getting instance")
 
 	switch req.BackendStoreDriver {
-	case BackendStoreDriverTypeLonghorn:
+	case types.BackendStoreDriverTypeLonghorn:
 		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -198,7 +192,7 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 			return nil, err
 		}
 		return processResponseToInstanceResponse(process), nil
-	case BackendStoreDriverTypeSpdkAio:
+	case types.BackendStoreDriverTypeSpdkAio:
 		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 		if err != nil {
 			return nil, err
@@ -283,7 +277,7 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 	}).Info("Replacing instance")
 
 	switch req.Spec.BackendStoreDriver {
-	case BackendStoreDriverTypeLonghorn:
+	case types.BackendStoreDriverTypeLonghorn:
 		if req.Spec.ProcessSpecific == nil {
 			return nil, fmt.Errorf("process is required for longhorn backend store driver")
 		}
@@ -301,7 +295,7 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 		}
 
 		return processResponseToInstanceResponse(process), nil
-	case BackendStoreDriverTypeSpdkAio:
+	case types.BackendStoreDriverTypeSpdkAio:
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
@@ -316,7 +310,7 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 	}).Info("Getting instance log")
 
 	switch req.BackendStoreDriver {
-	case BackendStoreDriverTypeLonghorn:
+	case types.BackendStoreDriverTypeLonghorn:
 		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
 		if err != nil {
 			return err
@@ -341,7 +335,7 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 			}
 		}
 		return nil
-	case BackendStoreDriverTypeSpdkAio:
+	case types.BackendStoreDriverTypeSpdkAio:
 		return nil
 	default:
 		return fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
@@ -475,8 +469,8 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 		Spec: &rpc.InstanceSpec{
 			Name: p.Spec.Name,
 			// Leave Type empty. It will be determined in longhorn manager.
-			Type:               BackendStoreDriverTypeUndefined,
-			BackendStoreDriver: BackendStoreDriverTypeLonghorn,
+			Type:               types.BackendStoreDriverTypeUndefined,
+			BackendStoreDriver: types.BackendStoreDriverTypeLonghorn,
 			ProcessSpecific: &rpc.ProcessSpecific{
 				Binary: p.Spec.Binary,
 				Args:   p.Spec.Args,
@@ -499,7 +493,7 @@ func replicaResponseToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 		Spec: &rpc.InstanceSpec{
 			Name:               r.Name,
 			Type:               types.InstanceTypeReplica,
-			BackendStoreDriver: BackendStoreDriverTypeSpdkAio,
+			BackendStoreDriver: types.BackendStoreDriverTypeSpdkAio,
 		},
 		Status: &rpc.InstanceStatus{
 			State:     types.ProcessStateRunning,
@@ -514,7 +508,7 @@ func engineResponseToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
 		Spec: &rpc.InstanceSpec{
 			Name:               e.Name,
 			Type:               types.InstanceTypeEngine,
-			BackendStoreDriver: BackendStoreDriverTypeSpdkAio,
+			BackendStoreDriver: types.BackendStoreDriverTypeSpdkAio,
 		},
 		Status: &rpc.InstanceStatus{
 			State:     types.ProcessStateRunning,

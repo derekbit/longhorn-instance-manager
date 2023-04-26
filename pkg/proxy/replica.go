@@ -1,11 +1,15 @@
 package proxy
 
 import (
+	"fmt"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
+	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	esync "github.com/longhorn/longhorn-engine/pkg/sync"
@@ -40,10 +44,7 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 	return &empty.Empty{}, nil
 }
 
-func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
-	log.Trace("Listing replicas")
-
+func (p *Proxy) getReplicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -71,6 +72,68 @@ func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (r
 			Replicas: replicas,
 		},
 	}, nil
+}
+
+func replicaModeToGRPCReplicaMode(mode rpc.ReplicaMode) eptypes.ReplicaMode {
+	switch mode {
+	case rpc.ReplicaMode_WO:
+		return eptypes.ReplicaMode_WO
+	case rpc.ReplicaMode_RW:
+		return eptypes.ReplicaMode_RW
+	case rpc.ReplicaMode_ERR:
+		return eptypes.ReplicaMode_ERR
+	}
+	return eptypes.ReplicaMode_ERR
+}
+
+func (p *Proxy) getReplicaListFromDiskService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+	c, err := client.NewDiskServiceClient("tcp://"+p.diskServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	recv, err := c.EngineGet(req.EngineName)
+	if err != nil {
+		return nil, err
+	}
+
+	replicas := []*eptypes.ControllerReplica{}
+	for address, mode := range recv.ReplicaModeMap {
+		replica := &eptypes.ControllerReplica{
+			Address: &eptypes.ReplicaAddress{
+				Address: address,
+			},
+			Mode: replicaModeToGRPCReplicaMode(mode),
+		}
+		replicas = append(replicas, replica)
+	}
+
+	logrus.Infof("Debug ---> replicas=%+v", replicas)
+
+	return &rpc.EngineReplicaListProxyResponse{
+		ReplicaList: &eptypes.ReplicaListReply{
+			Replicas: replicas,
+		},
+	}, nil
+}
+
+func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
+	log.Trace("Listing replicas")
+
+	switch req.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.getReplicaListFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.getReplicaListFromDiskService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
 }
 
 func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {

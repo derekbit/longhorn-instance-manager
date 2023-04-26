@@ -14,13 +14,16 @@ type Proxy struct {
 	logsDir       string
 	shutdownCh    chan error
 	HealthChecker HealthChecker
+
+	diskServiceAddress string
 }
 
-func NewProxy(logsDir string, shutdownCh chan error) (*Proxy, error) {
+func NewProxy(logsDir, diskServiceAddress string, shutdownCh chan error) (*Proxy, error) {
 	p := &Proxy{
-		logsDir:       logsDir,
-		shutdownCh:    shutdownCh,
-		HealthChecker: &GRPCHealthChecker{},
+		logsDir:            logsDir,
+		shutdownCh:         shutdownCh,
+		HealthChecker:      &GRPCHealthChecker{},
+		diskServiceAddress: diskServiceAddress,
 	}
 
 	go p.startMonitoring()

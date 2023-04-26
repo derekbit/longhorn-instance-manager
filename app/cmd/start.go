@@ -140,7 +140,7 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager instance gRPC server listening to %v", instanceServiceAddress)
 
 	// Start proxy server
-	proxyRPCServer, proxyRPCListener, err := setupProxyGrpcServer(logsDir, proxyServiceAddress, tlsConfig, shutdownCh)
+	proxyRPCServer, proxyRPCListener, err := setupProxyGrpcServer(logsDir, proxyServiceAddress, diskServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -235,9 +235,9 @@ func setupDiskGrpcServer(listen string, tlsConfig *tls.Config, spdkEnabled bool,
 	return rpcServer, rpcListener, nil
 }
 
-func setupProxyGrpcServer(logsDir, listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+func setupProxyGrpcServer(logsDir, listen, diskServiceAddress string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
 	// TODO: skip proxy for replica instance manager pod
-	proxy, err := proxy.NewProxy(logsDir, shutdownCh)
+	proxy, err := proxy.NewProxy(logsDir, diskServiceAddress, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}
