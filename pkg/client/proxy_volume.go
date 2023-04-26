@@ -9,9 +9,11 @@ import (
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
 )
 
-func (c *ProxyClient) VolumeGet(serviceAddress string) (info *etypes.VolumeInfo, err error) {
+func (c *ProxyClient) VolumeGet(engineName, serviceAddress, backendStoreDriver string) (info *etypes.VolumeInfo, err error) {
 	input := map[string]string{
+		"engineName":     engineName,
 		"serviceAddress": serviceAddress,
+		"backendStore":   backendStoreDriver,
 	}
 	if err := validateProxyMethodParameters(input); err != nil {
 		return nil, errors.Wrap(err, "failed to get volume")

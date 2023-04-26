@@ -84,18 +84,31 @@ func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 }
 
 func (s *Server) getSpdkClient() (*spdkclient.Client, error) {
-	if s.spdkEnabled {
-		if s.spdkClient == nil {
-			spdkClient, err := spdkclient.NewClient()
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to create spdk client")
+	/*
+		if s.spdkEnabled {
+			if s.spdkClient == nil {
+				spdkClient, err := spdkclient.NewClient()
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to create spdk client")
+				}
+
+				s.spdkClient = spdkClient
 			}
-
-			s.spdkClient = spdkClient
 		}
-	}
 
-	return s.spdkClient, nil
+		return s.spdkClient, nil
+	*/
+	if s.spdkEnabled {
+		return spdkclient.NewClient()
+	}
+	return nil, fmt.Errorf("spdk is not enabled")
+}
+
+func (s *Server) Close() error {
+	if s.spdkClient == nil {
+		return nil
+	}
+	return s.spdkClient.Close()
 }
 
 func (s *Server) startMonitoring() {
@@ -128,10 +141,7 @@ func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInf
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
-
-	if spdkClient == nil {
-		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, "SPDK is not enabled")
-	}
+	defer spdkClient.Close()
 
 	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore(lvsName, uuid)
 	if err != nil {
@@ -150,8 +160,9 @@ func (s *Server) getBdevNameFromDiskPath(diskPath string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
-	bdevInfos, err := spdkClient.BdevGetBdevs("", 30)
+	bdevInfos, err := spdkClient.BdevGetBdevs("", 3000)
 	if err != nil {
 		return "", grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdevs").Error())
 	}
@@ -187,6 +198,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	diskPath := getDiskPath(req.DiskPath)
 
@@ -300,6 +312,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	lvstoreUUID := req.LvstoreUuid
 	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", lvstoreUUID)
@@ -336,7 +349,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 
 	log.Info("Created replica")
 
-	lvolInfos, err := spdkClient.BdevLvolGet(uuid, 30)
+	lvolInfos, err := spdkClient.BdevLvolGet(uuid, 3000)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -389,6 +402,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
 	if err != nil {
@@ -434,6 +448,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
 	if err != nil {
@@ -448,7 +463,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 	}
 
 	aliasName := lvstoreName + "/" + req.Name
-	lvolInfos, err := spdkClient.BdevLvolGet(aliasName, 30)
+	lvolInfos, err := spdkClient.BdevLvolGet(aliasName, 3000)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol info")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -496,8 +511,9 @@ func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.Replic
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
-	lvolInfos, err := spdkClient.BdevLvolGet("", 30)
+	lvolInfos, err := spdkClient.BdevLvolGet("", 3000)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -604,10 +620,11 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	bdevs := []string{}
 
-	lvolInfos, err := spdkClient.BdevLvolGet("", 30)
+	lvolInfos, err := spdkClient.BdevLvolGet("", 3000)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -735,12 +752,15 @@ func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	bdevRaidInfos, err := spdkClient.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
 	if err != nil {
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
+
+	logrus.Infof("Debug ===> bdevRaidInfos=%+v", bdevRaidInfos)
 
 	for _, info := range bdevRaidInfos {
 		if info.Name != req.Name {
@@ -765,13 +785,23 @@ func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc
 			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 		}
 
+		replicaModeMap := map[string]rpc.ReplicaMode{}
+		replicaAddressMap := map[string]string{}
+		for _, baseBdev := range info.BaseBdevsList {
+			parts := strings.Split(baseBdev.Name, "/")
+			name := parts[1]
+
+			replicaModeMap[name] = rpc.ReplicaMode_RW
+			replicaAddressMap[name] = ""
+		}
+
 		engine := &rpc.Engine{
 			Name:              info.Name,
 			Uuid:              "",
 			Size:              0,
 			Address:           "",
 			ReplicaAddressMap: map[string]string{},
-			ReplicaModeMap:    map[string]rpc.ReplicaMode{},
+			ReplicaModeMap:    replicaModeMap,
 			Endpoint:          "",
 			Frontend:          "",
 			Ip:                listenerList[0].Address.Traddr,
@@ -802,6 +832,7 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get spdk client")
 	}
+	defer spdkClient.Close()
 
 	resp := &rpc.EngineListResponse{
 		Engines: map[string]*rpc.Engine{},

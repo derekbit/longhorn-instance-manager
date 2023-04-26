@@ -44,7 +44,7 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 	return &empty.Empty{}, nil
 }
 
-func (p *Proxy) getReplicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+func (p *Proxy) replicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func replicaModeToGRPCReplicaMode(mode rpc.ReplicaMode) eptypes.ReplicaMode {
 	return eptypes.ReplicaMode_ERR
 }
 
-func (p *Proxy) getReplicaListFromDiskService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
 	c, err := client.NewDiskServiceClient("tcp://"+p.diskServiceAddress, nil)
 	if err != nil {
 		return nil, err
@@ -128,9 +128,9 @@ func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (r
 
 	switch req.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		return p.getReplicaListFromEngine(ctx, req)
+		return p.replicaListFromEngine(ctx, req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		return p.getReplicaListFromDiskService(ctx, req)
+		return p.replicaListFromSpdkService(ctx, req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
