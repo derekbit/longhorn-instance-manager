@@ -24,7 +24,9 @@ func (c *ProxyClient) VolumeGet(engineName, serviceAddress, backendStoreDriver s
 	}()
 
 	req := &rpc.ProxyEngineRequest{
-		Address: serviceAddress,
+		Address:            serviceAddress,
+		EngineName:         engineName,
+		BackendStoreDriver: backendStoreDriver,
 	}
 	resp, err := c.service.VolumeGet(getContextWithGRPCTimeout(c.ctx), req)
 	if err != nil {
