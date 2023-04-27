@@ -91,9 +91,24 @@ func (p *Proxy) volumeGetFromSpdkService(ctx context.Context, req *rpc.ProxyEngi
 }
 
 func (p *Proxy) VolumeExpand(ctx context.Context, req *rpc.EngineVolumeExpandRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Expanding volume to size %v", req.Expand.Size)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.volumeExpandFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.volumeExpandFromSpdkService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) volumeExpandFromEngine(ctx context.Context, req *rpc.EngineVolumeExpandRequest) (resp *empty.Empty, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -108,10 +123,29 @@ func (p *Proxy) VolumeExpand(ctx context.Context, req *rpc.EngineVolumeExpandReq
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) volumeExpandFromSpdkService(ctx context.Context, req *rpc.EngineVolumeExpandRequest) (resp *empty.Empty, err error) {
+	return &empty.Empty{}, nil
+}
+
 func (p *Proxy) VolumeFrontendStart(ctx context.Context, req *rpc.EngineVolumeFrontendStartRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Starting volume frontend %v", req.FrontendStart.Frontend)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.volumeFrontendStartFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.volumeFrontendStartFromSpdkService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) volumeFrontendStartFromEngine(ctx context.Context, req *rpc.EngineVolumeFrontendStartRequest) (resp *empty.Empty, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -126,10 +160,29 @@ func (p *Proxy) VolumeFrontendStart(ctx context.Context, req *rpc.EngineVolumeFr
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) volumeFrontendStartFromSpdkService(ctx context.Context, req *rpc.EngineVolumeFrontendStartRequest) (resp *empty.Empty, err error) {
+	return &empty.Empty{}, nil
+}
+
 func (p *Proxy) VolumeFrontendShutdown(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Info("Shutting down volume frontend")
 
+	switch req.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.volumeFrontendShutdownFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.volumeFrontendShutdownFromSpdkService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) volumeFrontendShutdownFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *empty.Empty, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -144,10 +197,30 @@ func (p *Proxy) VolumeFrontendShutdown(ctx context.Context, req *rpc.ProxyEngine
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) volumeFrontendShutdownFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *empty.Empty, err error) {
+	return &empty.Empty{}, nil
+}
+
 func (p *Proxy) VolumeUnmapMarkSnapChainRemovedSet(ctx context.Context, req *rpc.EngineVolumeUnmapMarkSnapChainRemovedSetRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Setting volume flag UnmapMarkSnapChainRemoved to %v", req.UnmapMarkSnap.Enabled)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.volumeUnmapMarkSnapChainRemovedSetFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.volumeUnmapMarkSnapChainRemovedSetFromSPDKService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+
+}
+
+func (p *Proxy) volumeUnmapMarkSnapChainRemovedSetFromEngine(ctx context.Context, req *rpc.EngineVolumeUnmapMarkSnapChainRemovedSetRequest) (resp *empty.Empty, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -159,5 +232,9 @@ func (p *Proxy) VolumeUnmapMarkSnapChainRemovedSet(ctx context.Context, req *rpc
 		return nil, err
 	}
 
+	return &empty.Empty{}, nil
+}
+
+func (p *Proxy) volumeUnmapMarkSnapChainRemovedSetFromSPDKService(ctx context.Context, req *rpc.EngineVolumeUnmapMarkSnapChainRemovedSetRequest) (resp *empty.Empty, err error) {
 	return &empty.Empty{}, nil
 }

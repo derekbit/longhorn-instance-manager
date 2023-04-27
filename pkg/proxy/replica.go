@@ -44,6 +44,24 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
+	log.Trace("Listing replicas")
+
+	switch req.BackendStoreDriver {
+	case types.BackendStoreDriverTypeLonghorn:
+		return p.replicaListFromEngine(ctx, req)
+	case types.BackendStoreDriverTypeSpdkAio:
+		return p.replicaListFromSpdkService(ctx, req)
+	default:
+		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
 func (p *Proxy) replicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
@@ -109,8 +127,6 @@ func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEn
 		replicas = append(replicas, replica)
 	}
 
-	logrus.Infof("Debug ---> replicas=%+v", replicas)
-
 	return &rpc.EngineReplicaListProxyResponse{
 		ReplicaList: &eptypes.ReplicaListReply{
 			Replicas: replicas,
@@ -118,28 +134,25 @@ func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEn
 	}, nil
 }
 
-func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
 	log := logrus.WithFields(logrus.Fields{
 		"serviceURL":         req.Address,
 		"engineName":         req.EngineName,
 		"backendStoreDriver": req.BackendStoreDriver,
 	})
-	log.Trace("Listing replicas")
+	log.Trace("Getting replica rebuilding status")
 
 	switch req.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		return p.replicaListFromEngine(ctx, req)
+		return p.replicaRebuildingStatusFromEngine(ctx, req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		return p.replicaListFromSpdkService(ctx, req)
+		return p.replicaRebuildingStatusFromSpdkService(ctx, req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
 }
 
-func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
-	log.Trace("Getting replica rebuilding status")
-
+func (p *Proxy) replicaRebuildingStatusFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
 	task, err := esync.NewTask(ctx, req.Address)
 	if err != nil {
 		return nil, err
@@ -164,6 +177,12 @@ func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngin
 	}
 
 	return resp, nil
+}
+
+func (p *Proxy) replicaRebuildingStatusFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
+	return &rpc.EngineReplicaRebuildStatusProxyResponse{
+		Status: make(map[string]*eptypes.ReplicaRebuildStatusResponse),
+	}, nil
 }
 
 func (p *Proxy) ReplicaVerifyRebuild(ctx context.Context, req *rpc.EngineReplicaVerifyRebuildRequest) (resp *empty.Empty, err error) {
