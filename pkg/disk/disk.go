@@ -704,24 +704,94 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	port, err := strconv.Atoi(listenerList[0].Address.Trsvcid)
+	engine, err := getEngine(spdkClient, req.Name, log)
 	if err != nil {
-		log.WithError(err).Error("Failed to convert port")
+		log.WithError(err).Error("Failed to get engine")
+		return nil, err
+	}
+
+	s.engineUpdateCh <- interface{}(engine)
+	return engine, nil
+}
+
+func getVolumeName(engineName string) string {
+	parts := strings.Split(engineName, "-e-")
+	return parts[0]
+}
+
+func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (*rpc.Engine, error) {
+	bdevRaidInfos, err := client.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	if err != nil {
+		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
-	e := &rpc.Engine{
-		Name:              req.Name,
-		Address:           req.Address,
-		ReplicaAddressMap: req.ReplicaAddressMap,
-		Frontend:          req.Frontend,
-		Endpoint:          localIP,
-		Ip:                listenerList[0].Address.Traddr,
-		Port:              int32(port),
+
+	var engine *rpc.Engine
+	for _, info := range bdevRaidInfos {
+		if info.Name != name {
+			continue
+		}
+
+		raidNQN := spdkutil.GetNQN(info.Name)
+		listenerList, err := client.NvmfSubsystemGetListeners(raidNQN, "")
+		if err != nil {
+			log.WithError(err).Error("Failed to get NVMe subsystem listeners")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+
+		if len(listenerList) != 1 {
+			log.WithError(err).Error("Invalid NVMe subsystem listeners")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+
+		port, err := strconv.Atoi(listenerList[0].Address.Trsvcid)
+		if err != nil {
+			log.WithError(err).Error("Failed to convert port")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+
+		localIP, err := issiutil.GetIPToHost()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get local IP")
+		}
+
+		replicaModeMap := map[string]rpc.ReplicaMode{}
+		replicaAddressMap := map[string]string{}
+		for _, baseBdev := range info.BaseBdevsList {
+			parts := strings.Split(baseBdev.Name, "/")
+			name := parts[1]
+			address := localIP + ":" + "4420"
+			replicaModeMap[address] = rpc.ReplicaMode_RW
+			replicaAddressMap[name] = localIP + ":" + strconv.Itoa(port)
+		}
+
+		engine = &rpc.Engine{
+			Name:              name,
+			Uuid:              "",
+			Size:              0,
+			Address:           "",
+			ReplicaAddressMap: replicaAddressMap,
+			ReplicaModeMap:    replicaModeMap,
+			Endpoint:          "/dev/longhorn/" + getVolumeName(name),
+			Frontend:          "spdk-blockdev",
+			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
+			Ip:                listenerList[0].Address.Traddr,
+			Port:              int32(port),
+		}
 	}
 
-	s.engineUpdateCh <- interface{}(e)
+	if engine == nil {
+		return nil, grpcstatus.Error(grpccodes.NotFound, "")
+	}
 
-	return e, nil
+	return engine, nil
+}
+
+func getFrontendState(category spdktypes.BdevRaidCategory) string {
+	if category == spdktypes.BdevRaidCategoryOffline {
+		return "down"
+	}
+	return "up"
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
@@ -754,70 +824,13 @@ func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc
 	}
 	defer spdkClient.Close()
 
-	bdevRaidInfos, err := spdkClient.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	engine, err := getEngine(spdkClient, req.Name, log)
 	if err != nil {
-		log.WithError(err).Error("Failed to get bdev raid infos")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		log.WithError(err).Error("Failed to get engine")
+		return nil, err
 	}
 
-	logrus.Infof("Debug ===> bdevRaidInfos=%+v", bdevRaidInfos)
-
-	for _, info := range bdevRaidInfos {
-		if info.Name != req.Name {
-			continue
-		}
-
-		raidNQN := spdkutil.GetNQN(req.Name)
-		listenerList, err := spdkClient.NvmfSubsystemGetListeners(raidNQN, "")
-		if err != nil {
-			log.WithError(err).Error("Failed to get NVMe subsystem listeners")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		if len(listenerList) != 1 {
-			log.WithError(err).Error("Invalid NVMe subsystem listeners")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		port, err := strconv.Atoi(listenerList[0].Address.Trsvcid)
-		if err != nil {
-			log.WithError(err).Error("Failed to convert port")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		replicaModeMap := map[string]rpc.ReplicaMode{}
-		replicaAddressMap := map[string]string{}
-		for _, baseBdev := range info.BaseBdevsList {
-			parts := strings.Split(baseBdev.Name, "/")
-			name := parts[1]
-
-			replicaModeMap[name] = rpc.ReplicaMode_RW
-			replicaAddressMap[name] = ""
-		}
-
-		engine := &rpc.Engine{
-			Name:              info.Name,
-			Uuid:              "",
-			Size:              0,
-			Address:           "",
-			ReplicaAddressMap: map[string]string{},
-			ReplicaModeMap:    replicaModeMap,
-			Endpoint:          "",
-			Frontend:          "",
-			Ip:                listenerList[0].Address.Traddr,
-			Port:              int32(port),
-		}
-
-		if info.State == spdktypes.BdevRaidCategoryOffline {
-			engine.FrontendState = "down"
-		} else {
-			engine.FrontendState = "up"
-		}
-
-		return engine, nil
-	}
-
-	return nil, grpcstatus.Error(grpccodes.NotFound, "")
+	return engine, nil
 }
 
 func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineListResponse, error) {
