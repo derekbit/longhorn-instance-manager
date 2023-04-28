@@ -84,20 +84,6 @@ func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 }
 
 func (s *Server) getSpdkClient() (*spdkclient.Client, error) {
-	/*
-		if s.spdkEnabled {
-			if s.spdkClient == nil {
-				spdkClient, err := spdkclient.NewClient()
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed to create spdk client")
-				}
-
-				s.spdkClient = spdkClient
-			}
-		}
-
-		return s.spdkClient, nil
-	*/
 	if s.spdkEnabled {
 		return spdkclient.NewClient()
 	}
@@ -303,7 +289,6 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		"name":        req.Name,
 		"lvstoreUUID": req.LvstoreUuid,
 		"size":        req.Size,
-		"address":     req.Address,
 	})
 
 	log.Info("Creating replica")
@@ -609,7 +594,6 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	log := logrus.WithFields(logrus.Fields{
 		"name":              req.Name,
 		"volumeName":        req.VolumeName,
-		"address":           req.Address,
 		"replicaAddressMap": req.ReplicaAddressMap,
 		"frontend":          req.Frontend,
 	})

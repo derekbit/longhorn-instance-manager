@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/emptypb"
-
-	"github.com/golang/protobuf/ptypes/empty"
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
@@ -84,45 +83,53 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 
 	switch req.Spec.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pmClient.Close()
-
-		if req.Spec.ProcessSpecific == nil {
-			return nil, fmt.Errorf("process is required for longhorn backend store driver")
-		}
-		process, err := pmClient.ProcessCreate(req.Spec.Name, req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs)
-		if err != nil {
-			return nil, err
-		}
-		return processResponseToInstanceResponse(process), nil
+		return s.processInstanceCreate(req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer diskClient.Close()
-
-		switch req.Spec.Type {
-		case types.InstanceTypeEngine:
-			engine, err := diskClient.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkSpecific.Frontend, req.Spec.SpdkSpecific.DiskUuid, req.Spec.SpdkSpecific.ReplicaAddressMap)
-			if err != nil {
-				return nil, err
-			}
-			return engineResponseToInstanceResponse(engine), nil
-		case types.InstanceTypeReplica:
-			replica, err := diskClient.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, req.Spec.SpdkSpecific.Address)
-			if err != nil {
-				return nil, err
-			}
-			return replicaResponseToInstanceResponse(replica), nil
-		default:
-			return nil, fmt.Errorf("unknown instance type %v", req.Spec.Type)
-		}
+		return s.spdkInstanceCreate(req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
+	}
+}
+
+func (s *Server) processInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.InstanceResponse, error) {
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	if req.Spec.ProcessSpecific == nil {
+		return nil, fmt.Errorf("process is required for longhorn backend store driver")
+	}
+	process, err := pmClient.ProcessCreate(req.Spec.Name, req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs)
+	if err != nil {
+		return nil, err
+	}
+	return processResponseToInstanceResponse(process), nil
+}
+
+func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.InstanceResponse, error) {
+	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	switch req.Spec.Type {
+	case types.InstanceTypeEngine:
+		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkSpecific.Frontend, req.Spec.SpdkSpecific.ReplicaAddressMap)
+		if err != nil {
+			return nil, err
+		}
+		return engineResponseToInstanceResponse(engine), nil
+	case types.InstanceTypeReplica:
+		replica, err := c.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskUuid, req.Spec.Size, true)
+		if err != nil {
+			return nil, err
+		}
+		return replicaResponseToInstanceResponse(replica), nil
+	default:
+		return nil, fmt.Errorf("unknown instance type %v", req.Spec.Type)
 	}
 }
 
@@ -136,40 +143,56 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 
 	switch req.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pmClient.Close()
-
-		process, err := pmClient.ProcessDelete(req.Name)
-		if err != nil {
-			return nil, err
-		}
-		return processResponseToInstanceResponse(process), nil
+		return s.processInstanceDelete(req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer diskClient.Close()
-
-		err = diskClient.ReplicaDelete(req.Name, req.DiskUuid)
-		if err != nil {
-			return nil, err
-		}
-		return &rpc.InstanceResponse{
-			Spec: &rpc.InstanceSpec{
-				Name: req.Name,
-			},
-			Status: &rpc.InstanceStatus{
-				State: types.ProcessStateStopped,
-			},
-			Deleted: true,
-		}, nil
+		return s.spdkInstanceDelete(req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
+}
+
+func (s *Server) processInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.InstanceResponse, error) {
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	process, err := pmClient.ProcessDelete(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	return processResponseToInstanceResponse(process), nil
+}
+
+func (s *Server) spdkInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.InstanceResponse, error) {
+	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	switch req.Type {
+	case types.InstanceTypeEngine:
+		err = c.EngineDelete(req.Name)
+	case types.InstanceTypeReplica:
+		err = c.ReplicaDelete(req.Name, req.DiskUuid)
+	default:
+		err = fmt.Errorf("unknown instance type %v", req.Type)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &rpc.InstanceResponse{
+		Spec: &rpc.InstanceSpec{
+			Name: req.Name,
+		},
+		Status: &rpc.InstanceStatus{
+			State: types.ProcessStateStopped,
+		},
+		Deleted: true,
+	}, nil
 }
 
 func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
@@ -181,41 +204,50 @@ func (s *Server) InstanceGet(ctx context.Context, req *rpc.InstanceGetRequest) (
 
 	switch req.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pmClient.Close()
-
-		process, err := pmClient.ProcessGet(req.Name)
-		if err != nil {
-			return nil, err
-		}
-		return processResponseToInstanceResponse(process), nil
+		return s.processInstanceGet(req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer diskClient.Close()
-		switch req.Type {
-		case types.InstanceTypeEngine:
-			engine, err := diskClient.EngineGet(req.Name)
-			if err != nil {
-				return nil, err
-			}
-			return engineResponseToInstanceResponse(engine), nil
-		case types.InstanceTypeReplica:
-			replica, err := diskClient.ReplicaGet(req.Name, req.DiskUuid)
-			if err != nil {
-				return nil, err
-			}
-			return replicaResponseToInstanceResponse(replica), nil
-		default:
-			return nil, fmt.Errorf("unknown instance type %v", req.Type)
-		}
+		return s.spdkInstanceGet(req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (s *Server) processInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	process, err := pmClient.ProcessGet(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	return processResponseToInstanceResponse(process), nil
+}
+
+func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
+	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	switch req.Type {
+	case types.InstanceTypeEngine:
+		engine, err := c.EngineGet(req.Name)
+		if err != nil {
+			return nil, err
+		}
+		return engineResponseToInstanceResponse(engine), nil
+	case types.InstanceTypeReplica:
+		replica, err := c.ReplicaGet(req.Name, req.DiskUuid)
+		if err != nil {
+			return nil, err
+		}
+		return replicaResponseToInstanceResponse(replica), nil
+	default:
+		return nil, fmt.Errorf("unknown instance type %v", req.Type)
 	}
 }
 
@@ -224,49 +256,63 @@ func (s *Server) InstanceList(ctx context.Context, req *empty.Empty) (*rpc.Insta
 
 	instances := map[string]*rpc.InstanceResponse{}
 
-	// Collect engine and replica processes as instances
-	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	err := s.processInstanceList(instances)
 	if err != nil {
 		return nil, err
 	}
-	defer pmClient.Close()
 
-	processes, err := pmClient.ProcessList()
-	if err != nil {
-		return nil, err
-	}
-	for _, process := range processes {
-		instances[process.Spec.Name] = processResponseToInstanceResponse(process)
-	}
-
-	// Collect spdk instances as instances
 	if s.spdkEnabled {
-		diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+		err := s.spdkInstanceList(instances)
 		if err != nil {
 			return nil, err
-		}
-		defer diskClient.Close()
-
-		replicas, err := diskClient.ReplicaList()
-		if err != nil {
-			return nil, err
-		}
-		for _, replica := range replicas {
-			instances[replica.Name] = replicaResponseToInstanceResponse(replica)
-		}
-
-		engines, err := diskClient.EngineList()
-		if err != nil {
-			return nil, err
-		}
-		for _, engine := range engines {
-			instances[engine.Name] = engineResponseToInstanceResponse(engine)
 		}
 	}
 
 	return &rpc.InstanceListResponse{
 		Instances: instances,
 	}, nil
+}
+
+func (s *Server) processInstanceList(instances map[string]*rpc.InstanceResponse) error {
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return err
+	}
+	defer pmClient.Close()
+
+	processes, err := pmClient.ProcessList()
+	if err != nil {
+		return err
+	}
+	for _, process := range processes {
+		instances[process.Spec.Name] = processResponseToInstanceResponse(process)
+	}
+	return nil
+}
+
+func (s *Server) spdkInstanceList(instances map[string]*rpc.InstanceResponse) error {
+	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	if err != nil {
+		return err
+	}
+	defer diskClient.Close()
+
+	replicas, err := diskClient.ReplicaList()
+	if err != nil {
+		return err
+	}
+	for _, replica := range replicas {
+		instances[replica.Name] = replicaResponseToInstanceResponse(replica)
+	}
+
+	engines, err := diskClient.EngineList()
+	if err != nil {
+		return err
+	}
+	for _, engine := range engines {
+		instances[engine.Name] = engineResponseToInstanceResponse(engine)
+	}
+	return nil
 }
 
 func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
@@ -278,28 +324,36 @@ func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRe
 
 	switch req.Spec.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		if req.Spec.ProcessSpecific == nil {
-			return nil, fmt.Errorf("process is required for longhorn backend store driver")
-		}
-
-		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer pmClient.Close()
-
-		process, err := pmClient.ProcessReplace(req.Spec.Name,
-			req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs, req.TerminateSignal)
-		if err != nil {
-			return nil, err
-		}
-
-		return processResponseToInstanceResponse(process), nil
+		return s.processInstanceReplace(req)
 	case types.BackendStoreDriverTypeSpdkAio:
-		return nil, nil
+		return s.spdkInstanceReplace(req)
 	default:
 		return nil, fmt.Errorf("unknown backend store driver %v", req.Spec.BackendStoreDriver)
 	}
+}
+
+func (s *Server) processInstanceReplace(req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
+	if req.Spec.ProcessSpecific == nil {
+		return nil, fmt.Errorf("process is required for longhorn backend store driver")
+	}
+
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer pmClient.Close()
+
+	process, err := pmClient.ProcessReplace(req.Spec.Name,
+		req.Spec.ProcessSpecific.Binary, int(req.Spec.PortCount), req.Spec.ProcessSpecific.Args, req.Spec.PortArgs, req.TerminateSignal)
+	if err != nil {
+		return nil, err
+	}
+
+	return processResponseToInstanceResponse(process), nil
+}
+
+func (s *Server) spdkInstanceReplace(req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
+	return nil, fmt.Errorf("spdk instance replace is not supported")
 }
 
 func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
@@ -311,38 +365,48 @@ func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceServic
 
 	switch req.BackendStoreDriver {
 	case types.BackendStoreDriverTypeLonghorn:
-		pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
-		if err != nil {
-			return err
-		}
-		defer pmClient.Close()
-
-		stream, err := pmClient.ProcessLog(context.Background(), req.Name)
-		if err != nil {
-			return err
-		}
-		for {
-			line, err := stream.Recv()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				logrus.WithError(err).Error("Failed to receive log")
-				return err
-			}
-
-			if err := srv.Send(&rpc.LogResponse{Line: line}); err != nil {
-				return err
-			}
-		}
-		return nil
+		return s.processInstanceLog(req, srv)
 	case types.BackendStoreDriverTypeSpdkAio:
-		return nil
+		return s.spdkInstanceLog(req, srv)
 	default:
 		return fmt.Errorf("unknown backend store driver %v", req.BackendStoreDriver)
 	}
 }
 
+func (s *Server) processInstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
+	pmClient, err := client.NewProcessManagerClient("tcp://"+s.processManagerServiceAddress, nil)
+	if err != nil {
+		return err
+	}
+	defer pmClient.Close()
+
+	stream, err := pmClient.ProcessLog(context.Background(), req.Name)
+	if err != nil {
+		return err
+	}
+	for {
+		line, err := stream.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			logrus.WithError(err).Error("Failed to receive log")
+			return err
+		}
+
+		if err := srv.Send(&rpc.LogResponse{Line: line}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) spdkInstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {
+	return fmt.Errorf("spdk instance log is not supported")
+}
+
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+	logrus.Info("Start watching instances")
+
 	ctx := context.Background()
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -350,13 +414,15 @@ func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_Instanc
 		return s.watchProcess(ctx, req, srv)
 	})
 
-	g.Go(func() error {
-		return s.watchSpdkReplica(ctx, req, srv)
-	})
+	if s.spdkEnabled {
+		g.Go(func() error {
+			return s.watchSpdkReplica(ctx, req, srv)
+		})
 
-	g.Go(func() error {
-		return s.watchSpdkEngine(ctx, req, srv)
-	})
+		g.Go(func() error {
+			return s.watchSpdkEngine(ctx, req, srv)
+		})
+	}
 
 	if err := g.Wait(); err != nil {
 		return errors.Wrap(err, "failed to watch instances")
@@ -399,8 +465,6 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 }
 
 func (s *Server) watchSpdkEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
-	logrus.Info("Start watching SPDK engine")
-
 	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")

@@ -135,7 +135,7 @@ func (c *DiskServiceClient) DiskGet(diskPath string) (*DiskInfo, error) {
 	}, nil
 }
 
-func (c *DiskServiceClient) ReplicaCreate(name, lvstoreUUID string, size int64, address string) (*rpc.Replica, error) {
+func (c *DiskServiceClient) ReplicaCreate(name, lvstoreUUID string, size int64, exposeRequired bool) (*rpc.Replica, error) {
 	if name == "" || lvstoreUUID == "" || size == 0 {
 		return nil, fmt.Errorf("failed to create replica: missing required parameter")
 	}
@@ -145,10 +145,10 @@ func (c *DiskServiceClient) ReplicaCreate(name, lvstoreUUID string, size int64, 
 	defer cancel()
 
 	resp, err := client.ReplicaCreate(ctx, &rpc.ReplicaCreateRequest{
-		Name:        name,
-		LvstoreUuid: lvstoreUUID,
-		Size:        size,
-		Address:     address,
+		Name:           name,
+		LvstoreUuid:    lvstoreUUID,
+		Size:           size,
+		ExposeRequired: exposeRequired,
 	})
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (c *DiskServiceClient) ReplicaList() (map[string]*rpc.Replica, error) {
 	return resp.Replicas, nil
 }
 
-func (c *DiskServiceClient) EngineCreate(name, volumeName, frontend, address string, replicaAddresses map[string]string) (*rpc.Engine, error) {
+func (c *DiskServiceClient) EngineCreate(name, volumeName, frontend string, replicaAddresses map[string]string) (*rpc.Engine, error) {
 	if name == "" || replicaAddresses == nil {
 		return nil, fmt.Errorf("failed to create engine: missing required parameter")
 	}
@@ -213,7 +213,6 @@ func (c *DiskServiceClient) EngineCreate(name, volumeName, frontend, address str
 	resp, err := client.EngineCreate(ctx, &rpc.EngineCreateRequest{
 		Name:              name,
 		VolumeName:        volumeName,
-		Address:           address,
 		ReplicaAddressMap: replicaAddresses,
 		Frontend:          frontend,
 	})
@@ -224,8 +223,19 @@ func (c *DiskServiceClient) EngineCreate(name, volumeName, frontend, address str
 	return resp, nil
 }
 
-func (c *DiskServiceClient) EngineDelete() error {
-	return nil
+func (c *DiskServiceClient) EngineDelete(name string) error {
+	if name == "" {
+		return fmt.Errorf("failed to delete engine: missing required parameter")
+	}
+
+	client := c.getControllerServiceClient()
+	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
+	defer cancel()
+
+	_, err := client.EngineDelete(ctx, &rpc.EngineDeleteRequest{
+		Name: name,
+	})
+	return err
 }
 
 func (c *DiskServiceClient) EngineGet(name string) (*rpc.Engine, error) {
