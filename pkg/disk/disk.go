@@ -124,53 +124,6 @@ func (s *Server) startMonitoring() {
 	}
 }
 
-func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInfo, error) {
-	spdkClient, err := s.getSpdkClient()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get spdk client")
-	}
-	defer spdkClient.Close()
-
-	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore(lvsName, uuid)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get lvstore info")
-	}
-
-	if len(lvstoreInfos) != 1 {
-		return nil, fmt.Errorf("number of lvstores with UUID %v is not 1", uuid)
-	}
-
-	return &lvstoreInfos[0], nil
-}
-
-func (s *Server) getBdevNameFromDiskPath(diskPath string) (string, error) {
-	spdkClient, err := s.getSpdkClient()
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to get spdk client")
-	}
-	defer spdkClient.Close()
-
-	bdevInfos, err := spdkClient.BdevGetBdevs("", 3000)
-	if err != nil {
-		return "", grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdevs").Error())
-	}
-
-	bdevName := ""
-	for _, info := range bdevInfos {
-		if info.DriverSpecific != nil &&
-			info.DriverSpecific.Aio != nil &&
-			info.DriverSpecific.Aio.FileName == diskPath {
-			bdevName = info.Name
-		}
-	}
-
-	if bdevName == "" {
-		return "", grpcstatus.Error(grpccodes.NotFound, errors.Errorf("failed to find bdev with disk path %v", diskPath).Error())
-	}
-
-	return bdevName, nil
-}
-
 func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*rpc.Disk, error) {
 	s.Lock()
 	defer s.Unlock()
@@ -187,9 +140,9 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and path are required")
 	}
 
-	blockSize := defaultBlockSize
+	blockSize := uint64(defaultBlockSize)
 	if req.BlockSize > 0 {
-		blockSize = int(req.BlockSize)
+		blockSize = uint64(req.BlockSize)
 	}
 
 	ok, err := isBlockDevice(req.DiskPath)
@@ -199,7 +152,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 	}
 	if !ok {
 		log.Errorf("Disk %v is not a block device", req.DiskPath)
-		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, fmt.Errorf("disk %v is not a block device", req.DiskPath).Error())
+		return nil, grpcstatus.Errorf(grpccodes.FailedPrecondition, "disk %v is not a block device", req.DiskPath)
 	}
 
 	size, err := getDiskDeviceSize(req.DiskPath)
@@ -208,12 +161,12 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, errors.Wrap(err, "failed to get disk size").Error())
 	}
 	if size == 0 {
-		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, fmt.Errorf("disk %v size is 0", req.DiskPath).Error())
+		return nil, grpcstatus.Errorf(grpccodes.FailedPrecondition, "disk %v size is 0", req.DiskPath)
 	}
 
 	spdkClient, err := s.getSpdkClient()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get spdk client")
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to get spdk client").Error())
 	}
 	defer spdkClient.Close()
 
@@ -298,6 +251,10 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 
 	log.Info("Getting disk info")
 
+	if req.DiskPath == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk path is required")
+	}
+
 	diskPath := getDiskPath(req.DiskPath)
 
 	bdevName, err := s.getBdevNameFromDiskPath(diskPath)
@@ -334,6 +291,53 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 		ClusterSize: int64(lvstoreInfo.ClusterSize),
 		Readonly:    false,
 	}, nil
+}
+
+func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInfo, error) {
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spdk client")
+	}
+	defer spdkClient.Close()
+
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore(lvsName, uuid)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get lvstore info")
+	}
+
+	if len(lvstoreInfos) != 1 {
+		return nil, fmt.Errorf("number of lvstores with UUID %v is not 1", uuid)
+	}
+
+	return &lvstoreInfos[0], nil
+}
+
+func (s *Server) getBdevNameFromDiskPath(diskPath string) (string, error) {
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get spdk client")
+	}
+	defer spdkClient.Close()
+
+	bdevInfos, err := spdkClient.BdevGetBdevs("", 3000)
+	if err != nil {
+		return "", grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdevs").Error())
+	}
+
+	bdevName := ""
+	for _, info := range bdevInfos {
+		if info.DriverSpecific != nil &&
+			info.DriverSpecific.Aio != nil &&
+			info.DriverSpecific.Aio.FileName == diskPath {
+			bdevName = info.Name
+		}
+	}
+
+	if bdevName == "" {
+		return "", grpcstatus.Error(grpccodes.NotFound, errors.Errorf("failed to find bdev with disk path %v", diskPath).Error())
+	}
+
+	return bdevName, nil
 }
 
 func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateRequest) (*rpc.Replica, error) {
