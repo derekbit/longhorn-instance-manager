@@ -72,7 +72,7 @@ func NewDiskServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peerName
 	return NewDiskServiceClient(serviceURL, tlsConfig)
 }
 
-func (c *DiskServiceClient) DiskCreate(diskName, diskPath string) (*DiskInfo, error) {
+func (c *DiskServiceClient) DiskCreate(diskName, diskPath string, blockSize int64) (*DiskInfo, error) {
 	if diskName == "" || diskPath == "" {
 		return nil, fmt.Errorf("failed to create disk: missing required parameter")
 	}
@@ -82,8 +82,9 @@ func (c *DiskServiceClient) DiskCreate(diskName, diskPath string) (*DiskInfo, er
 	defer cancel()
 
 	resp, err := client.DiskCreate(ctx, &rpc.DiskCreateRequest{
-		DiskName: diskName,
-		DiskPath: diskPath,
+		DiskName:  diskName,
+		DiskPath:  diskPath,
+		BlockSize: blockSize,
 	})
 	if err != nil {
 		return nil, err

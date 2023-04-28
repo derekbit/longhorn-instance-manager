@@ -81,6 +81,7 @@ enum ReplicaMode {
 message DiskCreateRequest{
 	string disk_name = 1;
     string disk_path = 2;
+    int64 block_size = 3;
 }
 
 message DiskGetRequest {

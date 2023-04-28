@@ -3,6 +3,7 @@ package disk
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,6 +34,7 @@ import (
 
 const (
 	defaultClusterSize = 4 * 1024 * 1024 // 4MB
+	defaultBlockSize   = 4096            // 4KB
 
 	devPath = "/dev/longhorn"
 )
@@ -174,11 +176,40 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 	defer s.Unlock()
 
 	log := logrus.WithFields(logrus.Fields{
-		"diskName": req.DiskName,
-		"diskPath": req.DiskPath,
+		"diskName":  req.DiskName,
+		"diskPath":  req.DiskPath,
+		"blockSize": req.BlockSize,
 	})
 
 	log.Info("Creating disk")
+
+	if req.DiskName == "" || req.DiskPath == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and path are required")
+	}
+
+	blockSize := defaultBlockSize
+	if req.BlockSize > 0 {
+		blockSize = int(req.BlockSize)
+	}
+
+	ok, err := isBlockDevice(req.DiskPath)
+	if err != nil {
+		log.WithError(err).Error("Failed to check if disk is block device")
+		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, errors.Wrap(err, "failed to check if disk is block device").Error())
+	}
+	if !ok {
+		log.Errorf("Disk %v is not a block device", req.DiskPath)
+		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, fmt.Errorf("disk %v is not a block device", req.DiskPath).Error())
+	}
+
+	size, err := getDiskDeviceSize(req.DiskPath)
+	if err != nil {
+		log.WithError(err).Error("Failed to get disk size")
+		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, errors.Wrap(err, "failed to get disk size").Error())
+	}
+	if size == 0 {
+		return nil, grpcstatus.Error(grpccodes.FailedPrecondition, fmt.Errorf("disk %v size is 0", req.DiskPath).Error())
+	}
 
 	spdkClient, err := s.getSpdkClient()
 	if err != nil {
@@ -188,7 +219,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 
 	diskPath := getDiskPath(req.DiskPath)
 
-	bdevName, err := spdkClient.BdevAioCreate(diskPath, req.DiskName, 4096)
+	bdevName, err := spdkClient.BdevAioCreate(diskPath, req.DiskName, blockSize)
 	if err != nil {
 		resp, parseErr := parseErrorMessage(err.Error())
 		if parseErr != nil || !strings.EqualFold(resp.Message, syscall.Errno(syscall.EEXIST).Error()) {
@@ -231,6 +262,30 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 		ClusterSize: int64(lvstoreInfo.ClusterSize),
 		Readonly:    false,
 	}, nil
+}
+
+func getDiskDeviceSize(path string) (int64, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to open %s", path)
+	}
+	defer file.Close()
+
+	pos, err := file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to seek %s", path)
+	}
+	return pos, nil
+}
+
+func isBlockDevice(fullPath string) (bool, error) {
+	var st unix.Stat_t
+	err := unix.Stat(fullPath, &st)
+	if err != nil {
+		return false, err
+	}
+
+	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
 }
 
 func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Disk, error) {
@@ -757,7 +812,7 @@ func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (
 			ReplicaAddressMap: replicaAddressMap,
 			ReplicaModeMap:    replicaModeMap,
 			Endpoint:          "/dev/longhorn/" + getVolumeName(name),
-			Frontend:          "spdk-blockdev",
+			Frontend:          "spdk-tcp-blockdev",
 			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
 			Ip:                listenerList[0].Address.Traddr,
 			Port:              int32(port),
