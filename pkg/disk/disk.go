@@ -181,10 +181,40 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 		}
 	}
 
-	uuid, err := spdkClient.BdevLvolCreateLvstore(bdevName, req.DiskName, defaultClusterSize)
+	lvstoreName := bdevName
+	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", "")
 	if err != nil {
-		log.WithError(err).Error("Failed to create lvstore")
-		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create lvstore").Error())
+		log.WithError(err).Errorf("Failed to get lvstore with name %v", lvstoreName)
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get lvstore with name %v", lvstoreName).Error())
+	}
+
+	uuid := ""
+	switch len(lvstoreInfos) {
+	case 0:
+		uuid, err = spdkClient.BdevLvolCreateLvstore(lvstoreName, req.DiskName, defaultClusterSize)
+		if err != nil {
+			log.WithError(err).Error("Failed to create lvstore")
+			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create lvstore").Error())
+		}
+	case 1:
+		log.Info("Found an existing lvstore %v", lvstoreInfos[0].Name)
+		lvstoreInfo := &lvstoreInfos[0]
+		if lvstoreInfo.Name != lvstoreName {
+			log.Info("Renaming the existing lvstore %v to %v", lvstoreInfo.Name, lvstoreName)
+			renamed, err := spdkClient.BdevLvolRenameLvstore(lvstoreInfo.Name, lvstoreName)
+			if err != nil {
+				log.WithError(err).Errorf("Failed to rename lvstore from %v to %v", lvstoreInfo.Name, lvstoreName)
+				return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to rename lvstore from %v to %v", lvstoreInfo.Name, lvstoreName).Error())
+			}
+			if !renamed {
+				log.Errorf("Failed to rename lvstore from %v to %v", lvstoreInfo.Name, lvstoreName)
+				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to rename lvstore from %v to %v", lvstoreInfo.Name, lvstoreName)
+			}
+		}
+		uuid = lvstoreInfo.UUID
+	default:
+		log.Error("Found more than one lvstore")
+		return nil, grpcstatus.Error(grpccodes.Internal, "found more than one lvstore")
 	}
 
 	lvstoreInfo, err := s.bdevLvolGetLvstore("", uuid)
@@ -246,28 +276,57 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 	defer s.Unlock()
 
 	log := logrus.WithFields(logrus.Fields{
+		"diskName": req.DiskName,
 		"diskPath": req.DiskPath,
 	})
 
 	log.Info("Getting disk info")
 
-	if req.DiskPath == "" {
+	if req.DiskName == "" || req.DiskPath == "" {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk path is required")
+	}
+
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get spdk client").Error())
+	}
+	defer spdkClient.Close()
+
+	// Check if the disk exists
+	bdevInfos, err := spdkClient.BdevGetBdevs(req.DiskName, 3000)
+	if err != nil {
+		resp, parseErr := parseErrorMessage(err.Error())
+		if parseErr != nil || !strings.EqualFold(resp.Message, syscall.Errno(syscall.ENODEV).Error()) {
+			log.WithError(err).Errorf("Failed to get bdev with name %v", req.DiskName)
+			return nil, grpcstatus.Errorf(grpccodes.Internal, errors.Wrapf(err, "failed to get bdev with name %v", req.DiskName).Error())
+		}
+	}
+	if len(bdevInfos) == 0 {
+		log.WithError(err).Errorf("Cannot find bdev with name %v", req.DiskName)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find bdev with name %v", req.DiskName)
 	}
 
 	diskPath := getDiskPath(req.DiskPath)
 
-	bdevName, err := s.getBdevNameFromDiskPath(diskPath)
-	if err != nil {
+	var bdevInfo *spdktypes.BdevInfo
+	for i, info := range bdevInfos {
+		if info.DriverSpecific != nil ||
+			info.DriverSpecific.Aio != nil ||
+			info.DriverSpecific.Aio.FileName == diskPath {
+			bdevInfo = &bdevInfos[i]
+		}
+	}
+	if bdevInfo == nil {
 		log.WithError(err).Errorf("Failed to get bdev name for disk path %v", diskPath)
-		return nil, grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdev name for disk path %v", diskPath).Error())
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, errors.Wrapf(err, "failed to get bdev name for disk path %v", diskPath).Error())
 	}
 
-	lvstoreName := bdevName
+	// Get the disk information from the lvstore
+	lvstoreName := req.DiskName
 	lvstoreInfo, err := s.bdevLvolGetLvstore(lvstoreName, "")
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get %v lvstore", lvstoreName)
-		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get %v lvstore", lvstoreName).Error())
+		return nil, grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get %v lvstore", lvstoreName).Error())
 	}
 
 	log.Info("Got disk info")
@@ -305,12 +364,18 @@ func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInf
 		return nil, errors.Wrapf(err, "failed to get lvstore info")
 	}
 
+	if len(lvstoreInfos) == 0 {
+		return nil, errors.New(syscall.ENOENT.Error())
+	}
+
 	if len(lvstoreInfos) != 1 {
-		return nil, fmt.Errorf("number of lvstores with UUID %v is not 1", uuid)
+		return nil, fmt.Errorf("number of lvstores with name %v is not 1", lvsName)
 	}
 
 	return &lvstoreInfos[0], nil
 }
+
+//func (s *Server) getDiskPathFromBdevName(bdevName string) (string, error) {
 
 func (s *Server) getBdevNameFromDiskPath(diskPath string) (string, error) {
 	spdkClient, err := s.getSpdkClient()
@@ -808,14 +873,21 @@ func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (
 			replicaAddressMap[name] = localIP + ":" + strconv.Itoa(port)
 		}
 
+		endpoint := "/dev/longhorn/" + getVolumeName(name)
+		size, err := getDiskDeviceSize(endpoint)
+		if err != nil {
+			log.WithError(err).Error("Failed to get disk device size")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+
 		engine = &rpc.Engine{
 			Name:              name,
 			Uuid:              "",
-			Size:              0,
+			Size:              uint64(size),
 			Address:           "",
 			ReplicaAddressMap: replicaAddressMap,
 			ReplicaModeMap:    replicaModeMap,
-			Endpoint:          "/dev/longhorn/" + getVolumeName(name),
+			Endpoint:          endpoint,
 			Frontend:          "spdk-tcp-blockdev",
 			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
 			Ip:                listenerList[0].Address.Traddr,
@@ -848,7 +920,7 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 	log.Info("Deleting engine")
 	log.Info("Deleted engine")
 
-	return nil, grpcstatus.Error(grpccodes.Unimplemented, "")
+	return &empty.Empty{}, nil
 }
 
 func (s *Server) EngineGet(ctx context.Context, req *rpc.EngineGetRequest) (*rpc.Engine, error) {

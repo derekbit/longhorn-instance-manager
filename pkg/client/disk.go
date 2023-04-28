@@ -105,7 +105,7 @@ func (c *DiskServiceClient) DiskCreate(diskName, diskPath string, blockSize int6
 	}, nil
 }
 
-func (c *DiskServiceClient) DiskGet(diskPath string) (*DiskInfo, error) {
+func (c *DiskServiceClient) DiskGet(diskName, diskPath string) (*DiskInfo, error) {
 	if diskPath == "" {
 		return nil, fmt.Errorf("failed to get disk info: missing required parameter")
 	}
@@ -115,6 +115,7 @@ func (c *DiskServiceClient) DiskGet(diskPath string) (*DiskInfo, error) {
 	defer cancel()
 
 	resp, err := client.DiskGet(ctx, &rpc.DiskGetRequest{
+		DiskName: diskName,
 		DiskPath: diskPath,
 	})
 	if err != nil {

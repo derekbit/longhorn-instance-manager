@@ -132,6 +132,21 @@ func (c *Client) BdevLvolGetLvstore(lvsName, uuid string) (lvstoreInfoList []spd
 	return lvstoreInfoList, json.Unmarshal(cmdOutput, &lvstoreInfoList)
 }
 
+// BdevLvolRenameLvstore renames a logical volume store.
+func (c *Client) BdevLvolRenameLvstore(oldlvsName, newlvsName string) (renamed bool, err error) {
+	req := spdktypes.BdevLvolRenameLvstoreRequest{
+		OldLvsName: oldlvsName,
+		NewLvsName: newlvsName,
+	}
+
+	cmdOutput, err := c.jsonCli.SendCommand("bdev_lvol_rename_lvstore", req)
+	if err != nil {
+		return false, err
+	}
+
+	return renamed, json.Unmarshal(cmdOutput, &renamed)
+}
+
 // BdevLvolCreate create a logical volume on a logical volume store.
 //
 //	"lvol_name": Required. Name of logical volume to create. The bdev name/alias will be <LVSTORE NAME>/<LVOL NAME>.
@@ -336,12 +351,12 @@ func (c *Client) BdevRaidDelete(name string) (deleted bool, err error) {
 
 // BdevRaidGetBdevs is used to list all the raid bdev details based on the input category requested.
 //
-//	"category": Required.
-//    This should be one of 'all', 'online', 'configuring' or 'offline'.
-//	    'all' means all the raid bdevs whether they are online or configuring or offline.
-//	    'online' is the raid bdev which is registered with bdev layer.
-//	    'offline' is the raid bdev which is not registered with bdev as of now and it has encountered any error or user has requested to offline the raid bdev.
-//	    'configuring' is the raid bdev which does not have full configuration discovered yet.
+//		"category": Required.
+//	   This should be one of 'all', 'online', 'configuring' or 'offline'.
+//		    'all' means all the raid bdevs whether they are online or configuring or offline.
+//		    'online' is the raid bdev which is registered with bdev layer.
+//		    'offline' is the raid bdev which is not registered with bdev as of now and it has encountered any error or user has requested to offline the raid bdev.
+//		    'configuring' is the raid bdev which does not have full configuration discovered yet.
 func (c *Client) BdevRaidGetBdevs(category spdktypes.BdevRaidCategory) (bdevRaidInfoList []spdktypes.BdevRaidInfo, err error) {
 	req := spdktypes.BdevRaidGetBdevsRequest{
 		Category: category,
@@ -357,7 +372,7 @@ func (c *Client) BdevRaidGetBdevs(category spdktypes.BdevRaidCategory) (bdevRaid
 
 // BdevNvmeAttachController constructs NVMe bdev.
 //
-//	"name": Name of the NVMe controller, prefix for each bdev name.
+//	"name": Name of the NVMe controller. And the corresponding bdev nvme name are same as the nvme namespace name, which is `{ControllerName}n1`
 //
 //	"subnqn": NVMe-oF target subnqn. It can be the nvmf subsystem nqn.
 //
@@ -418,6 +433,42 @@ func (c *Client) BdevNvmeGetControllers(name string) (controllerInfoList []spdkt
 	}
 
 	return controllerInfoList, json.Unmarshal(cmdOutput, &controllerInfoList)
+}
+
+// BdevNvmeGet gets information about bdev NVMe of attached controllers.
+//
+//	"name": Optional. UUID or name of the bdev NVMe. The alias of a bdev NVMe is UUID while <LVSTORE NAME>/<LVOL NAME>.
+//		 	The name is `<Nvme Controller Name>n1`.
+//		 	If this is not specified, the function will list all bdev NVMe.
+//
+//	"timeout": Optional. 0 by default, meaning the method returns immediately whether the nvme exists or not.
+func (c *Client) BdevNvmeGet(name string, timeout uint64) (bdevNvmeInfoList []spdktypes.BdevInfo, err error) {
+	req := spdktypes.BdevGetBdevsRequest{
+		Name:    name,
+		Timeout: timeout,
+	}
+
+	cmdOutput, err := c.jsonCli.SendCommand("bdev_get_bdevs", req)
+	if err != nil {
+		return nil, err
+	}
+	bdevInfoList := []spdktypes.BdevInfo{}
+	if err := json.Unmarshal(cmdOutput, &bdevInfoList); err != nil {
+		return nil, err
+	}
+
+	bdevNvmeInfoList = []spdktypes.BdevInfo{}
+	for _, b := range bdevInfoList {
+		if b.ProductName != spdktypes.BdevProductNameNvme {
+			continue
+		}
+		if b.DriverSpecific.Nvme == nil {
+			continue
+		}
+		bdevNvmeInfoList = append(bdevNvmeInfoList, b)
+	}
+
+	return bdevNvmeInfoList, nil
 }
 
 // NvmfCreateTransport initializes an NVMe-oF transport with the given options.

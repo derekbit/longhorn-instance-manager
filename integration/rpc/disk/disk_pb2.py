@@ -23,7 +23,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xca\x01\n\x04\x44isk\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xa9\x01\n\x07Replica\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x0c\n\x04port\x18\t \x01(\x05\x12\r\n\x05state\x18\n \x01(\t\"\x9e\x03\n\x06\x45ngine\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x41\n\x13replica_address_map\x18\x05 \x03(\x0b\x32$.imrpc.Engine.ReplicaAddressMapEntry\x12;\n\x10replica_mode_map\x18\x06 \x03(\x0b\x32!.imrpc.Engine.ReplicaModeMapEntry\x12\x10\n\x08\x65ndpoint\x18\x07 \x01(\t\x12\x10\n\x08\x66rontend\x18\x08 \x01(\t\x12\x16\n\x0e\x66rontend_state\x18\t \x01(\t\x12\n\n\x02ip\x18\n \x01(\t\x12\x0c\n\x04port\x18\x0b \x01(\x05\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aI\n\x13ReplicaModeMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0e\x32\x12.imrpc.ReplicaMode:\x02\x38\x01\"M\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\x12\x12\n\nblock_size\x18\x03 \x01(\x03\"#\n\x0e\x44iskGetRequest\x12\x11\n\tdisk_path\x18\x01 \x01(\t\"a\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\x12\x17\n\x0f\x65xpose_required\x18\x04 \x01(\x08\"7\n\x11ReplicaGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"\x92\x01\n\x13ReplicaListResponse\x12:\n\x08replicas\x18\x01 \x03(\x0b\x32(.imrpc.ReplicaListResponse.ReplicasEntry\x1a?\n\rReplicasEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1d\n\x05value\x18\x02 \x01(\x0b\x32\x0e.imrpc.Replica:\x02\x38\x01\"\xd4\x01\n\x13\x45ngineCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bvolume_name\x18\x02 \x01(\t\x12N\n\x13replica_address_map\x18\x03 \x03(\x0b\x32\x31.imrpc.EngineCreateRequest.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x04 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"#\n\x13\x45ngineDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\" \n\x10\x45ngineGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x8c\x01\n\x12\x45ngineListResponse\x12\x37\n\x07\x65ngines\x18\x01 \x03(\x0b\x32&.imrpc.EngineListResponse.EnginesEntry\x1a=\n\x0c\x45nginesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1c\n\x05value\x18\x02 \x01(\x0b\x32\r.imrpc.Engine:\x02\x38\x01*&\n\x0bReplicaMode\x12\x06\n\x02WO\x10\x00\x12\x06\n\x02RW\x10\x01\x12\x07\n\x03\x45RR\x10\x02\x32\x93\x06\n\x0b\x44iskService\x12\x33\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x0b.imrpc.Disk\x12-\n\x07\x44iskGet\x12\x15.imrpc.DiskGetRequest\x1a\x0b.imrpc.Disk\x12<\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x0e.imrpc.Replica\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nReplicaGet\x12\x18.imrpc.ReplicaGetRequest\x1a\x0e.imrpc.Replica\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x39\n\x0c\x45ngineCreate\x12\x1a.imrpc.EngineCreateRequest\x1a\r.imrpc.Engine\x12\x42\n\x0c\x45ngineDelete\x12\x1a.imrpc.EngineDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x33\n\tEngineGet\x12\x17.imrpc.EngineGetRequest\x1a\r.imrpc.Engine\x12?\n\nEngineList\x12\x16.google.protobuf.Empty\x1a\x19.imrpc.EngineListResponse\x12:\n\x0cReplicaWatch\x12\x16.google.protobuf.Empty\x1a\x0e.imrpc.Replica\"\x00\x30\x01\x12\x38\n\x0b\x45ngineWatch\x12\x16.google.protobuf.Empty\x1a\r.imrpc.Engine\"\x00\x30\x01\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
+  serialized_pb=_b('\n\ndisk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xca\x01\n\x04\x44isk\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x12\x0c\n\x04type\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x11\n\tfree_size\x18\x06 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x07 \x01(\x03\x12\x13\n\x0b\x66ree_blocks\x18\x08 \x01(\x03\x12\x12\n\nblock_size\x18\t \x01(\x03\x12\x14\n\x0c\x63luster_size\x18\n \x01(\x03\x12\x10\n\x08readonly\x18\x0b \x01(\x08\"\xa9\x01\n\x07Replica\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tbdev_name\x18\x03 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x04 \x01(\t\x12\x12\n\ntotal_size\x18\x05 \x01(\x03\x12\x14\n\x0ctotal_blocks\x18\x06 \x01(\x03\x12\x12\n\nblock_size\x18\x07 \x01(\x03\x12\x0c\n\x04port\x18\t \x01(\x05\x12\r\n\x05state\x18\n \x01(\t\"\x9e\x03\n\x06\x45ngine\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x41\n\x13replica_address_map\x18\x05 \x03(\x0b\x32$.imrpc.Engine.ReplicaAddressMapEntry\x12;\n\x10replica_mode_map\x18\x06 \x03(\x0b\x32!.imrpc.Engine.ReplicaModeMapEntry\x12\x10\n\x08\x65ndpoint\x18\x07 \x01(\t\x12\x10\n\x08\x66rontend\x18\x08 \x01(\t\x12\x16\n\x0e\x66rontend_state\x18\t \x01(\t\x12\n\n\x02ip\x18\n \x01(\t\x12\x0c\n\x04port\x18\x0b \x01(\x05\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aI\n\x13ReplicaModeMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0e\x32\x12.imrpc.ReplicaMode:\x02\x38\x01\"M\n\x11\x44iskCreateRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\x12\x12\n\nblock_size\x18\x03 \x01(\x03\"6\n\x0e\x44iskGetRequest\x12\x11\n\tdisk_name\x18\x01 \x01(\t\x12\x11\n\tdisk_path\x18\x02 \x01(\t\"a\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x03\x12\x17\n\x0f\x65xpose_required\x18\x04 \x01(\x08\"7\n\x11ReplicaGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\":\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x0clvstore_uuid\x18\x02 \x01(\t\"\x92\x01\n\x13ReplicaListResponse\x12:\n\x08replicas\x18\x01 \x03(\x0b\x32(.imrpc.ReplicaListResponse.ReplicasEntry\x1a?\n\rReplicasEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1d\n\x05value\x18\x02 \x01(\x0b\x32\x0e.imrpc.Replica:\x02\x38\x01\"\xd4\x01\n\x13\x45ngineCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bvolume_name\x18\x02 \x01(\t\x12N\n\x13replica_address_map\x18\x03 \x03(\x0b\x32\x31.imrpc.EngineCreateRequest.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x04 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"#\n\x13\x45ngineDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\" \n\x10\x45ngineGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x8c\x01\n\x12\x45ngineListResponse\x12\x37\n\x07\x65ngines\x18\x01 \x03(\x0b\x32&.imrpc.EngineListResponse.EnginesEntry\x1a=\n\x0c\x45nginesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1c\n\x05value\x18\x02 \x01(\x0b\x32\r.imrpc.Engine:\x02\x38\x01*&\n\x0bReplicaMode\x12\x06\n\x02WO\x10\x00\x12\x06\n\x02RW\x10\x01\x12\x07\n\x03\x45RR\x10\x02\x32\x93\x06\n\x0b\x44iskService\x12\x33\n\nDiskCreate\x12\x18.imrpc.DiskCreateRequest\x1a\x0b.imrpc.Disk\x12-\n\x07\x44iskGet\x12\x15.imrpc.DiskGetRequest\x1a\x0b.imrpc.Disk\x12<\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x0e.imrpc.Replica\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nReplicaGet\x12\x18.imrpc.ReplicaGetRequest\x1a\x0e.imrpc.Replica\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x39\n\x0c\x45ngineCreate\x12\x1a.imrpc.EngineCreateRequest\x1a\r.imrpc.Engine\x12\x42\n\x0c\x45ngineDelete\x12\x1a.imrpc.EngineDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x33\n\tEngineGet\x12\x17.imrpc.EngineGetRequest\x1a\r.imrpc.Engine\x12?\n\nEngineList\x12\x16.google.protobuf.Empty\x1a\x19.imrpc.EngineListResponse\x12:\n\x0cReplicaWatch\x12\x16.google.protobuf.Empty\x1a\x0e.imrpc.Replica\"\x00\x30\x01\x12\x38\n\x0b\x45ngineWatch\x12\x16.google.protobuf.Empty\x1a\r.imrpc.Engine\"\x00\x30\x01\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,imrpc__pb2.DESCRIPTOR,])
 
@@ -48,8 +48,8 @@ _REPLICAMODE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1767,
-  serialized_end=1805,
+  serialized_start=1786,
+  serialized_end=1824,
 )
 _sym_db.RegisterEnumDescriptor(_REPLICAMODE)
 
@@ -476,8 +476,15 @@ _DISKGETREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='disk_path', full_name='imrpc.DiskGetRequest.disk_path', index=0,
+      name='disk_name', full_name='imrpc.DiskGetRequest.disk_name', index=0,
       number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='disk_path', full_name='imrpc.DiskGetRequest.disk_path', index=1,
+      number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -495,7 +502,7 @@ _DISKGETREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=936,
-  serialized_end=971,
+  serialized_end=990,
 )
 
 
@@ -546,8 +553,8 @@ _REPLICACREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=973,
-  serialized_end=1070,
+  serialized_start=992,
+  serialized_end=1089,
 )
 
 
@@ -584,8 +591,8 @@ _REPLICAGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1072,
-  serialized_end=1127,
+  serialized_start=1091,
+  serialized_end=1146,
 )
 
 
@@ -622,8 +629,8 @@ _REPLICADELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1129,
-  serialized_end=1187,
+  serialized_start=1148,
+  serialized_end=1206,
 )
 
 
@@ -660,8 +667,8 @@ _REPLICALISTRESPONSE_REPLICASENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1273,
-  serialized_end=1336,
+  serialized_start=1292,
+  serialized_end=1355,
 )
 
 _REPLICALISTRESPONSE = _descriptor.Descriptor(
@@ -690,8 +697,8 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1190,
-  serialized_end=1336,
+  serialized_start=1209,
+  serialized_end=1355,
 )
 
 
@@ -779,8 +786,8 @@ _ENGINECREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1339,
-  serialized_end=1551,
+  serialized_start=1358,
+  serialized_end=1570,
 )
 
 
@@ -810,8 +817,8 @@ _ENGINEDELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1553,
-  serialized_end=1588,
+  serialized_start=1572,
+  serialized_end=1607,
 )
 
 
@@ -841,8 +848,8 @@ _ENGINEGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1590,
-  serialized_end=1622,
+  serialized_start=1609,
+  serialized_end=1641,
 )
 
 
@@ -879,8 +886,8 @@ _ENGINELISTRESPONSE_ENGINESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1704,
-  serialized_end=1765,
+  serialized_start=1723,
+  serialized_end=1784,
 )
 
 _ENGINELISTRESPONSE = _descriptor.Descriptor(
@@ -909,8 +916,8 @@ _ENGINELISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1625,
-  serialized_end=1765,
+  serialized_start=1644,
+  serialized_end=1784,
 )
 
 _ENGINE_REPLICAADDRESSMAPENTRY.containing_type = _ENGINE
@@ -1086,8 +1093,8 @@ _DISKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1808,
-  serialized_end=2595,
+  serialized_start=1827,
+  serialized_end=2614,
   methods=[
   _descriptor.MethodDescriptor(
     name='DiskCreate',
