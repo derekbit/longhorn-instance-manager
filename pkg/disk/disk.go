@@ -217,7 +217,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 		return nil, grpcstatus.Error(grpccodes.Internal, "found more than one lvstore")
 	}
 
-	lvstoreInfo, err := s.bdevLvolGetLvstore("", uuid)
+	lvstoreInfo, err := s.bdevLvolGetLvstore(spdkClient, "", uuid)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get lvstore with name %v and UUID %v", req.DiskName, uuid)
 		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get lvstore with name %v and UUID %v", req.DiskName, uuid).Error())
@@ -323,7 +323,7 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 
 	// Get the disk information from the lvstore
 	lvstoreName := req.DiskName
-	lvstoreInfo, err := s.bdevLvolGetLvstore(lvstoreName, "")
+	lvstoreInfo, err := s.bdevLvolGetLvstore(spdkClient, lvstoreName, "")
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get %v lvstore", lvstoreName)
 		return nil, grpcstatus.Error(grpccodes.NotFound, errors.Wrapf(err, "failed to get %v lvstore", lvstoreName).Error())
@@ -352,13 +352,7 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 	}, nil
 }
 
-func (s *Server) bdevLvolGetLvstore(lvsName, uuid string) (*spdktypes.LvstoreInfo, error) {
-	spdkClient, err := s.getSpdkClient()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get spdk client")
-	}
-	defer spdkClient.Close()
-
+func (s *Server) bdevLvolGetLvstore(spdkClient *spdkclient.Client, lvsName, uuid string) (*spdktypes.LvstoreInfo, error) {
 	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore(lvsName, uuid)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get lvstore info")

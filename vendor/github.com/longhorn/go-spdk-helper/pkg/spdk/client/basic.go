@@ -133,10 +133,10 @@ func (c *Client) BdevLvolGetLvstore(lvsName, uuid string) (lvstoreInfoList []spd
 }
 
 // BdevLvolRenameLvstore renames a logical volume store.
-func (c *Client) BdevLvolRenameLvstore(oldlvsName, newlvsName string) (renamed bool, err error) {
+func (c *Client) BdevLvolRenameLvstore(oldName, newName string) (renamed bool, err error) {
 	req := spdktypes.BdevLvolRenameLvstoreRequest{
-		OldLvsName: oldlvsName,
-		NewLvsName: newlvsName,
+		OldName: oldName,
+		NewName: newName,
 	}
 
 	cmdOutput, err := c.jsonCli.SendCommand("bdev_lvol_rename_lvstore", req)
