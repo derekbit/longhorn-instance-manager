@@ -912,6 +912,44 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 	})
 
 	log.Info("Deleting engine")
+
+	raidNQN := spdkutil.GetNQN(req.Name)
+	localIP, err := issiutil.GetIPToHost()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get local IP")
+	}
+	localPort := "4422"
+
+	nvmeCli, err := spdknvme.NewInitiator(raidNQN, localIP, localPort)
+	if err != nil {
+		log.WithError(err).Error("Failed to create NVMe initiator")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	err = nvmeCli.StopInitiator()
+	if err != nil {
+		log.WithError(err).Error("Failed to stop NVMe initiator")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spdk client")
+	}
+	defer spdkClient.Close()
+
+	err = spdkClient.StopExposeBdev(raidNQN)
+	if err != nil {
+		log.WithError(err).Error("Failed to stop expose bdev")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
+	_, err = spdkClient.BdevRaidDelete(req.Name)
+	if err != nil {
+		log.WithError(err).Error("Failed to delete bdev raid")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
+
 	log.Info("Deleted engine")
 
 	return &empty.Empty{}, nil
