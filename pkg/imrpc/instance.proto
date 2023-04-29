@@ -52,6 +52,7 @@ message InstanceStatus {
 
 message InstanceCreateRequest {
 	InstanceSpec spec = 1;
+	bool expose_required = 2;
 }
 
 message InstanceDeleteRequest {
