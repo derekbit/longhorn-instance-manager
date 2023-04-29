@@ -177,7 +177,7 @@ func (c *SPDKServiceClient) EngineDelete(name string) error {
 
 func (c *SPDKServiceClient) EngineGet(name string) (*rpc.Engine, error) {
 	if name == "" {
-		return nil, fmt.Errorf("failed to get replica: missing required parameter")
+		return nil, fmt.Errorf("failed to get engine: missing required parameter")
 	}
 
 	client := c.getControllerServiceClient()
@@ -229,7 +229,7 @@ func (c *SPDKServiceClient) VersionGet() (*meta.VersionOutput, error) {
 
 	resp, err := client.VersionGet(ctx, &empty.Empty{})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get disk service version")
+		return nil, errors.Wrap(err, "failed to get SPDK service version")
 	}
 
 	return &meta.VersionOutput{
