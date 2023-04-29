@@ -57,7 +57,7 @@ message Engine {
 
 message ReplicaCreateRequest {
     string name = 1;
-    string lvs_name = 2;
+    string lvs_uuid = 2;
     uint64 size = 3;
     bool expose_required = 4;
 }

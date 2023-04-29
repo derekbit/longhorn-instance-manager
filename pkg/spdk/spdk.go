@@ -110,7 +110,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 
 	log := logrus.WithFields(logrus.Fields{
 		"name":           req.Name,
-		"lvsName":        req.LvsName,
+		"lvsUUID":        req.LvsUuid,
 		"size":           req.Size,
 		"exposeRequired": req.ExposeRequired,
 	})
@@ -123,7 +123,7 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	}
 	defer spdkClient.Close()
 
-	lvstoreInfo, err := bdevLvolGetLvstore(spdkClient, log, req.LvsName)
+	lvstoreInfo, err := bdevLvolGetLvstore(spdkClient, log, req.LvsUuid)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvstore")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())

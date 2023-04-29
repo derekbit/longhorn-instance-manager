@@ -72,8 +72,8 @@ func NewSPDKServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peerName
 	return NewSPDKServiceClient(serviceURL, tlsConfig)
 }
 
-func (c *SPDKServiceClient) ReplicaCreate(name, lvsName string, size uint64, exposeRequired bool) (*rpc.Replica, error) {
-	if name == "" || lvsName == "" || size == 0 {
+func (c *SPDKServiceClient) ReplicaCreate(name, lvsUUID string, size uint64, exposeRequired bool) (*rpc.Replica, error) {
+	if name == "" || lvsUUID == "" || size == 0 {
 		return nil, fmt.Errorf("failed to create replica: missing required parameter")
 	}
 
@@ -83,7 +83,7 @@ func (c *SPDKServiceClient) ReplicaCreate(name, lvsName string, size uint64, exp
 
 	resp, err := client.ReplicaCreate(ctx, &rpc.ReplicaCreateRequest{
 		Name:           name,
-		LvsName:        lvsName,
+		LvsUuid:        lvsUUID,
 		Size:           size,
 		ExposeRequired: exposeRequired,
 	})

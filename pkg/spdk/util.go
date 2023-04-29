@@ -24,8 +24,8 @@ import (
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
-func bdevLvolGetLvstore(c *spdkclient.Client, log logrus.FieldLogger, lvsName string) (*spdktypes.LvstoreInfo, error) {
-	lvstoreInfos, err := c.BdevLvolGetLvstore(lvsName, "")
+func bdevLvolGetLvstore(c *spdkclient.Client, log logrus.FieldLogger, LvsUuid string) (*spdktypes.LvstoreInfo, error) {
+	lvstoreInfos, err := c.BdevLvolGetLvstore("", LvsUuid)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get lvstore info")
 	}
