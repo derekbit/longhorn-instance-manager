@@ -510,6 +510,18 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 
 	log.Info("Deleting engine")
 
+	spdkClient, err := s.getSpdkClient()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get spdk client")
+	}
+	defer spdkClient.Close()
+
+	engine, err := getEngine(spdkClient, req.Name, log)
+	if err != nil {
+		log.WithError(err).Error("Failed to get engine")
+		return nil, err
+	}
+
 	raidNQN := spdkutil.GetNQN(req.Name)
 	localIP, err := issiutil.GetIPToHost()
 	if err != nil {
@@ -529,12 +541,6 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	spdkClient, err := s.getSpdkClient()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get spdk client")
-	}
-	defer spdkClient.Close()
-
 	err = spdkClient.StopExposeBdev(raidNQN)
 	if err != nil {
 		log.WithError(err).Error("Failed to stop expose bdev")
@@ -546,6 +552,8 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 		log.WithError(err).Error("Failed to delete bdev raid")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
+
+	s.engineUpdateCh <- interface{}(engine)
 
 	log.Info("Deleted engine")
 
