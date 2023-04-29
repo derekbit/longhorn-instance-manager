@@ -72,7 +72,7 @@ func NewInstanceServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peer
 	return NewInstanceServiceClient(serviceURL, tlsConfig)
 }
 
-func (c *InstanceServiceClient) InstanceCreate(name, volumeName, instanceType, backendStoreDriver, diskUUID string, size int64,
+func (c *InstanceServiceClient) InstanceCreate(name, volumeName, instanceType, backendStoreDriver, diskUUID string, size uint64,
 	binary string, args []string, frontend, address string, replicaAddressMap map[string]string, portCount int, portArgs []string) (*api.Instance, error) {
 	if name == "" || instanceType == "" || backendStoreDriver == "" {
 		return nil, fmt.Errorf("failed to create instance: missing required parameter")
@@ -113,7 +113,7 @@ func (c *InstanceServiceClient) InstanceCreate(name, volumeName, instanceType, b
 	return api.RPCToInstance(p), nil
 }
 
-func (c *InstanceServiceClient) InstanceDelete(name, instanceType, backendStoreDriver, diskUUID string) (*api.Instance, error) {
+func (c *InstanceServiceClient) InstanceDelete(name, instanceType, backendStoreDriver, diskUUID string, cleanupRequired bool) (*api.Instance, error) {
 	if name == "" {
 		return nil, fmt.Errorf("failed to delete instance: missing required parameter name")
 	}
@@ -127,6 +127,7 @@ func (c *InstanceServiceClient) InstanceDelete(name, instanceType, backendStoreD
 		Type:               instanceType,
 		BackendStoreDriver: backendStoreDriver,
 		DiskUuid:           diskUUID,
+		CleanupRequired:    cleanupRequired,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to delete instance %v", name)

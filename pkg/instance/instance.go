@@ -177,7 +177,7 @@ func (s *Server) spdkInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.Instan
 	case types.InstanceTypeEngine:
 		err = c.EngineDelete(req.Name)
 	case types.InstanceTypeReplica:
-		err = c.ReplicaDelete(req.Name, req.DiskUuid)
+		err = c.ReplicaDelete(req.DiskUuid+"/"+req.Name, req.CleanupRequired)
 	default:
 		err = fmt.Errorf("unknown instance type %v", req.Type)
 	}
@@ -242,7 +242,7 @@ func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResp
 		}
 		return engineResponseToInstanceResponse(engine), nil
 	case types.InstanceTypeReplica:
-		replica, err := c.ReplicaGet(req.Name, req.DiskUuid)
+		replica, err := c.ReplicaGet(req.DiskUuid + "/" + req.Name)
 		if err != nil {
 			return nil, err
 		}

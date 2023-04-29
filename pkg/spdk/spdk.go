@@ -3,18 +3,13 @@ package spdk
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	grpccodes "google.golang.org/grpc/codes"
@@ -114,9 +109,10 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	defer s.Unlock()
 
 	log := logrus.WithFields(logrus.Fields{
-		"name":        req.Name,
-		"lvstoreUUID": req.LvstoreUuid,
-		"size":        req.Size,
+		"name":           req.Name,
+		"lvsName":        req.LvsName,
+		"size":           req.Size,
+		"exposeRequired": req.ExposeRequired,
 	})
 
 	log.Info("Creating replica")
@@ -127,19 +123,11 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 	}
 	defer spdkClient.Close()
 
-	lvstoreUUID := req.LvstoreUuid
-	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", lvstoreUUID)
+	lvstoreInfo, err := bdevLvolGetLvstore(spdkClient, log, req.LvsName)
 	if err != nil {
-		log.WithError(err).Error("Failed to get lvstore info")
+		log.WithError(err).Error("Failed to get lvstore")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
-
-	if len(lvstoreInfos) != 1 {
-		log.WithError(err).Error("Number of lvstore info is not 1")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	lvstoreInfo := lvstoreInfos[0]
 
 	sizeInMib := uint64(req.Size / 1024 / 1024)
 
@@ -149,50 +137,37 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *rpc.ReplicaCreateReques
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	////
-	/*
+	localPort := 4420
+	localIP, err := issiutil.GetIPToHost()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get local IP")
+	}
+
+	if req.ExposeRequired {
 		nqn := spdkutil.GetNQN(req.Name)
-		err = spdkClient.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, req.Address, "4420")
+		err = spdkClient.StartExposeBdev(nqn, lvstoreInfo.Name+"/"+req.Name, localIP, strconv.Itoa(localPort))
 		if err != nil {
 			log.WithError(err).Error("Failed to start exposing bdev")
 			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 		}
-	*/
-	////
+	}
 
 	log.Info("Created replica")
 
-	lvolInfos, err := spdkClient.BdevLvolGet(uuid, 3000)
+	lvolInfo, err := bdevLvolGet(spdkClient, log, uuid)
 	if err != nil {
-		log.WithError(err).Error("Failed to get lvol info")
+		log.WithError(err).Error("Failed to get lvol")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	if len(lvolInfos) != 1 {
-		log.WithError(err).Error("Number of lvol info is not 1")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	lvolInfo := lvolInfos[0]
-
-	name := getNameFromAlias(lvolInfo.Aliases)
-	if name == "" {
-		return nil, grpcstatus.Error(grpccodes.NotFound, "failed to get name from alias")
 	}
 
 	r := &rpc.Replica{
-		Name:        name,
-		Uuid:        lvolInfo.UUID,
-		BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
-		LvstoreUuid: lvolInfo.DriverSpecific.Lvol.LvolStoreUUID,
-
-		TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
-		TotalBlocks: int64(lvolInfo.NumBlocks),
-		BlockSize:   int64(lvolInfo.BlockSize),
-
-		Port: 4420,
-
-		State: types.ProcessStateRunning,
+		Name:       req.Name,
+		Uuid:       lvolInfo.UUID,
+		SpecSize:   uint64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		ActualSize: uint64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		Snapshots:  map[string]*rpc.Lvol{},
+		Rebuilding: false,
+		Port:       int32(localPort),
 	}
 
 	s.replicaUpdateCh <- interface{}(r)
@@ -205,8 +180,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	defer s.Unlock()
 
 	log := logrus.WithFields(logrus.Fields{
-		"name":        req.Name,
-		"lvstoreUUID": req.LvstoreUuid,
+		"name": req.Name,
 	})
 
 	log.Info("Deleting replica")
@@ -217,20 +191,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	}
 	defer spdkClient.Close()
 
-	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
-	if err != nil {
-		log.WithError(err).Error("Failed to list lvstore info")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	lvstoreName := getLvolNameFromUUID(lvstoreInfos, req.LvstoreUuid)
-	if lvstoreName == "" {
-		log.WithError(err).Error("Failed to get lvstore name")
-		return nil, grpcstatus.Error(grpccodes.NotFound, err.Error())
-	}
-
-	aliasName := lvstoreName + "/" + req.Name
-	deleted, err := spdkClient.BdevLvolDelete(aliasName)
+	deleted, err := spdkClient.BdevLvolDelete(req.Name)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete lvol")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -238,7 +199,7 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 
 	if !deleted {
 		log.WithError(err).Error("Failed to delete lvol")
-		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to delete lvol %v", aliasName)
+		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to delete lvol %v", req.Name)
 	}
 
 	log.Info("Deleted replica")
@@ -251,8 +212,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 	defer s.Unlock()
 
 	log := logrus.WithFields(logrus.Fields{
-		"name":        req.Name,
-		"lvstoreUUID": req.LvstoreUuid,
+		"name": req.Name,
 	})
 
 	log.Info("Getting replica info")
@@ -263,52 +223,24 @@ func (s *Server) ReplicaGet(ctx context.Context, req *rpc.ReplicaGetRequest) (*r
 	}
 	defer spdkClient.Close()
 
-	lvstoreInfos, err := spdkClient.BdevLvolGetLvstore("", req.LvstoreUuid)
+	lvolInfo, err := bdevLvolGet(spdkClient, log, req.Name)
 	if err != nil {
-		log.WithError(err).Error("Failed to list lvstore info")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	lvstoreName := getLvolNameFromUUID(lvstoreInfos, req.LvstoreUuid)
-	if lvstoreName == "" {
-		log.WithError(err).Error("Failed to get lvstore name")
-		return nil, grpcstatus.Error(grpccodes.NotFound, err.Error())
-	}
-
-	aliasName := lvstoreName + "/" + req.Name
-	lvolInfos, err := spdkClient.BdevLvolGet(aliasName, 3000)
-	if err != nil {
-		log.WithError(err).Error("Failed to get lvol info")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	if len(lvolInfos) != 1 {
-		log.WithError(err).Error("Number of lvol info is not 1")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		log.WithError(err).Error("Failed to get lvol")
+		return nil, grpcstatus.Errorf(grpccodes.Internal, errors.Wrapf(err, "failed to get lvol %v", req.Name).Error())
 	}
 
 	log.Info("Got replica info")
 
-	lvolInfo := lvolInfos[0]
-
-	name := getNameFromAlias(lvolInfo.Aliases)
-	if name == "" {
-		return nil, grpcstatus.Error(grpccodes.NotFound, "failed to get name from alias")
-	}
+	localPort := 4420
 
 	return &rpc.Replica{
-		Name:        name,
-		Uuid:        lvolInfo.UUID,
-		BdevName:    lvolInfo.DriverSpecific.Lvol.BaseBdev,
-		LvstoreUuid: lvolInfo.DriverSpecific.Lvol.BaseBdev,
-
-		TotalSize:   int64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
-		TotalBlocks: int64(lvolInfo.NumBlocks),
-		BlockSize:   int64(lvolInfo.BlockSize),
-
-		Port: 4420,
-
-		State: types.ProcessStateRunning,
+		Name:       req.Name,
+		Uuid:       lvolInfo.UUID,
+		SpecSize:   uint64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		ActualSize: uint64(lvolInfo.NumBlocks * uint64(lvolInfo.BlockSize)),
+		Snapshots:  map[string]*rpc.Lvol{},
+		Rebuilding: false,
+		Port:       int32(localPort),
 	}, nil
 }
 
@@ -332,54 +264,59 @@ func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*rpc.Replic
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	log.Info("Got replica list")
-
 	resp := &rpc.ReplicaListResponse{
 		Replicas: map[string]*rpc.Replica{},
 	}
 	for _, info := range lvolInfos {
 		name := getNameFromAlias(info.Aliases)
 		if name == "" {
-			return nil, grpcstatus.Error(grpccodes.Internal, "Failed to get name from alias")
+			return nil, grpcstatus.Error(grpccodes.Internal, "failed to get name from alias")
 		}
+
+		localPort := 4420
 
 		resp.Replicas[info.Name] = &rpc.Replica{
-			Name:        name,
-			Uuid:        info.UUID,
-			BdevName:    info.DriverSpecific.Lvol.BaseBdev,
-			LvstoreUuid: info.DriverSpecific.Lvol.BaseBdev,
-
-			TotalSize:   int64(info.NumBlocks * uint64(info.BlockSize)),
-			TotalBlocks: int64(info.NumBlocks),
-			BlockSize:   int64(info.BlockSize),
-
-			Port: 4420,
-
-			State: types.ProcessStateRunning,
+			Name:       name,
+			Uuid:       info.UUID,
+			SpecSize:   uint64(info.NumBlocks * uint64(info.BlockSize)),
+			ActualSize: uint64(info.NumBlocks * uint64(info.BlockSize)),
+			Snapshots:  map[string]*rpc.Lvol{},
+			Rebuilding: false,
+			Port:       int32(localPort),
 		}
 	}
+
+	log.Info("Got replica list")
 
 	return resp, nil
 }
 
-func getNameFromAlias(alias []string) string {
-	if len(alias) != 1 {
-		return ""
+func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.SPDKService_ReplicaWatchServer) error {
+	responseChan, err := s.Subscribe(types.InstanceTypeReplica)
+	if err != nil {
+		return err
 	}
 
-	splitName := strings.Split(alias[0], "/")
-	return splitName[1]
-}
+	defer func() {
+		if err != nil {
+			logrus.WithError(err).Error("SPDK service update watch errored out")
+		} else {
+			logrus.Info("SPDK service update watch ended successfully")
+		}
+	}()
+	logrus.Info("Started new SPDK service update watch")
 
-func getLvolNameFromUUID(lvstoreInfos []spdktypes.LvstoreInfo, lvstoreUUID string) string {
-	lvstoreName := ""
-	for _, info := range lvstoreInfos {
-		if info.UUID == lvstoreUUID {
-			lvstoreName = info.Name
-			break
+	for resp := range responseChan {
+		r, ok := resp.(*rpc.Replica)
+		if !ok {
+			return fmt.Errorf("BUG: cannot get Replica from channel")
+		}
+		if err := srv.Send(r); err != nil {
+			return err
 		}
 	}
-	return lvstoreName
+
+	return nil
 }
 
 func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest) (*rpc.Engine, error) {
@@ -491,93 +428,6 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 
 	s.engineUpdateCh <- interface{}(engine)
 	return engine, nil
-}
-
-func getVolumeName(engineName string) string {
-	parts := strings.Split(engineName, "-e-")
-	return parts[0]
-}
-
-func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (*rpc.Engine, error) {
-	bdevRaidInfos, err := client.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
-	if err != nil {
-		log.WithError(err).Error("Failed to get bdev raid infos")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	var engine *rpc.Engine
-	for _, info := range bdevRaidInfos {
-		if info.Name != name {
-			continue
-		}
-
-		raidNQN := spdkutil.GetNQN(info.Name)
-		listenerList, err := client.NvmfSubsystemGetListeners(raidNQN, "")
-		if err != nil {
-			log.WithError(err).Error("Failed to get NVMe subsystem listeners")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		if len(listenerList) != 1 {
-			log.WithError(err).Error("Invalid NVMe subsystem listeners")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		port, err := strconv.Atoi(listenerList[0].Address.Trsvcid)
-		if err != nil {
-			log.WithError(err).Error("Failed to convert port")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		localIP, err := issiutil.GetIPToHost()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get local IP")
-		}
-
-		replicaModeMap := map[string]rpc.ReplicaMode{}
-		replicaAddressMap := map[string]string{}
-		for _, baseBdev := range info.BaseBdevsList {
-			parts := strings.Split(baseBdev.Name, "/")
-			name := parts[1]
-			address := localIP + ":" + "4420"
-			replicaModeMap[address] = rpc.ReplicaMode_RW
-			replicaAddressMap[name] = localIP + ":" + strconv.Itoa(port)
-		}
-
-		endpoint := "/dev/longhorn/" + getVolumeName(name)
-		size, err := getDiskDeviceSize(endpoint)
-		if err != nil {
-			log.WithError(err).Error("Failed to get disk device size")
-			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-		}
-
-		engine = &rpc.Engine{
-			Name:              name,
-			Uuid:              "",
-			Size:              uint64(size),
-			Address:           "",
-			ReplicaAddressMap: replicaAddressMap,
-			ReplicaModeMap:    replicaModeMap,
-			Endpoint:          endpoint,
-			Frontend:          "spdk-tcp-blockdev",
-			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
-			Ip:                listenerList[0].Address.Traddr,
-			Port:              int32(port),
-		}
-	}
-
-	if engine == nil {
-		return nil, grpcstatus.Error(grpccodes.NotFound, "")
-	}
-
-	return engine, nil
-}
-
-func getFrontendState(category spdktypes.BdevRaidCategory) string {
-	if category == spdktypes.BdevRaidCategoryOffline {
-		return "down"
-	}
-	return "up"
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest) (*empty.Empty, error) {
@@ -734,104 +584,6 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 	return resp, nil
 }
 
-func createLonghornDevice(devicePath, name string) error {
-	logrus.Infof("Creating longhorn device: devicePath=%s, name=%s", devicePath, name)
-
-	if _, err := os.Stat(devPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(devPath, 0755); err != nil {
-			logrus.Fatalf("device %v: Cannot create directory %v", name, devPath)
-		}
-	}
-
-	// Get the major and minor numbers of the NVMe device.
-	major, minor, err := getDeviceNumbers(devicePath)
-	if err != nil {
-		return err
-	}
-
-	longhornDevPath := filepath.Join(devPath, name)
-
-	return duplicateDevice(major, minor, longhornDevPath)
-}
-
-func getDeviceNumbers(devicePath string) (major, minor uint32, err error) {
-	fileInfo, err := os.Stat(devicePath)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	statT := fileInfo.Sys().(*syscall.Stat_t)
-	major = uint32(int(statT.Rdev) >> 8)
-	minor = uint32(int(statT.Rdev) & 0xFF)
-	return major, minor, nil
-}
-
-func duplicateDevice(major, minor uint32, dest string) error {
-	if err := mknod(dest, major, minor); err != nil {
-		return fmt.Errorf("couldn't create device %s: %w", dest, err)
-	}
-	if err := os.Chmod(dest, 0660); err != nil {
-		return fmt.Errorf("couldn't change permission of the device %s: %w", dest, err)
-	}
-	return nil
-}
-
-func mknod(device string, major, minor uint32) error {
-	var fileMode os.FileMode = 0660
-	fileMode |= unix.S_IFBLK
-	dev := int(unix.Mkdev(uint32(major), uint32(minor)))
-
-	logrus.Infof("Creating device %s %d:%d", device, major, minor)
-	return unix.Mknod(device, uint32(fileMode), dev)
-}
-
-func (s *Server) replicaBroadcastConnector() (chan interface{}, error) {
-	return s.replicaBroadcastCh, nil
-}
-
-func (s *Server) engineBroadcastConnector() (chan interface{}, error) {
-	return s.engineBroadcastCh, nil
-}
-
-func (s *Server) Subscribe(instanceType string) (<-chan interface{}, error) {
-	switch instanceType {
-	case types.InstanceTypeEngine:
-		return s.engineBroadcaster.Subscribe(context.TODO(), s.engineBroadcastConnector)
-	case types.InstanceTypeReplica:
-		return s.replicaBroadcaster.Subscribe(context.TODO(), s.replicaBroadcastConnector)
-	default:
-		return nil, fmt.Errorf("unknown instance type %v", instanceType)
-	}
-}
-
-func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.SPDKService_ReplicaWatchServer) error {
-	responseChan, err := s.Subscribe(types.InstanceTypeReplica)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			logrus.WithError(err).Error("Disk service update watch errored out")
-		} else {
-			logrus.Info("Disk service update watch ended successfully")
-		}
-	}()
-	logrus.Info("Started new disk service update watch")
-
-	for resp := range responseChan {
-		r, ok := resp.(*rpc.Replica)
-		if !ok {
-			return fmt.Errorf("BUG: cannot get Replica from channel")
-		}
-		if err := srv.Send(r); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (s *Server) EngineWatch(req *empty.Empty, srv rpc.SPDKService_EngineWatchServer) error {
 	responseChan, err := s.Subscribe(types.InstanceTypeEngine)
 	if err != nil {
@@ -840,12 +592,12 @@ func (s *Server) EngineWatch(req *empty.Empty, srv rpc.SPDKService_EngineWatchSe
 
 	defer func() {
 		if err != nil {
-			logrus.WithError(err).Error("Disk service update watch errored out")
+			logrus.WithError(err).Error("SPDK service update watch errored out")
 		} else {
-			logrus.Info("Disk service update watch ended successfully")
+			logrus.Info("SPDK service update watch ended successfully")
 		}
 	}()
-	logrus.Info("Started new disk service update watch")
+	logrus.Info("Started new SPDK service update watch")
 
 	for resp := range responseChan {
 		e, ok := resp.(*rpc.Engine)
@@ -858,6 +610,17 @@ func (s *Server) EngineWatch(req *empty.Empty, srv rpc.SPDKService_EngineWatchSe
 	}
 
 	return nil
+}
+
+func (s *Server) Subscribe(instanceType string) (<-chan interface{}, error) {
+	switch instanceType {
+	case types.InstanceTypeEngine:
+		return s.engineBroadcaster.Subscribe(context.TODO(), s.engineBroadcastConnector)
+	case types.InstanceTypeReplica:
+		return s.replicaBroadcaster.Subscribe(context.TODO(), s.replicaBroadcastConnector)
+	default:
+		return nil, fmt.Errorf("unknown instance type %v", instanceType)
+	}
 }
 
 func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.VersionResponse, error) {
@@ -876,18 +639,4 @@ func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.Version
 		InstanceManagerDiskServiceAPIVersion:    int64(v.InstanceManagerDiskServiceAPIVersion),
 		InstanceManagerDiskServiceAPIMinVersion: int64(v.InstanceManagerDiskServiceAPIMinVersion),
 	}, nil
-}
-
-func getDiskDeviceSize(path string) (int64, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return 0, errors.Wrapf(err, "failed to open %s", path)
-	}
-	defer file.Close()
-
-	pos, err := file.Seek(0, io.SeekEnd)
-	if err != nil {
-		return 0, errors.Wrapf(err, "failed to seek %s", path)
-	}
-	return pos, nil
 }
