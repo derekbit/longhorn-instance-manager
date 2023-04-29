@@ -50,7 +50,6 @@ func (s *Server) startMonitoring() {
 		case <-s.shutdownCh:
 			logrus.Info("Instance Server is shutting down")
 			done = true
-			break
 		}
 		if done {
 			break

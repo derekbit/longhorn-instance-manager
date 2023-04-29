@@ -66,7 +66,6 @@ func (s *Server) startMonitoring() {
 		case <-s.shutdownCh:
 			logrus.Info("Disk gRPC Server is shutting down")
 			done = true
-			break
 		}
 		if done {
 			break
