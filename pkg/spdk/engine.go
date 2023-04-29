@@ -1,4 +1,4 @@
-package disk
+package spdk
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	spdkutil "github.com/longhorn/go-spdk-helper/pkg/types"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
@@ -724,7 +725,7 @@ func (s *Server) Subscribe(instanceType string) (<-chan interface{}, error) {
 	}
 }
 
-func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.DiskService_ReplicaWatchServer) error {
+func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.SPDKService_ReplicaWatchServer) error {
 	responseChan, err := s.Subscribe(types.InstanceTypeReplica)
 	if err != nil {
 		return err
@@ -752,7 +753,7 @@ func (s *Server) ReplicaWatch(req *empty.Empty, srv rpc.DiskService_ReplicaWatch
 	return nil
 }
 
-func (s *Server) EngineWatch(req *empty.Empty, srv rpc.DiskService_EngineWatchServer) error {
+func (s *Server) EngineWatch(req *empty.Empty, srv rpc.SPDKService_EngineWatchServer) error {
 	responseChan, err := s.Subscribe(types.InstanceTypeEngine)
 	if err != nil {
 		return err
@@ -778,4 +779,22 @@ func (s *Server) EngineWatch(req *empty.Empty, srv rpc.DiskService_EngineWatchSe
 	}
 
 	return nil
+}
+
+func (s *Server) VersionGet(ctx context.Context, req *empty.Empty) (*rpc.VersionResponse, error) {
+	v := meta.GetVersion()
+	return &rpc.VersionResponse{
+		Version:   v.Version,
+		GitCommit: v.GitCommit,
+		BuildDate: v.BuildDate,
+
+		InstanceManagerAPIVersion:    int64(v.InstanceManagerAPIVersion),
+		InstanceManagerAPIMinVersion: int64(v.InstanceManagerAPIMinVersion),
+
+		InstanceManagerProxyAPIVersion:    int64(v.InstanceManagerProxyAPIVersion),
+		InstanceManagerProxyAPIMinVersion: int64(v.InstanceManagerProxyAPIMinVersion),
+
+		InstanceManagerDiskServiceAPIVersion:    int64(v.InstanceManagerDiskServiceAPIVersion),
+		InstanceManagerDiskServiceAPIMinVersion: int64(v.InstanceManagerDiskServiceAPIMinVersion),
+	}, nil
 }

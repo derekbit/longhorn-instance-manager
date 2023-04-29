@@ -3,6 +3,8 @@ package disk
 import (
 	"fmt"
 	"regexp"
+	"strings"
+	"syscall"
 )
 
 type ErrorMessage struct {
@@ -28,4 +30,12 @@ func parseErrorMessage(errStr string) (*ErrorMessage, error) {
 	}
 
 	return em, nil
+}
+
+func isFileExists(message string) bool {
+	return strings.EqualFold(message, syscall.Errno(syscall.EEXIST).Error())
+}
+
+func isNoSuchDevice(message string) bool {
+	return strings.EqualFold(message, syscall.Errno(syscall.ENODEV).Error())
 }

@@ -21,16 +21,18 @@ type Server struct {
 	logsDir                      string
 	processManagerServiceAddress string
 	diskServiceAddress           string
+	spdkServiceAddress           string
 	spdkEnabled                  bool
 	shutdownCh                   chan error
 	HealthChecker                HealthChecker
 }
 
-func NewServer(logsDir, processManagerServiceAddress, diskServiceAddress string, spdkEnabled bool, shutdownCh chan error) (*Server, error) {
+func NewServer(logsDir, processManagerServiceAddress, diskServiceAddress, spdkServiceAddress string, spdkEnabled bool, shutdownCh chan error) (*Server, error) {
 	s := &Server{
 		logsDir:                      logsDir,
 		processManagerServiceAddress: processManagerServiceAddress,
 		diskServiceAddress:           diskServiceAddress,
+		spdkServiceAddress:           spdkServiceAddress,
 		spdkEnabled:                  spdkEnabled,
 		shutdownCh:                   shutdownCh,
 		HealthChecker:                &GRPCHealthChecker{},
@@ -109,7 +111,7 @@ func (s *Server) processInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Ins
 }
 
 func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +168,7 @@ func (s *Server) processInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.Ins
 }
 
 func (s *Server) spdkInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +229,7 @@ func (s *Server) processInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceR
 }
 
 func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -291,13 +293,13 @@ func (s *Server) processInstanceList(instances map[string]*rpc.InstanceResponse)
 }
 
 func (s *Server) spdkInstanceList(instances map[string]*rpc.InstanceResponse) error {
-	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return err
 	}
-	defer diskClient.Close()
+	defer c.Close()
 
-	replicas, err := diskClient.ReplicaList()
+	replicas, err := c.ReplicaList()
 	if err != nil {
 		return err
 	}
@@ -305,7 +307,7 @@ func (s *Server) spdkInstanceList(instances map[string]*rpc.InstanceResponse) er
 		instances[replica.Name] = replicaResponseToInstanceResponse(replica)
 	}
 
-	engines, err := diskClient.EngineList()
+	engines, err := c.EngineList()
 	if err != nil {
 		return err
 	}
@@ -434,13 +436,13 @@ func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_Instanc
 func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	logrus.Info("Start watching SPDK replica")
 
-	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")
 	}
-	defer diskClient.Close()
+	defer c.Close()
 
-	notifier, err := diskClient.ReplicaWatch(context.Background())
+	notifier, err := c.ReplicaWatch(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "failed to create SPDK replica watch notifier")
 	}
@@ -465,13 +467,13 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 }
 
 func (s *Server) watchSpdkEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
-	diskClient, err := client.NewDiskServiceClient("tcp://"+s.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")
 	}
-	defer diskClient.Close()
+	defer c.Close()
 
-	notifier, err := diskClient.EngineWatch(context.Background())
+	notifier, err := c.EngineWatch(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "failed to create SPDK engine watch notifier")
 	}

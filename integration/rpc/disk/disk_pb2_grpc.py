@@ -26,56 +26,6 @@ class DiskServiceStub(object):
         request_serializer=disk__pb2.DiskGetRequest.SerializeToString,
         response_deserializer=disk__pb2.Disk.FromString,
         )
-    self.ReplicaCreate = channel.unary_unary(
-        '/imrpc.DiskService/ReplicaCreate',
-        request_serializer=disk__pb2.ReplicaCreateRequest.SerializeToString,
-        response_deserializer=disk__pb2.Replica.FromString,
-        )
-    self.ReplicaDelete = channel.unary_unary(
-        '/imrpc.DiskService/ReplicaDelete',
-        request_serializer=disk__pb2.ReplicaDeleteRequest.SerializeToString,
-        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-        )
-    self.ReplicaGet = channel.unary_unary(
-        '/imrpc.DiskService/ReplicaGet',
-        request_serializer=disk__pb2.ReplicaGetRequest.SerializeToString,
-        response_deserializer=disk__pb2.Replica.FromString,
-        )
-    self.ReplicaList = channel.unary_unary(
-        '/imrpc.DiskService/ReplicaList',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=disk__pb2.ReplicaListResponse.FromString,
-        )
-    self.EngineCreate = channel.unary_unary(
-        '/imrpc.DiskService/EngineCreate',
-        request_serializer=disk__pb2.EngineCreateRequest.SerializeToString,
-        response_deserializer=disk__pb2.Engine.FromString,
-        )
-    self.EngineDelete = channel.unary_unary(
-        '/imrpc.DiskService/EngineDelete',
-        request_serializer=disk__pb2.EngineDeleteRequest.SerializeToString,
-        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-        )
-    self.EngineGet = channel.unary_unary(
-        '/imrpc.DiskService/EngineGet',
-        request_serializer=disk__pb2.EngineGetRequest.SerializeToString,
-        response_deserializer=disk__pb2.Engine.FromString,
-        )
-    self.EngineList = channel.unary_unary(
-        '/imrpc.DiskService/EngineList',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=disk__pb2.EngineListResponse.FromString,
-        )
-    self.ReplicaWatch = channel.unary_stream(
-        '/imrpc.DiskService/ReplicaWatch',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=disk__pb2.Replica.FromString,
-        )
-    self.EngineWatch = channel.unary_stream(
-        '/imrpc.DiskService/EngineWatch',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=disk__pb2.Engine.FromString,
-        )
     self.VersionGet = channel.unary_unary(
         '/imrpc.DiskService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -101,76 +51,6 @@ class DiskServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def ReplicaCreate(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ReplicaDelete(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ReplicaGet(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ReplicaList(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def EngineCreate(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def EngineDelete(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def EngineGet(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def EngineList(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ReplicaWatch(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def EngineWatch(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
   def VersionGet(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -190,56 +70,6 @@ def add_DiskServiceServicer_to_server(servicer, server):
           servicer.DiskGet,
           request_deserializer=disk__pb2.DiskGetRequest.FromString,
           response_serializer=disk__pb2.Disk.SerializeToString,
-      ),
-      'ReplicaCreate': grpc.unary_unary_rpc_method_handler(
-          servicer.ReplicaCreate,
-          request_deserializer=disk__pb2.ReplicaCreateRequest.FromString,
-          response_serializer=disk__pb2.Replica.SerializeToString,
-      ),
-      'ReplicaDelete': grpc.unary_unary_rpc_method_handler(
-          servicer.ReplicaDelete,
-          request_deserializer=disk__pb2.ReplicaDeleteRequest.FromString,
-          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-      ),
-      'ReplicaGet': grpc.unary_unary_rpc_method_handler(
-          servicer.ReplicaGet,
-          request_deserializer=disk__pb2.ReplicaGetRequest.FromString,
-          response_serializer=disk__pb2.Replica.SerializeToString,
-      ),
-      'ReplicaList': grpc.unary_unary_rpc_method_handler(
-          servicer.ReplicaList,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=disk__pb2.ReplicaListResponse.SerializeToString,
-      ),
-      'EngineCreate': grpc.unary_unary_rpc_method_handler(
-          servicer.EngineCreate,
-          request_deserializer=disk__pb2.EngineCreateRequest.FromString,
-          response_serializer=disk__pb2.Engine.SerializeToString,
-      ),
-      'EngineDelete': grpc.unary_unary_rpc_method_handler(
-          servicer.EngineDelete,
-          request_deserializer=disk__pb2.EngineDeleteRequest.FromString,
-          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-      ),
-      'EngineGet': grpc.unary_unary_rpc_method_handler(
-          servicer.EngineGet,
-          request_deserializer=disk__pb2.EngineGetRequest.FromString,
-          response_serializer=disk__pb2.Engine.SerializeToString,
-      ),
-      'EngineList': grpc.unary_unary_rpc_method_handler(
-          servicer.EngineList,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=disk__pb2.EngineListResponse.SerializeToString,
-      ),
-      'ReplicaWatch': grpc.unary_stream_rpc_method_handler(
-          servicer.ReplicaWatch,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=disk__pb2.Replica.SerializeToString,
-      ),
-      'EngineWatch': grpc.unary_stream_rpc_method_handler(
-          servicer.EngineWatch,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=disk__pb2.Engine.SerializeToString,
       ),
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,

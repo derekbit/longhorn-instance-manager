@@ -63,7 +63,7 @@ func (p *Proxy) volumeGetFromEngine(ctx context.Context, req *rpc.ProxyEngineReq
 
 func (p *Proxy) volumeGetFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineVolumeGetProxyResponse, err error) {
 	// TODO: Should connect to SPDK service
-	c, err := client.NewDiskServiceClient("tcp://"+p.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+p.spdkServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}

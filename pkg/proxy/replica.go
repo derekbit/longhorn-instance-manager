@@ -105,7 +105,7 @@ func replicaModeToGRPCReplicaMode(mode rpc.ReplicaMode) eptypes.ReplicaMode {
 }
 
 func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
-	c, err := client.NewDiskServiceClient("tcp://"+p.diskServiceAddress, nil)
+	c, err := client.NewSPDKServiceClient("tcp://"+p.spdkServiceAddress, nil)
 	if err != nil {
 		return nil, err
 	}
