@@ -166,6 +166,34 @@ func createLonghornDevice(devicePath, name string) error {
 	return duplicateDevice(major, minor, longhornDevPath)
 }
 
+func deleteLonghornDevice(devicePath string) error {
+	if _, err := os.Stat(devicePath); err == nil {
+		if err := remove(devicePath); err != nil {
+			return fmt.Errorf("failed to removing device %s, %v", devicePath, err)
+		}
+	}
+	return nil
+}
+
+func removeAsync(path string, done chan<- error) {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		logrus.Errorf("Unable to remove: %v", path)
+		done <- err
+	}
+	done <- nil
+}
+
+func remove(path string) error {
+	done := make(chan error)
+	go removeAsync(path, done)
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(30 * time.Second):
+		return fmt.Errorf("timeout trying to delete %s", path)
+	}
+}
+
 func getDeviceNumbers(devicePath string) (major, minor uint32, err error) {
 	fileInfo, err := os.Stat(devicePath)
 	if err != nil {

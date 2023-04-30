@@ -140,6 +140,7 @@ func (s *Server) InstanceDelete(ctx context.Context, req *rpc.InstanceDeleteRequ
 		"type":               req.Type,
 		"backendStoreDriver": req.BackendStoreDriver,
 		"diskUuid":           req.DiskUuid,
+		"cleanupRequired":    req.CleanupRequired,
 	}).Info("Deleting instance")
 
 	switch req.BackendStoreDriver {
