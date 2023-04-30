@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -216,4 +217,30 @@ func getDiskDeviceSize(path string) (int64, error) {
 		return 0, errors.Wrapf(err, "failed to seek %s", path)
 	}
 	return pos, nil
+}
+
+func splitHostPort(addr string) (string, string, error) {
+	parts := strings.Split(addr, ":")
+
+	if len(parts) != 2 {
+		return "", "", grpcstatus.Errorf(grpccodes.InvalidArgument, "Invalid address %v", addr)
+	}
+
+	return parts[0], parts[1], nil
+}
+
+// wait for device file comes up or timeout
+func waitForDeviceReady(devPath string, seconds int) error {
+	for i := 0; i <= seconds; i++ {
+		time.Sleep(time.Second)
+		_, err := os.Stat(devPath)
+		if err == nil {
+			return nil
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return fmt.Errorf("device %s not found", devPath)
 }

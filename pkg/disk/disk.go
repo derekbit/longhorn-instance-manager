@@ -109,7 +109,7 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 
 	blockSize := uint64(defaultBlockSize)
 	if req.BlockSize > 0 {
-		log.Info("Using custom block size %v", req.BlockSize)
+		log.Infof("Using custom block size %v", req.BlockSize)
 		blockSize = uint64(req.BlockSize)
 	}
 

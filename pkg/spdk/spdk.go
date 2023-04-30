@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -338,39 +337,53 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	}
 	defer spdkClient.Close()
 
+	localbdevs := map[string]struct{}{}
 	bdevs := []string{}
 
+	// Get all local bdevs
 	lvolInfos, err := spdkClient.BdevLvolGet("", 3000)
 	if err != nil {
 		log.WithError(err).Error("Failed to get lvol infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 	for _, info := range lvolInfos {
-		bdevs = append(bdevs, info.Aliases[0])
+		replicaName := getNameFromAlias(info.Aliases)
+		if _, ok := req.ReplicaAddressMap[replicaName]; ok {
+			bdevs = append(bdevs, info.Aliases[0])
+			localbdevs[replicaName] = struct{}{}
+		}
 	}
 
+	// Attach remote NVMe controllers
+	for replicaName, replicaAddr := range req.ReplicaAddressMap {
+		if _, ok := localbdevs[replicaName]; ok {
+			continue
+		}
+
+		log.Infof("Attaching NVMe controller for replica %v at %v", replicaName, replicaAddr)
+
+		nqn := spdkutil.GetNQN(replicaName)
+		ip, port, err := splitHostPort(replicaAddr)
+		if err != nil {
+			log.WithError(err).Error("Failed to split host port")
+			return nil, grpcstatus.Error(grpccodes.InvalidArgument, err.Error())
+		}
+
+		bdevNameList, err := spdkClient.BdevNvmeAttachController(replicaName, nqn, ip, port, spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
+		if err != nil {
+			log.WithError(err).Error("Failed to attach NVMe controller")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		bdevs = append(bdevs, bdevNameList...)
+	}
+
+	log.Infof("Creating RAID with bdevs %v", bdevs)
+
+	localPort := "4422"
 	localIP, err := issiutil.GetIPToHost()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get local IP")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
-	localPort := "4422"
-
-	/*
-		for name, addr := range req.ReplicaAddressMap {
-			nqn := spdkutil.GetNQN(name)
-			addressComponents := strings.Split(addr, ":")
-			if len(addressComponents) != 2 {
-				return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "Invalid address %v", addr)
-			}
-
-			bdevNameList, err := spdkCli.BdevNvmeAttachController(name, nqn, addressComponents[0], addressComponents[1], spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
-			if err != nil {
-				log.WithError(err).Error("Failed to attach NVMe controller")
-				return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-			}
-			bdevs = append(bdevs, bdevNameList...)
-		}
-	*/
 
 	created, err := spdkClient.BdevRaidCreate(req.Name, spdktypes.BdevRaidLevelRaid1, 0, bdevs)
 	if err != nil {
@@ -379,7 +392,7 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	}
 
 	if created {
-		log.Info("Created RAID")
+		log.Infof("Created RAID with bdevs %v", bdevs)
 	}
 
 	raidNQN := spdkutil.GetNQN(req.Name)
@@ -389,21 +402,25 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	nvmeCli, err := spdknvme.NewInitiator(raidNQN, localIP, localPort)
+	initiator, err := spdknvme.NewInitiator(raidNQN, localIP, localPort)
 	if err != nil {
 		log.WithError(err).Error("Failed to create NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	err = nvmeCli.StartInitiator()
+	err = initiator.StartInitiator()
 	if err != nil {
 		log.WithError(err).Error("Failed to start NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	time.Sleep(5 * time.Second)
+	err = waitForDeviceReady(filepath.Join("/dev", initiator.ControllerName)+"n1", 10)
+	if err != nil {
+		log.WithError(err).Error("Failed to wait for longhorn device ready")
+		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+	}
 
-	err = createLonghornDevice(filepath.Join("/dev", nvmeCli.ControllerName)+"n1", req.VolumeName)
+	err = createLonghornDevice(filepath.Join("/dev", initiator.ControllerName)+"n1", req.VolumeName)
 	if err != nil {
 		log.WithError(err).Error("Failed to create longhorn device")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
