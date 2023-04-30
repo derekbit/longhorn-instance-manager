@@ -65,7 +65,7 @@ func getVolumeName(engineName string) string {
 }
 
 func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (*rpc.Engine, error) {
-	bdevRaidInfos, err := client.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	bdevRaidInfos, err := client.BdevRaidGetInfoByCategory(spdktypes.BdevRaidCategoryAll)
 	if err != nil {
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())

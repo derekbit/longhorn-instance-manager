@@ -556,7 +556,7 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 	resp := &rpc.EngineListResponse{
 		Engines: map[string]*rpc.Engine{},
 	}
-	bdevRaidInfos, err := spdkClient.BdevRaidGetBdevs(spdktypes.BdevRaidCategoryAll)
+	bdevRaidInfos, err := spdkClient.BdevRaidGetInfoByCategory(spdktypes.BdevRaidCategoryAll)
 	if err != nil {
 		log.WithError(err).Error("Failed to get bdev raid infos")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
