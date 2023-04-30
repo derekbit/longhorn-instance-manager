@@ -36,6 +36,11 @@ class SPDKServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=spdk__pb2.ReplicaListResponse.FromString,
         )
+    self.ReplicaWatch = channel.unary_stream(
+        '/imrpc.SPDKService/ReplicaWatch',
+        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        response_deserializer=spdk__pb2.Replica.FromString,
+        )
     self.EngineCreate = channel.unary_unary(
         '/imrpc.SPDKService/EngineCreate',
         request_serializer=spdk__pb2.EngineCreateRequest.SerializeToString,
@@ -55,11 +60,6 @@ class SPDKServiceStub(object):
         '/imrpc.SPDKService/EngineList',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=spdk__pb2.EngineListResponse.FromString,
-        )
-    self.ReplicaWatch = channel.unary_stream(
-        '/imrpc.SPDKService/ReplicaWatch',
-        request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=spdk__pb2.Replica.FromString,
         )
     self.EngineWatch = channel.unary_stream(
         '/imrpc.SPDKService/EngineWatch',
@@ -105,6 +105,13 @@ class SPDKServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def ReplicaWatch(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def EngineCreate(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -127,13 +134,6 @@ class SPDKServiceServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def EngineList(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ReplicaWatch(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -177,6 +177,11 @@ def add_SPDKServiceServicer_to_server(servicer, server):
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=spdk__pb2.ReplicaListResponse.SerializeToString,
       ),
+      'ReplicaWatch': grpc.unary_stream_rpc_method_handler(
+          servicer.ReplicaWatch,
+          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+          response_serializer=spdk__pb2.Replica.SerializeToString,
+      ),
       'EngineCreate': grpc.unary_unary_rpc_method_handler(
           servicer.EngineCreate,
           request_deserializer=spdk__pb2.EngineCreateRequest.FromString,
@@ -196,11 +201,6 @@ def add_SPDKServiceServicer_to_server(servicer, server):
           servicer.EngineList,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=spdk__pb2.EngineListResponse.SerializeToString,
-      ),
-      'ReplicaWatch': grpc.unary_stream_rpc_method_handler(
-          servicer.ReplicaWatch,
-          request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=spdk__pb2.Replica.SerializeToString,
       ),
       'EngineWatch': grpc.unary_stream_rpc_method_handler(
           servicer.EngineWatch,

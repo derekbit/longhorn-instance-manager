@@ -584,20 +584,15 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*rpc.EngineL
 		engine := &rpc.Engine{
 			Name:              info.Name,
 			Uuid:              "",
+			VolumeName:        getVolumeName(info.Name),
 			Size:              0,
-			Address:           "",
+			Ip:                listenerList[0].Address.Traddr,
+			Port:              int32(port),
 			ReplicaAddressMap: map[string]string{},
 			ReplicaModeMap:    map[string]rpc.ReplicaMode{},
 			Endpoint:          "",
-			Frontend:          "",
-			Ip:                listenerList[0].Address.Traddr,
-			Port:              int32(port),
-		}
-
-		if info.State == spdktypes.BdevRaidCategoryOffline {
-			engine.FrontendState = "down"
-		} else {
-			engine.FrontendState = "up"
+			Frontend:          "spdk-tcp-blockdev",
+			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
 		}
 
 		resp.Engines[info.Name] = engine

@@ -120,15 +120,15 @@ func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (
 		engine = &rpc.Engine{
 			Name:              name,
 			Uuid:              "",
+			VolumeName:        getVolumeName(name),
 			Size:              uint64(size),
-			Address:           "",
+			Ip:                listenerList[0].Address.Traddr,
+			Port:              int32(port),
 			ReplicaAddressMap: replicaAddressMap,
 			ReplicaModeMap:    replicaModeMap,
 			Endpoint:          endpoint,
 			Frontend:          "spdk-tcp-blockdev",
 			FrontendState:     getFrontendState(spdktypes.BdevRaidCategoryOffline),
-			Ip:                listenerList[0].Address.Traddr,
-			Port:              int32(port),
 		}
 	}
 

@@ -23,7 +23,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\nspdk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xb8\x01\n\x04Lvol\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tspec_size\x18\x03 \x01(\x04\x12\x13\n\x0b\x61\x63tual_size\x18\x04 \x01(\x04\x12\x0e\n\x06parent\x18\x05 \x01(\t\x12+\n\x08\x63hildren\x18\x06 \x03(\x0b\x32\x19.imrpc.Lvol.ChildrenEntry\x1a/\n\rChildrenEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x08:\x02\x38\x01\"\xe0\x01\n\x07Replica\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tspec_size\x18\x03 \x01(\x04\x12\x13\n\x0b\x61\x63tual_size\x18\x04 \x01(\x04\x12\x30\n\tsnapshots\x18\x05 \x03(\x0b\x32\x1d.imrpc.Replica.SnapshotsEntry\x12\x12\n\nrebuilding\x18\x06 \x01(\x08\x12\x0c\n\x04port\x18\x07 \x01(\x05\x1a=\n\x0eSnapshotsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.imrpc.Lvol:\x02\x38\x01\"\x9e\x03\n\x06\x45ngine\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x41\n\x13replica_address_map\x18\x05 \x03(\x0b\x32$.imrpc.Engine.ReplicaAddressMapEntry\x12;\n\x10replica_mode_map\x18\x06 \x03(\x0b\x32!.imrpc.Engine.ReplicaModeMapEntry\x12\x10\n\x08\x65ndpoint\x18\x07 \x01(\t\x12\x10\n\x08\x66rontend\x18\x08 \x01(\t\x12\x16\n\x0e\x66rontend_state\x18\t \x01(\t\x12\n\n\x02ip\x18\n \x01(\t\x12\x0c\n\x04port\x18\x0b \x01(\x05\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aI\n\x13ReplicaModeMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0e\x32\x12.imrpc.ReplicaMode:\x02\x38\x01\"]\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08lvs_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x17\n\x0f\x65xpose_required\x18\x04 \x01(\x08\">\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x10\x63leanup_required\x18\x02 \x01(\x08\"!\n\x11ReplicaGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x92\x01\n\x13ReplicaListResponse\x12:\n\x08replicas\x18\x01 \x03(\x0b\x32(.imrpc.ReplicaListResponse.ReplicasEntry\x1a?\n\rReplicasEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1d\n\x05value\x18\x02 \x01(\x0b\x32\x0e.imrpc.Replica:\x02\x38\x01\"\xd4\x01\n\x13\x45ngineCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bvolume_name\x18\x02 \x01(\t\x12N\n\x13replica_address_map\x18\x03 \x03(\x0b\x32\x31.imrpc.EngineCreateRequest.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x04 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"#\n\x13\x45ngineDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\" \n\x10\x45ngineGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x8c\x01\n\x12\x45ngineListResponse\x12\x37\n\x07\x65ngines\x18\x01 \x03(\x0b\x32&.imrpc.EngineListResponse.EnginesEntry\x1a=\n\x0c\x45nginesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1c\n\x05value\x18\x02 \x01(\x0b\x32\r.imrpc.Engine:\x02\x38\x01*&\n\x0bReplicaMode\x12\x06\n\x02WO\x10\x00\x12\x06\n\x02RW\x10\x01\x12\x07\n\x03\x45RR\x10\x02\x32\xaf\x05\n\x0bSPDKService\x12<\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x0e.imrpc.Replica\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nReplicaGet\x12\x18.imrpc.ReplicaGetRequest\x1a\x0e.imrpc.Replica\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12\x39\n\x0c\x45ngineCreate\x12\x1a.imrpc.EngineCreateRequest\x1a\r.imrpc.Engine\x12\x42\n\x0c\x45ngineDelete\x12\x1a.imrpc.EngineDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x33\n\tEngineGet\x12\x17.imrpc.EngineGetRequest\x1a\r.imrpc.Engine\x12?\n\nEngineList\x12\x16.google.protobuf.Empty\x1a\x19.imrpc.EngineListResponse\x12:\n\x0cReplicaWatch\x12\x16.google.protobuf.Empty\x1a\x0e.imrpc.Replica\"\x00\x30\x01\x12\x38\n\x0b\x45ngineWatch\x12\x16.google.protobuf.Empty\x1a\r.imrpc.Engine\"\x00\x30\x01\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
+  serialized_pb=_b('\n\nspdk.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0bimrpc.proto\"\xb8\x01\n\x04Lvol\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tspec_size\x18\x03 \x01(\x04\x12\x13\n\x0b\x61\x63tual_size\x18\x04 \x01(\x04\x12\x0e\n\x06parent\x18\x05 \x01(\t\x12+\n\x08\x63hildren\x18\x06 \x03(\x0b\x32\x19.imrpc.Lvol.ChildrenEntry\x1a/\n\rChildrenEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x08:\x02\x38\x01\"\xe0\x01\n\x07Replica\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x11\n\tspec_size\x18\x03 \x01(\x04\x12\x13\n\x0b\x61\x63tual_size\x18\x04 \x01(\x04\x12\x30\n\tsnapshots\x18\x05 \x03(\x0b\x32\x1d.imrpc.Replica.SnapshotsEntry\x12\x12\n\nrebuilding\x18\x06 \x01(\x08\x12\x0c\n\x04port\x18\x07 \x01(\x05\x1a=\n\x0eSnapshotsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.imrpc.Lvol:\x02\x38\x01\"]\n\x14ReplicaCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08lvs_uuid\x18\x02 \x01(\t\x12\x0c\n\x04size\x18\x03 \x01(\x04\x12\x17\n\x0f\x65xpose_required\x18\x04 \x01(\x08\">\n\x14ReplicaDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x10\x63leanup_required\x18\x02 \x01(\x08\"!\n\x11ReplicaGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x92\x01\n\x13ReplicaListResponse\x12:\n\x08replicas\x18\x01 \x03(\x0b\x32(.imrpc.ReplicaListResponse.ReplicasEntry\x1a?\n\rReplicasEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1d\n\x05value\x18\x02 \x01(\x0b\x32\x0e.imrpc.Replica:\x02\x38\x01\"\xd4\x01\n\x13\x45ngineCreateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0bvolume_name\x18\x02 \x01(\t\x12N\n\x13replica_address_map\x18\x03 \x03(\x0b\x32\x31.imrpc.EngineCreateRequest.ReplicaAddressMapEntry\x12\x10\n\x08\x66rontend\x18\x04 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xa2\x03\n\x06\x45ngine\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04uuid\x18\x02 \x01(\t\x12\x13\n\x0bvolume_name\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x04\x12\n\n\x02ip\x18\x05 \x01(\t\x12\x0c\n\x04port\x18\x06 \x01(\x05\x12\x41\n\x13replica_address_map\x18\x07 \x03(\x0b\x32$.imrpc.Engine.ReplicaAddressMapEntry\x12;\n\x10replica_mode_map\x18\x08 \x03(\x0b\x32!.imrpc.Engine.ReplicaModeMapEntry\x12\x10\n\x08\x65ndpoint\x18\t \x01(\t\x12\x10\n\x08\x66rontend\x18\n \x01(\t\x12\x16\n\x0e\x66rontend_state\x18\x0b \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aI\n\x13ReplicaModeMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12!\n\x05value\x18\x02 \x01(\x0e\x32\x12.imrpc.ReplicaMode:\x02\x38\x01\"#\n\x13\x45ngineDeleteRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\" \n\x10\x45ngineGetRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x8c\x01\n\x12\x45ngineListResponse\x12\x37\n\x07\x65ngines\x18\x01 \x03(\x0b\x32&.imrpc.EngineListResponse.EnginesEntry\x1a=\n\x0c\x45nginesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1c\n\x05value\x18\x02 \x01(\x0b\x32\r.imrpc.Engine:\x02\x38\x01*&\n\x0bReplicaMode\x12\x06\n\x02WO\x10\x00\x12\x06\n\x02RW\x10\x01\x12\x07\n\x03\x45RR\x10\x02\x32\xaf\x05\n\x0bSPDKService\x12<\n\rReplicaCreate\x12\x1b.imrpc.ReplicaCreateRequest\x1a\x0e.imrpc.Replica\x12\x44\n\rReplicaDelete\x12\x1b.imrpc.ReplicaDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x36\n\nReplicaGet\x12\x18.imrpc.ReplicaGetRequest\x1a\x0e.imrpc.Replica\x12\x41\n\x0bReplicaList\x12\x16.google.protobuf.Empty\x1a\x1a.imrpc.ReplicaListResponse\x12:\n\x0cReplicaWatch\x12\x16.google.protobuf.Empty\x1a\x0e.imrpc.Replica\"\x00\x30\x01\x12\x39\n\x0c\x45ngineCreate\x12\x1a.imrpc.EngineCreateRequest\x1a\r.imrpc.Engine\x12\x42\n\x0c\x45ngineDelete\x12\x1a.imrpc.EngineDeleteRequest\x1a\x16.google.protobuf.Empty\x12\x33\n\tEngineGet\x12\x17.imrpc.EngineGetRequest\x1a\r.imrpc.Engine\x12?\n\nEngineList\x12\x16.google.protobuf.Empty\x1a\x19.imrpc.EngineListResponse\x12\x38\n\x0b\x45ngineWatch\x12\x16.google.protobuf.Empty\x1a\r.imrpc.Engine\"\x00\x30\x01\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,imrpc__pb2.DESCRIPTOR,])
 
@@ -48,8 +48,8 @@ _REPLICAMODE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1666,
-  serialized_end=1704,
+  serialized_start=1670,
+  serialized_end=1708,
 )
 _sym_db.RegisterEnumDescriptor(_REPLICAMODE)
 
@@ -273,181 +273,6 @@ _REPLICA = _descriptor.Descriptor(
 )
 
 
-_ENGINE_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
-  name='ReplicaAddressMapEntry',
-  full_name='imrpc.Engine.ReplicaAddressMapEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='imrpc.Engine.ReplicaAddressMapEntry.key', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='imrpc.Engine.ReplicaAddressMapEntry.value', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=_b('8\001'),
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=761,
-  serialized_end=817,
-)
-
-_ENGINE_REPLICAMODEMAPENTRY = _descriptor.Descriptor(
-  name='ReplicaModeMapEntry',
-  full_name='imrpc.Engine.ReplicaModeMapEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='imrpc.Engine.ReplicaModeMapEntry.key', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='imrpc.Engine.ReplicaModeMapEntry.value', index=1,
-      number=2, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=_b('8\001'),
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=819,
-  serialized_end=892,
-)
-
-_ENGINE = _descriptor.Descriptor(
-  name='Engine',
-  full_name='imrpc.Engine',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='name', full_name='imrpc.Engine.name', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='uuid', full_name='imrpc.Engine.uuid', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='size', full_name='imrpc.Engine.size', index=2,
-      number=3, type=4, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='address', full_name='imrpc.Engine.address', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='replica_address_map', full_name='imrpc.Engine.replica_address_map', index=4,
-      number=5, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='replica_mode_map', full_name='imrpc.Engine.replica_mode_map', index=5,
-      number=6, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='endpoint', full_name='imrpc.Engine.endpoint', index=6,
-      number=7, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frontend', full_name='imrpc.Engine.frontend', index=7,
-      number=8, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='frontend_state', full_name='imrpc.Engine.frontend_state', index=8,
-      number=9, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='ip', full_name='imrpc.Engine.ip', index=9,
-      number=10, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='port', full_name='imrpc.Engine.port', index=10,
-      number=11, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[_ENGINE_REPLICAADDRESSMAPENTRY, _ENGINE_REPLICAMODEMAPENTRY, ],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=478,
-  serialized_end=892,
-)
-
-
 _REPLICACREATEREQUEST = _descriptor.Descriptor(
   name='ReplicaCreateRequest',
   full_name='imrpc.ReplicaCreateRequest',
@@ -495,8 +320,8 @@ _REPLICACREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=894,
-  serialized_end=987,
+  serialized_start=477,
+  serialized_end=570,
 )
 
 
@@ -533,8 +358,8 @@ _REPLICADELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=989,
-  serialized_end=1051,
+  serialized_start=572,
+  serialized_end=634,
 )
 
 
@@ -564,8 +389,8 @@ _REPLICAGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1053,
-  serialized_end=1086,
+  serialized_start=636,
+  serialized_end=669,
 )
 
 
@@ -602,8 +427,8 @@ _REPLICALISTRESPONSE_REPLICASENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1172,
-  serialized_end=1235,
+  serialized_start=755,
+  serialized_end=818,
 )
 
 _REPLICALISTRESPONSE = _descriptor.Descriptor(
@@ -632,8 +457,8 @@ _REPLICALISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1089,
-  serialized_end=1235,
+  serialized_start=672,
+  serialized_end=818,
 )
 
 
@@ -670,8 +495,8 @@ _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=761,
-  serialized_end=817,
+  serialized_start=977,
+  serialized_end=1033,
 )
 
 _ENGINECREATEREQUEST = _descriptor.Descriptor(
@@ -721,8 +546,183 @@ _ENGINECREATEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1238,
-  serialized_end=1450,
+  serialized_start=821,
+  serialized_end=1033,
+)
+
+
+_ENGINE_REPLICAADDRESSMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaAddressMapEntry',
+  full_name='imrpc.Engine.ReplicaAddressMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.Engine.ReplicaAddressMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.Engine.ReplicaAddressMapEntry.value', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=977,
+  serialized_end=1033,
+)
+
+_ENGINE_REPLICAMODEMAPENTRY = _descriptor.Descriptor(
+  name='ReplicaModeMapEntry',
+  full_name='imrpc.Engine.ReplicaModeMapEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='imrpc.Engine.ReplicaModeMapEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='imrpc.Engine.ReplicaModeMapEntry.value', index=1,
+      number=2, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1381,
+  serialized_end=1454,
+)
+
+_ENGINE = _descriptor.Descriptor(
+  name='Engine',
+  full_name='imrpc.Engine',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='imrpc.Engine.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='uuid', full_name='imrpc.Engine.uuid', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='volume_name', full_name='imrpc.Engine.volume_name', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='size', full_name='imrpc.Engine.size', index=3,
+      number=4, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='ip', full_name='imrpc.Engine.ip', index=4,
+      number=5, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='port', full_name='imrpc.Engine.port', index=5,
+      number=6, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='replica_address_map', full_name='imrpc.Engine.replica_address_map', index=6,
+      number=7, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='replica_mode_map', full_name='imrpc.Engine.replica_mode_map', index=7,
+      number=8, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='endpoint', full_name='imrpc.Engine.endpoint', index=8,
+      number=9, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend', full_name='imrpc.Engine.frontend', index=9,
+      number=10, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='frontend_state', full_name='imrpc.Engine.frontend_state', index=10,
+      number=11, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_ENGINE_REPLICAADDRESSMAPENTRY, _ENGINE_REPLICAMODEMAPENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1036,
+  serialized_end=1454,
 )
 
 
@@ -752,8 +752,8 @@ _ENGINEDELETEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1452,
-  serialized_end=1487,
+  serialized_start=1456,
+  serialized_end=1491,
 )
 
 
@@ -783,8 +783,8 @@ _ENGINEGETREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1489,
-  serialized_end=1521,
+  serialized_start=1493,
+  serialized_end=1525,
 )
 
 
@@ -821,8 +821,8 @@ _ENGINELISTRESPONSE_ENGINESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1603,
-  serialized_end=1664,
+  serialized_start=1607,
+  serialized_end=1668,
 )
 
 _ENGINELISTRESPONSE = _descriptor.Descriptor(
@@ -851,8 +851,8 @@ _ENGINELISTRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1524,
-  serialized_end=1664,
+  serialized_start=1528,
+  serialized_end=1668,
 )
 
 _LVOL_CHILDRENENTRY.containing_type = _LVOL
@@ -860,27 +860,27 @@ _LVOL.fields_by_name['children'].message_type = _LVOL_CHILDRENENTRY
 _REPLICA_SNAPSHOTSENTRY.fields_by_name['value'].message_type = _LVOL
 _REPLICA_SNAPSHOTSENTRY.containing_type = _REPLICA
 _REPLICA.fields_by_name['snapshots'].message_type = _REPLICA_SNAPSHOTSENTRY
-_ENGINE_REPLICAADDRESSMAPENTRY.containing_type = _ENGINE
-_ENGINE_REPLICAMODEMAPENTRY.fields_by_name['value'].enum_type = _REPLICAMODE
-_ENGINE_REPLICAMODEMAPENTRY.containing_type = _ENGINE
-_ENGINE.fields_by_name['replica_address_map'].message_type = _ENGINE_REPLICAADDRESSMAPENTRY
-_ENGINE.fields_by_name['replica_mode_map'].message_type = _ENGINE_REPLICAMODEMAPENTRY
 _REPLICALISTRESPONSE_REPLICASENTRY.fields_by_name['value'].message_type = _REPLICA
 _REPLICALISTRESPONSE_REPLICASENTRY.containing_type = _REPLICALISTRESPONSE
 _REPLICALISTRESPONSE.fields_by_name['replicas'].message_type = _REPLICALISTRESPONSE_REPLICASENTRY
 _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY.containing_type = _ENGINECREATEREQUEST
 _ENGINECREATEREQUEST.fields_by_name['replica_address_map'].message_type = _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY
+_ENGINE_REPLICAADDRESSMAPENTRY.containing_type = _ENGINE
+_ENGINE_REPLICAMODEMAPENTRY.fields_by_name['value'].enum_type = _REPLICAMODE
+_ENGINE_REPLICAMODEMAPENTRY.containing_type = _ENGINE
+_ENGINE.fields_by_name['replica_address_map'].message_type = _ENGINE_REPLICAADDRESSMAPENTRY
+_ENGINE.fields_by_name['replica_mode_map'].message_type = _ENGINE_REPLICAMODEMAPENTRY
 _ENGINELISTRESPONSE_ENGINESENTRY.fields_by_name['value'].message_type = _ENGINE
 _ENGINELISTRESPONSE_ENGINESENTRY.containing_type = _ENGINELISTRESPONSE
 _ENGINELISTRESPONSE.fields_by_name['engines'].message_type = _ENGINELISTRESPONSE_ENGINESENTRY
 DESCRIPTOR.message_types_by_name['Lvol'] = _LVOL
 DESCRIPTOR.message_types_by_name['Replica'] = _REPLICA
-DESCRIPTOR.message_types_by_name['Engine'] = _ENGINE
 DESCRIPTOR.message_types_by_name['ReplicaCreateRequest'] = _REPLICACREATEREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaDeleteRequest'] = _REPLICADELETEREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaGetRequest'] = _REPLICAGETREQUEST
 DESCRIPTOR.message_types_by_name['ReplicaListResponse'] = _REPLICALISTRESPONSE
 DESCRIPTOR.message_types_by_name['EngineCreateRequest'] = _ENGINECREATEREQUEST
+DESCRIPTOR.message_types_by_name['Engine'] = _ENGINE
 DESCRIPTOR.message_types_by_name['EngineDeleteRequest'] = _ENGINEDELETEREQUEST
 DESCRIPTOR.message_types_by_name['EngineGetRequest'] = _ENGINEGETREQUEST
 DESCRIPTOR.message_types_by_name['EngineListResponse'] = _ENGINELISTRESPONSE
@@ -916,29 +916,6 @@ Replica = _reflection.GeneratedProtocolMessageType('Replica', (_message.Message,
   })
 _sym_db.RegisterMessage(Replica)
 _sym_db.RegisterMessage(Replica.SnapshotsEntry)
-
-Engine = _reflection.GeneratedProtocolMessageType('Engine', (_message.Message,), {
-
-  'ReplicaAddressMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaAddressMapEntry', (_message.Message,), {
-    'DESCRIPTOR' : _ENGINE_REPLICAADDRESSMAPENTRY,
-    '__module__' : 'spdk_pb2'
-    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaAddressMapEntry)
-    })
-  ,
-
-  'ReplicaModeMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaModeMapEntry', (_message.Message,), {
-    'DESCRIPTOR' : _ENGINE_REPLICAMODEMAPENTRY,
-    '__module__' : 'spdk_pb2'
-    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaModeMapEntry)
-    })
-  ,
-  'DESCRIPTOR' : _ENGINE,
-  '__module__' : 'spdk_pb2'
-  # @@protoc_insertion_point(class_scope:imrpc.Engine)
-  })
-_sym_db.RegisterMessage(Engine)
-_sym_db.RegisterMessage(Engine.ReplicaAddressMapEntry)
-_sym_db.RegisterMessage(Engine.ReplicaModeMapEntry)
 
 ReplicaCreateRequest = _reflection.GeneratedProtocolMessageType('ReplicaCreateRequest', (_message.Message,), {
   'DESCRIPTOR' : _REPLICACREATEREQUEST,
@@ -991,6 +968,29 @@ EngineCreateRequest = _reflection.GeneratedProtocolMessageType('EngineCreateRequ
 _sym_db.RegisterMessage(EngineCreateRequest)
 _sym_db.RegisterMessage(EngineCreateRequest.ReplicaAddressMapEntry)
 
+Engine = _reflection.GeneratedProtocolMessageType('Engine', (_message.Message,), {
+
+  'ReplicaAddressMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaAddressMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ENGINE_REPLICAADDRESSMAPENTRY,
+    '__module__' : 'spdk_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaAddressMapEntry)
+    })
+  ,
+
+  'ReplicaModeMapEntry' : _reflection.GeneratedProtocolMessageType('ReplicaModeMapEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ENGINE_REPLICAMODEMAPENTRY,
+    '__module__' : 'spdk_pb2'
+    # @@protoc_insertion_point(class_scope:imrpc.Engine.ReplicaModeMapEntry)
+    })
+  ,
+  'DESCRIPTOR' : _ENGINE,
+  '__module__' : 'spdk_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.Engine)
+  })
+_sym_db.RegisterMessage(Engine)
+_sym_db.RegisterMessage(Engine.ReplicaAddressMapEntry)
+_sym_db.RegisterMessage(Engine.ReplicaModeMapEntry)
+
 EngineDeleteRequest = _reflection.GeneratedProtocolMessageType('EngineDeleteRequest', (_message.Message,), {
   'DESCRIPTOR' : _ENGINEDELETEREQUEST,
   '__module__' : 'spdk_pb2'
@@ -1023,10 +1023,10 @@ _sym_db.RegisterMessage(EngineListResponse.EnginesEntry)
 
 _LVOL_CHILDRENENTRY._options = None
 _REPLICA_SNAPSHOTSENTRY._options = None
-_ENGINE_REPLICAADDRESSMAPENTRY._options = None
-_ENGINE_REPLICAMODEMAPENTRY._options = None
 _REPLICALISTRESPONSE_REPLICASENTRY._options = None
 _ENGINECREATEREQUEST_REPLICAADDRESSMAPENTRY._options = None
+_ENGINE_REPLICAADDRESSMAPENTRY._options = None
+_ENGINE_REPLICAMODEMAPENTRY._options = None
 _ENGINELISTRESPONSE_ENGINESENTRY._options = None
 
 _SPDKSERVICE = _descriptor.ServiceDescriptor(
@@ -1035,8 +1035,8 @@ _SPDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1707,
-  serialized_end=2394,
+  serialized_start=1711,
+  serialized_end=2398,
   methods=[
   _descriptor.MethodDescriptor(
     name='ReplicaCreate',
@@ -1075,9 +1075,18 @@ _SPDKSERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
+    name='ReplicaWatch',
+    full_name='imrpc.SPDKService.ReplicaWatch',
+    index=4,
+    containing_service=None,
+    input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    output_type=_REPLICA,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
     name='EngineCreate',
     full_name='imrpc.SPDKService.EngineCreate',
-    index=4,
+    index=5,
     containing_service=None,
     input_type=_ENGINECREATEREQUEST,
     output_type=_ENGINE,
@@ -1086,7 +1095,7 @@ _SPDKSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='EngineDelete',
     full_name='imrpc.SPDKService.EngineDelete',
-    index=5,
+    index=6,
     containing_service=None,
     input_type=_ENGINEDELETEREQUEST,
     output_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
@@ -1095,7 +1104,7 @@ _SPDKSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='EngineGet',
     full_name='imrpc.SPDKService.EngineGet',
-    index=6,
+    index=7,
     containing_service=None,
     input_type=_ENGINEGETREQUEST,
     output_type=_ENGINE,
@@ -1104,19 +1113,10 @@ _SPDKSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='EngineList',
     full_name='imrpc.SPDKService.EngineList',
-    index=7,
-    containing_service=None,
-    input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
-    output_type=_ENGINELISTRESPONSE,
-    serialized_options=None,
-  ),
-  _descriptor.MethodDescriptor(
-    name='ReplicaWatch',
-    full_name='imrpc.SPDKService.ReplicaWatch',
     index=8,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
-    output_type=_REPLICA,
+    output_type=_ENGINELISTRESPONSE,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
