@@ -463,17 +463,17 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 	}
 	defer spdkClient.Close()
 
+	engine, err := getEngine(spdkClient, req.Name, log)
+	if err != nil {
+		log.WithError(err).Error("Failed to get engine")
+		return nil, err
+	}
+
 	volumeName := getVolumeName(req.Name)
 	err = deleteLonghornDevice(volumeName)
 	if err != nil {
 		log.WithError(err).Error("Failed to delete longhorn device")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	engine, err := getEngine(spdkClient, req.Name, log)
-	if err != nil {
-		log.WithError(err).Error("Failed to get engine")
-		return nil, err
 	}
 
 	raidNQN := spdkutil.GetNQN(req.Name)

@@ -166,10 +166,12 @@ func createLonghornDevice(devicePath, name string) error {
 	return duplicateDevice(major, minor, longhornDevPath)
 }
 
-func deleteLonghornDevice(devicePath string) error {
-	if _, err := os.Stat(devicePath); err == nil {
-		if err := remove(devicePath); err != nil {
-			return fmt.Errorf("failed to removing device %s, %v", devicePath, err)
+func deleteLonghornDevice(name string) error {
+	longhornDevPath := filepath.Join(devPath, name)
+
+	if _, err := os.Stat(longhornDevPath); err == nil {
+		if err := remove(longhornDevPath); err != nil {
+			return fmt.Errorf("failed to removing device %s, %v", longhornDevPath, err)
 		}
 	}
 	return nil
