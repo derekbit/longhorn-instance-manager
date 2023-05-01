@@ -46,6 +46,10 @@ func StartCmd() cli.Command {
 				Name:  "port-range",
 				Value: "10000-30000",
 			},
+			cli.StringFlag{
+				Name:  "spdk-port-range",
+				Value: "30001-40000",
+			},
 			cli.BoolFlag{
 				Name:  "spdk-enabled",
 				Usage: "enable SPDK support",
@@ -91,7 +95,8 @@ func cleanup(pm *process.Manager) {
 func start(c *cli.Context) (err error) {
 	listen := c.String("listen")
 	logsDir := c.String("logs-dir")
-	portRange := c.String("port-range")
+	processPortRange := c.String("port-range")
+	spdkPortRange := c.String("spdk-port-range")
 	spdkEnabled := c.Bool("spdk-enabled")
 
 	if err := util.SetUpLogger(logsDir); err != nil {
@@ -155,7 +160,7 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyServiceAddress)
 
 	// Start process manager server
-	pm, pmGRPCServer, pmGRPCListener, err := setupProcessManagerGRPCServer(portRange, logsDir, processManagerServiceAddress, tlsConfig, shutdownCh)
+	pm, pmGRPCServer, pmGRPCListener, err := setupProcessManagerGRPCServer(processPortRange, logsDir, processManagerServiceAddress, tlsConfig, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -184,7 +189,7 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager disk gRPC server listening to %v", diskServiceAddress)
 
 	// Start SPDK server
-	spdkGRPCServer, spdkGRPCListener, err := setupSPDKGRPCServer(spdkServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
+	spdkGRPCServer, spdkGRPCListener, err := setupSPDKGRPCServer(spdkPortRange, spdkServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -251,8 +256,8 @@ func setupDiskGRPCServer(listen string, tlsConfig *tls.Config, spdkEnabled bool,
 	return grpcServer, rpcListener, nil
 }
 
-func setupSPDKGRPCServer(listen string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
-	srv, err := spdk.NewServer(spdkEnabled, shutdownCh)
+func setupSPDKGRPCServer(portRange, listen string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	srv, err := spdk.NewServer(portRange, spdkEnabled, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}
