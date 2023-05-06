@@ -2,6 +2,7 @@
 import grpc
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+import imcommon_pb2 as imcommon__pb2
 import imrpc_pb2 as imrpc__pb2
 
 
@@ -16,44 +17,44 @@ class ProcessManagerServiceStub(object):
       channel: A grpc.Channel.
     """
     self.ProcessCreate = channel.unary_unary(
-        '/ProcessManagerService/ProcessCreate',
+        '/imrpc.ProcessManagerService/ProcessCreate',
         request_serializer=imrpc__pb2.ProcessCreateRequest.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessResponse.FromString,
         )
     self.ProcessDelete = channel.unary_unary(
-        '/ProcessManagerService/ProcessDelete',
+        '/imrpc.ProcessManagerService/ProcessDelete',
         request_serializer=imrpc__pb2.ProcessDeleteRequest.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessResponse.FromString,
         )
     self.ProcessGet = channel.unary_unary(
-        '/ProcessManagerService/ProcessGet',
+        '/imrpc.ProcessManagerService/ProcessGet',
         request_serializer=imrpc__pb2.ProcessGetRequest.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessResponse.FromString,
         )
     self.ProcessList = channel.unary_unary(
-        '/ProcessManagerService/ProcessList',
+        '/imrpc.ProcessManagerService/ProcessList',
         request_serializer=imrpc__pb2.ProcessListRequest.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessListResponse.FromString,
         )
     self.ProcessLog = channel.unary_stream(
-        '/ProcessManagerService/ProcessLog',
+        '/imrpc.ProcessManagerService/ProcessLog',
         request_serializer=imrpc__pb2.LogRequest.SerializeToString,
-        response_deserializer=imrpc__pb2.LogResponse.FromString,
+        response_deserializer=imcommon__pb2.LogResponse.FromString,
         )
     self.ProcessWatch = channel.unary_stream(
-        '/ProcessManagerService/ProcessWatch',
+        '/imrpc.ProcessManagerService/ProcessWatch',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessResponse.FromString,
         )
     self.ProcessReplace = channel.unary_unary(
-        '/ProcessManagerService/ProcessReplace',
+        '/imrpc.ProcessManagerService/ProcessReplace',
         request_serializer=imrpc__pb2.ProcessReplaceRequest.SerializeToString,
         response_deserializer=imrpc__pb2.ProcessResponse.FromString,
         )
     self.VersionGet = channel.unary_unary(
-        '/ProcessManagerService/VersionGet',
+        '/imrpc.ProcessManagerService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=imrpc__pb2.VersionResponse.FromString,
+        response_deserializer=imcommon__pb2.VersionResponse.FromString,
         )
 
 
@@ -143,7 +144,7 @@ def add_ProcessManagerServiceServicer_to_server(servicer, server):
       'ProcessLog': grpc.unary_stream_rpc_method_handler(
           servicer.ProcessLog,
           request_deserializer=imrpc__pb2.LogRequest.FromString,
-          response_serializer=imrpc__pb2.LogResponse.SerializeToString,
+          response_serializer=imcommon__pb2.LogResponse.SerializeToString,
       ),
       'ProcessWatch': grpc.unary_stream_rpc_method_handler(
           servicer.ProcessWatch,
@@ -158,9 +159,9 @@ def add_ProcessManagerServiceServicer_to_server(servicer, server):
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=imrpc__pb2.VersionResponse.SerializeToString,
+          response_serializer=imcommon__pb2.VersionResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'ProcessManagerService', rpc_method_handlers)
+      'imrpc.ProcessManagerService', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))
