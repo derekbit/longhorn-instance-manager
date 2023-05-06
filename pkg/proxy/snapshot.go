@@ -4,18 +4,35 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	esync "github.com/longhorn/longhorn-engine/pkg/sync"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
 func (p *Proxy) VolumeSnapshot(ctx context.Context, req *rpc.EngineVolumeSnapshotRequest) (resp *rpc.EngineVolumeSnapshotProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Snapshotting volume: snapshot %v", req.SnapshotVolume.Name)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.volumeSnapshotFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.volumeSnapshotFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) volumeSnapshotFromEngine(ctx context.Context, req *rpc.EngineVolumeSnapshotRequest) (resp *rpc.EngineVolumeSnapshotProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -34,10 +51,29 @@ func (p *Proxy) VolumeSnapshot(ctx context.Context, req *rpc.EngineVolumeSnapsho
 	}, nil
 }
 
+func (p *Proxy) volumeSnapshotFromSpdkService(ctx context.Context, req *rpc.EngineVolumeSnapshotRequest) (resp *rpc.EngineVolumeSnapshotProxyResponse, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotListProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Listing snapshots")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotListFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotListFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotListProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -73,10 +109,32 @@ func (p *Proxy) SnapshotList(ctx context.Context, req *rpc.ProxyEngineRequest) (
 	return resp, nil
 }
 
+func (p *Proxy) snapshotListFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotListProxyResponse, err error) {
+	/* TODO: implement this */
+	return &rpc.EngineSnapshotListProxyResponse{
+		Disks: map[string]*rpc.EngineSnapshotDiskInfo{},
+	}, nil
+}
+
 func (p *Proxy) SnapshotClone(ctx context.Context, req *rpc.EngineSnapshotCloneRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Cloning snapshot from %v to %v", req.FromController, req.ProxyEngineRequest.Address)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotCloneFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotCloneFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotCloneFromEngine(ctx context.Context, req *rpc.EngineSnapshotCloneRequest) (resp *empty.Empty, err error) {
 	cFrom, err := eclient.NewControllerClient(req.FromController)
 	if err != nil {
 		return nil, err
@@ -97,10 +155,29 @@ func (p *Proxy) SnapshotClone(ctx context.Context, req *rpc.EngineSnapshotCloneR
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) snapshotCloneFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotCloneRequest) (resp *empty.Empty, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotCloneStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotCloneStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Getting snapshot clone status")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotCloneStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotCloneStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotCloneStatusFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotCloneStatusProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -129,10 +206,32 @@ func (p *Proxy) SnapshotCloneStatus(ctx context.Context, req *rpc.ProxyEngineReq
 	return resp, nil
 }
 
+func (p *Proxy) snapshotCloneStatusFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotCloneStatusProxyResponse, err error) {
+	/* TODO: implement this */
+	return &rpc.EngineSnapshotCloneStatusProxyResponse{
+		Status: map[string]*eptypes.SnapshotCloneStatusResponse{},
+	}, nil
+}
+
 func (p *Proxy) SnapshotRevert(ctx context.Context, req *rpc.EngineSnapshotRevertRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Reverting snapshot %v", req.Name)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotRevertFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotRevertFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotRevertFromEngine(ctx context.Context, req *rpc.EngineSnapshotRevertRequest) (resp *empty.Empty, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -146,10 +245,29 @@ func (p *Proxy) SnapshotRevert(ctx context.Context, req *rpc.EngineSnapshotRever
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) snapshotRevertFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotRevertRequest) (resp *empty.Empty, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotPurge(ctx context.Context, req *rpc.EngineSnapshotPurgeRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Info("Purging snapshots")
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotPurgeFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotPurgeFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotPurgeFromEngine(ctx context.Context, req *rpc.EngineSnapshotPurgeRequest) (resp *empty.Empty, err error) {
 	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -162,10 +280,29 @@ func (p *Proxy) SnapshotPurge(ctx context.Context, req *rpc.EngineSnapshotPurgeR
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) snapshotPurgeFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotPurgeRequest) (resp *empty.Empty, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotPurgeStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotPurgeStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Getting snapshot purge status")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotPurgeStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotPurgeStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotPurgeStatusFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotPurgeStatusProxyResponse, err error) {
 	task, err := esync.NewTask(ctx, req.Address)
 	if err != nil {
 		return nil, err
@@ -191,10 +328,32 @@ func (p *Proxy) SnapshotPurgeStatus(ctx context.Context, req *rpc.ProxyEngineReq
 	return resp, nil
 }
 
+func (p *Proxy) snapshotPurgeStatusFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotPurgeStatusProxyResponse, err error) {
+	/* TODO: implement this */
+	return &rpc.EngineSnapshotPurgeStatusProxyResponse{
+		Status: map[string]*eptypes.SnapshotPurgeStatusResponse{},
+	}, nil
+}
+
 func (p *Proxy) SnapshotRemove(ctx context.Context, req *rpc.EngineSnapshotRemoveRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Removing snapshots %v", req.Names)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotRemoveFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotRemoveFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotRemoveFromEngine(ctx context.Context, req *rpc.EngineSnapshotRemoveRequest) (resp *empty.Empty, err error) {
 	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -211,10 +370,29 @@ func (p *Proxy) SnapshotRemove(ctx context.Context, req *rpc.EngineSnapshotRemov
 	return &empty.Empty{}, lastErr
 }
 
+func (p *Proxy) snapshotRemoveFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotRemoveRequest) (resp *empty.Empty, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotHash(ctx context.Context, req *rpc.EngineSnapshotHashRequest) (resp *empty.Empty, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Hashing snapshot %v with rehash %v", req.SnapshotName, req.Rehash)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotHashFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotHashFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotHashFromEngine(ctx context.Context, req *rpc.EngineSnapshotHashRequest) (resp *empty.Empty, err error) {
 	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -227,10 +405,29 @@ func (p *Proxy) SnapshotHash(ctx context.Context, req *rpc.EngineSnapshotHashReq
 	return &empty.Empty{}, nil
 }
 
+func (p *Proxy) snapshotHashFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotHashRequest) (resp *empty.Empty, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotHashStatus(ctx context.Context, req *rpc.EngineSnapshotHashStatusRequest) (resp *rpc.EngineSnapshotHashStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Trace("Getting snapshot hash status")
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotHashStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotHashStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotHashStatusFromEngine(ctx context.Context, req *rpc.EngineSnapshotHashStatusRequest) (resp *rpc.EngineSnapshotHashStatusProxyResponse, err error) {
 	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -254,4 +451,8 @@ func (p *Proxy) SnapshotHashStatus(ctx context.Context, req *rpc.EngineSnapshotH
 	}
 
 	return resp, nil
+}
+
+func (p *Proxy) snapshotHashStatusFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotHashStatusRequest) (resp *rpc.EngineSnapshotHashStatusProxyResponse, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
 }
