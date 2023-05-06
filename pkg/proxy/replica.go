@@ -4,7 +4,10 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 
+	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
@@ -41,9 +44,24 @@ func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 }
 
 func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Listing replicas")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.replicaListFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.replicaListFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) replicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.Address)
 	if err != nil {
 		return nil, err
@@ -73,10 +91,67 @@ func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (r
 	}, nil
 }
 
+func replicaModeToGRPCReplicaMode(mode rpc.ReplicaMode) eptypes.ReplicaMode {
+	switch mode {
+	case rpc.ReplicaMode_WO:
+		return eptypes.ReplicaMode_WO
+	case rpc.ReplicaMode_RW:
+		return eptypes.ReplicaMode_RW
+	case rpc.ReplicaMode_ERR:
+		return eptypes.ReplicaMode_ERR
+	}
+	return eptypes.ReplicaMode_ERR
+}
+
+func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
+	c, err := client.NewSPDKServiceClient("tcp://"+p.spdkServiceAddress, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	recv, err := c.EngineGet(req.EngineName)
+	if err != nil {
+		return nil, err
+	}
+
+	replicas := []*eptypes.ControllerReplica{}
+	for address, mode := range recv.ReplicaModeMap {
+		replica := &eptypes.ControllerReplica{
+			Address: &eptypes.ReplicaAddress{
+				Address: address,
+			},
+			Mode: replicaModeToGRPCReplicaMode(mode),
+		}
+		replicas = append(replicas, replica)
+	}
+
+	return &rpc.EngineReplicaListProxyResponse{
+		ReplicaList: &eptypes.ReplicaListReply{
+			Replicas: replicas,
+		},
+	}, nil
+}
+
 func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Getting replica rebuilding status")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.replicaRebuildingStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.replicaRebuildingStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) replicaRebuildingStatusFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
 	task, err := esync.NewTask(ctx, req.Address)
 	if err != nil {
 		return nil, err
@@ -101,6 +176,13 @@ func (p *Proxy) ReplicaRebuildingStatus(ctx context.Context, req *rpc.ProxyEngin
 	}
 
 	return resp, nil
+}
+
+func (p *Proxy) replicaRebuildingStatusFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaRebuildStatusProxyResponse, err error) {
+	/* TODO: implement this */
+	return &rpc.EngineReplicaRebuildStatusProxyResponse{
+		Status: make(map[string]*eptypes.ReplicaRebuildStatusResponse),
+	}, nil
 }
 
 func (p *Proxy) ReplicaVerifyRebuild(ctx context.Context, req *rpc.EngineReplicaVerifyRebuildRequest) (resp *empty.Empty, err error) {

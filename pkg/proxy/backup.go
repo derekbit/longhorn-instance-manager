@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	rclient "github.com/longhorn/longhorn-engine/pkg/replica/client"
@@ -18,12 +18,29 @@ import (
 	etypes "github.com/longhorn/longhorn-engine/pkg/types"
 	eutil "github.com/longhorn/longhorn-engine/pkg/util"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
 func (p *Proxy) SnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Backing up snapshot %v to backup %v", req.SnapshotName, req.BackupName)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotBackupFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotBackupFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotBackupFromEngine(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
 	for _, env := range req.Envs {
 		part := strings.SplitN(env, "=", 2)
 		if len(part) < 2 {
@@ -72,10 +89,29 @@ func (p *Proxy) SnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBacku
 	}, nil
 }
 
+func (p *Proxy) snapshotBackupFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) SnapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapshotBackupStatusRequest) (resp *rpc.EngineSnapshotBackupStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Tracef("Getting %v backup status from replica %v", req.BackupName, req.ReplicaAddress)
 
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.snapshotBackupStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.snapshotBackupStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotBackupStatusFromEngine(ctx context.Context, req *rpc.EngineSnapshotBackupStatusRequest) (resp *rpc.EngineSnapshotBackupStatusProxyResponse, err error) {
 	c, err := eclient.NewControllerClient(req.ProxyEngineRequest.Address)
 	if err != nil {
 		return nil, err
@@ -146,9 +182,34 @@ func (p *Proxy) SnapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapsho
 	}, nil
 }
 
+func (p *Proxy) snapshotBackupStatusFromSpdkService(ctx context.Context, req *rpc.EngineSnapshotBackupStatusRequest) (resp *rpc.EngineSnapshotBackupStatusProxyResponse, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) BackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.ProxyEngineRequest.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 	log.Infof("Restoring backup %v to %v", req.Url, req.VolumeName)
+
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.backupRestoreFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.backupRestoreFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) backupRestoreFromEngine(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
 
 	for _, env := range req.Envs {
 		part := strings.SplitN(env, "=", 2)
@@ -191,10 +252,29 @@ func (p *Proxy) BackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreR
 	return resp, nil
 }
 
+func (p *Proxy) backupRestoreFromSpdkService(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
+	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+}
+
 func (p *Proxy) BackupRestoreStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineBackupRestoreStatusProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{"serviceURL": req.Address})
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.Address,
+		"engineName":         req.EngineName,
+		"backendStoreDriver": req.BackendStoreDriver,
+	})
 	log.Trace("Getting backup restore status")
 
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_longhorn:
+		return p.backupRestoreStatusFromEngine(ctx, req)
+	case rpc.BackendStoreDriver_spdk:
+		return p.backupRestoreStatusFromSpdkService(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) backupRestoreStatusFromEngine(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineBackupRestoreStatusProxyResponse, err error) {
 	task, err := esync.NewTask(ctx, req.Address)
 	if err != nil {
 		return nil, err
@@ -222,4 +302,11 @@ func (p *Proxy) BackupRestoreStatus(ctx context.Context, req *rpc.ProxyEngineReq
 	}
 
 	return resp, nil
+}
+
+func (p *Proxy) backupRestoreStatusFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineBackupRestoreStatusProxyResponse, err error) {
+	/* TODO: implement this */
+	return &rpc.EngineBackupRestoreStatusProxyResponse{
+		Status: map[string]*rpc.EngineBackupRestoreStatus{},
+	}, nil
 }
