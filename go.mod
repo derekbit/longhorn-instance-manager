@@ -58,3 +58,5 @@ require (
 )
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
+
+replace github.com/longhorn/backupstore v0.0.0-20230505015028-a1d4a7b45f7e => github.com/derekbit/backupstore v0.0.0-20230506045245-5f00fa1a27d6
