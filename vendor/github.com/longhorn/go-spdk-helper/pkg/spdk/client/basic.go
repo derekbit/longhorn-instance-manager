@@ -585,8 +585,9 @@ func (c *Client) NvmfDeleteSubsystem(nqn, targetName string) (deleted bool, err 
 // NvmfGetSubsystems lists all subsystem for the specified NVMe-oF target.
 //
 //	"tgtName": Optional. Parent NVMe-oF target name.
-func (c *Client) NvmfGetSubsystems(tgtName string) (subsystemList []spdktypes.NvmfSubsystem, err error) {
+func (c *Client) NvmfGetSubsystems(nqn, tgtName string) (subsystemList []spdktypes.NvmfSubsystem, err error) {
 	req := spdktypes.NvmfGetSubsystemsRequest{
+		Nqn:     nqn,
 		TgtName: tgtName,
 	}
 

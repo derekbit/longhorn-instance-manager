@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -159,94 +157,6 @@ func getEngine(client *spdkclient.Client, name string, log logrus.FieldLogger) (
 	return engine, nil
 }
 
-func getFrontendState(category spdktypes.BdevRaidCategory) string {
-	if category == spdktypes.BdevRaidCategoryOffline {
-		return "down"
-	}
-	return "up"
-}
-
-func createLonghornDevice(devicePath, name string) error {
-	logrus.Infof("Creating longhorn device: devicePath=%s, name=%s", devicePath, name)
-
-	if _, err := os.Stat(devPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(devPath, 0755); err != nil {
-			logrus.Fatalf("device %v: Cannot create directory %v", name, devPath)
-		}
-	}
-
-	// Get the major and minor numbers of the NVMe device.
-	major, minor, err := getDeviceNumbers(devicePath)
-	if err != nil {
-		return err
-	}
-
-	longhornDevPath := filepath.Join(devPath, name)
-
-	return duplicateDevice(major, minor, longhornDevPath)
-}
-
-func deleteLonghornDevice(name string) error {
-	longhornDevPath := filepath.Join(devPath, name)
-
-	if _, err := os.Stat(longhornDevPath); err == nil {
-		if err := remove(longhornDevPath); err != nil {
-			return fmt.Errorf("failed to removing device %s, %v", longhornDevPath, err)
-		}
-	}
-	return nil
-}
-
-func removeAsync(path string, done chan<- error) {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		logrus.Errorf("Unable to remove: %v", path)
-		done <- err
-	}
-	done <- nil
-}
-
-func remove(path string) error {
-	done := make(chan error)
-	go removeAsync(path, done)
-	select {
-	case err := <-done:
-		return err
-	case <-time.After(30 * time.Second):
-		return fmt.Errorf("timeout trying to delete %s", path)
-	}
-}
-
-func getDeviceNumbers(devicePath string) (major, minor uint32, err error) {
-	fileInfo, err := os.Stat(devicePath)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	statT := fileInfo.Sys().(*syscall.Stat_t)
-	major = uint32(int(statT.Rdev) >> 8)
-	minor = uint32(int(statT.Rdev) & 0xFF)
-	return major, minor, nil
-}
-
-func duplicateDevice(major, minor uint32, dest string) error {
-	if err := mknod(dest, major, minor); err != nil {
-		return fmt.Errorf("couldn't create device %s: %w", dest, err)
-	}
-	if err := os.Chmod(dest, 0660); err != nil {
-		return fmt.Errorf("couldn't change permission of the device %s: %w", dest, err)
-	}
-	return nil
-}
-
-func mknod(device string, major, minor uint32) error {
-	var fileMode os.FileMode = 0660
-	fileMode |= unix.S_IFBLK
-	dev := int(unix.Mkdev(uint32(major), uint32(minor)))
-
-	logrus.Infof("Creating device %s %d:%d", device, major, minor)
-	return unix.Mknod(device, uint32(fileMode), dev)
-}
-
 func (s *Server) replicaBroadcastConnector() (chan interface{}, error) {
 	return s.replicaBroadcastCh, nil
 }
@@ -388,4 +298,14 @@ func stripTail(s string, tail string) string {
 		return s[:len(s)-len(tail)]
 	}
 	return s
+}
+
+const (
+	EngineRandomIDLenth = 8
+	EngineSuffix        = "-e"
+)
+
+func GetVolumeNameFromEngineName(engineName string) string {
+	reg := regexp.MustCompile(fmt.Sprintf(`([^"]*)%s-[A-Za-z0-9]{%d,%d}$`, EngineSuffix, EngineRandomIDLenth, EngineRandomIDLenth))
+	return reg.ReplaceAllString(engineName, "${1}")
 }

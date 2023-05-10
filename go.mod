@@ -8,14 +8,14 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230502155402-f71b33a72840
 	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
-	github.com/longhorn/go-spdk-helper v0.0.0-20230428184001-b185b2f90a72
+	github.com/longhorn/go-spdk-helper v0.0.0-20230509182213-8371443810f2
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230503033304-7f1c1a149269
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli v1.22.12
+	github.com/urfave/cli v1.22.13
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.7.0
+	golang.org/x/sys v0.8.0
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -25,7 +25,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
-	github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b // indirect
+	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect

@@ -147,7 +147,10 @@ func (s *Server) DiskDelete(ctx context.Context, req *rpc.DiskDeleteRequest) (*e
 	s.Lock()
 	defer s.Unlock()
 
-	return &empty.Empty{}, s.blockTypeDiskDelete(ctx, req)
+	if s.spdkEnabled {
+		return &empty.Empty{}, s.blockTypeDiskDelete(ctx, req)
+	}
+	return &empty.Empty{}, nil
 }
 
 func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Disk, error) {

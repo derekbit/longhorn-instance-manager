@@ -217,15 +217,59 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	}
 	defer spdkClient.Close()
 
-	deleted, err := spdkClient.BdevLvolDelete(req.Name)
+	nqn := spdkutil.GetNQN(req.Name)
+	subsystems, err := spdkClient.NvmfGetSubsystems(nqn, "")
 	if err != nil {
-		log.WithError(err).Error("Failed to delete lvol")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		resp, parseErr := parseErrorMessage(err.Error())
+		if parseErr != nil || !isNoSuchDevice(resp.Message) {
+			log.WithError(err).Errorf("Failed to get nvmf subsystems for nqn %v", nqn)
+			return nil, grpcstatus.Errorf(grpccodes.Internal, errors.Wrapf(err, "failed to get nvmf subsystems for nqn %v", nqn).Error())
+		}
+		log.Infof("Nvmf subsystem %v does not exist", nqn)
+		return &empty.Empty{}, nil
 	}
 
-	if !deleted {
-		log.WithError(err).Error("Failed to delete lvol")
-		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to delete lvol %v", req.Name)
+	subsystem := &subsystems[0]
+	if !req.CleanupRequired {
+		if len(subsystem.ListenAddresses) == 0 {
+			log.Infof("Exposing nvmf subsystem %v is already stopped", nqn)
+			return &empty.Empty{}, nil
+		}
+	}
+
+	if len(subsystem.ListenAddresses) > 0 {
+		listener := &subsystem.ListenAddresses[0]
+		err = spdkClient.StopExposeBdev(nqn)
+		if err != nil {
+			log.WithError(err).Error("Failed to stop exposing bdev")
+			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to stop exposing bdev").Error())
+		}
+
+		logrus.Infof("Debug ===> Release port")
+		// Release the ports
+		portStart, err := strconv.Atoi(listener.Trsvcid)
+		if err != nil {
+			log.WithError(err).Error("Failed to convert port to int")
+			return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to convert port to int").Error())
+		}
+		portEnd := portStart + defaultReplicaPortCount - 1
+		s.releaseInstancePorts(req.Name, int32(portStart), int32(portEnd))
+	}
+
+	logrus.Infof("Debug ===> Cleanup %v", req.CleanupRequired)
+	if req.CleanupRequired {
+		log.Infof("Deleting lvol %v", req.Name)
+
+		deleted, err := spdkClient.BdevLvolDelete(req.Name)
+		if err != nil {
+			log.WithError(err).Error("Failed to delete lvol")
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+
+		if !deleted {
+			log.WithError(err).Error("Failed to delete lvol")
+			return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to delete lvol %v", req.Name)
+		}
 	}
 
 	log.Info("Deleted replica")
@@ -470,13 +514,13 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	initiator, err := spdknvme.NewInitiator(raidNQN, localIP, strconv.Itoa(int(localPort)))
+	initiator, err := spdknvme.NewInitiator(GetVolumeNameFromEngineName(req.Name), raidNQN, spdknvme.HostProc)
 	if err != nil {
 		log.WithError(err).Error("Failed to create NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	err = initiator.StartInitiator()
+	err = initiator.Start(localIP, strconv.Itoa(int(localPort)))
 	if err != nil {
 		log.WithError(err).Error("Failed to start NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
@@ -485,13 +529,6 @@ func (s *Server) EngineCreate(ctx context.Context, req *rpc.EngineCreateRequest)
 	err = waitForDeviceReady(filepath.Join("/dev", initiator.ControllerName)+"n1", 10)
 	if err != nil {
 		log.WithError(err).Error("Failed to wait for longhorn device ready")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
-	volumeName := getVolumeName(req.Name)
-	err = createLonghornDevice(filepath.Join("/dev", initiator.ControllerName)+"n1", volumeName)
-	if err != nil {
-		log.WithError(err).Error("Failed to create longhorn device")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
@@ -538,18 +575,7 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 		return nil, err
 	}
 
-	volumeName := getVolumeName(req.Name)
-	err = deleteLonghornDevice(volumeName)
-	if err != nil {
-		log.WithError(err).Error("Failed to delete longhorn device")
-		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
-	}
-
 	raidNQN := spdkutil.GetNQN(req.Name)
-	localIP, err := issiutil.GetIPToHost()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get local IP")
-	}
 
 	listeners, err := spdkClient.NvmfSubsystemGetListeners(raidNQN, "")
 	if err != nil {
@@ -559,13 +585,13 @@ func (s *Server) EngineDelete(ctx context.Context, req *rpc.EngineDeleteRequest)
 	listener := listeners[0]
 	localPort := listener.Address.Trsvcid
 
-	nvmeCli, err := spdknvme.NewInitiator(raidNQN, localIP, localPort)
+	initiator, err := spdknvme.NewInitiator(GetVolumeNameFromEngineName(req.Name), raidNQN, spdknvme.HostProc)
 	if err != nil {
 		log.WithError(err).Error("Failed to create NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
 	}
 
-	err = nvmeCli.StopInitiator()
+	err = initiator.Stop()
 	if err != nil {
 		log.WithError(err).Error("Failed to stop NVMe initiator")
 		return nil, grpcstatus.Error(grpccodes.Internal, err.Error())

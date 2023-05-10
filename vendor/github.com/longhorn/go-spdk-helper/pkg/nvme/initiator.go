@@ -130,6 +130,8 @@ func (i *Initiator) Start(transportAddress, transportServiceID string) (err erro
 		return fmt.Errorf("failed to start NVMe initiator %s within %d * %vsec retrys", i.Name, RetryCounts, RetryInterval.Seconds())
 	}
 
+	time.Sleep(1 * time.Second)
+
 	if err := i.loadStartedDeviceInfoWithoutLock(); err != nil {
 		return errors.Wrapf(err, "failed to load device info after starting NVMe initiator %s", i.Name)
 	}
