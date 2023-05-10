@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"regexp"
 	"strings"
+
+	"github.com/longhorn/go-spdk-helper/pkg/util"
 )
 
 const (
 	nvmeBinary = "nvme"
 
-	devPath = "/dev"
-
-	DefaultTransportType   = "tcp"
-	DefaultNVMeNamespaceID = 1
+	DefaultTransportType = "tcp"
 )
 
 type Device struct {
@@ -46,23 +45,15 @@ type Namespace struct {
 	SectorSize   uint32
 }
 
-func GetControllerPath(controllerName string) string {
-	return filepath.Join(devPath, controllerName)
-}
-
-func GetDefaultStorageNamespacePath(controllerName string) string {
-	return filepath.Join(devPath, fmt.Sprintf("%sn%d", controllerName, DefaultNVMeNamespaceID))
-}
-
-func CheckForNVMeCliExistence(execute func(name string, args []string) (string, error)) error {
+func CheckForNVMeCliExistence(executor util.Executor) error {
 	opts := []string{
 		"--version",
 	}
-	_, err := execute(nvmeBinary, opts)
+	_, err := executor.Execute(nvmeBinary, opts)
 	return err
 }
 
-func DiscoverTarget(ip, port string, execute func(name string, args []string) (string, error)) (subnqn string, err error) {
+func DiscoverTarget(ip, port string, executor util.Executor) (subnqn string, err error) {
 	opts := []string{
 		"discover",
 		"-t", DefaultTransportType,
@@ -82,7 +73,7 @@ func DiscoverTarget(ip, port string, execute func(name string, args []string) (s
 	//   subnqn:  nqn.2023-01.io.spdk:raid01
 	//   traddr:  127.0.0.1
 	//   sectype: none
-	output, err := execute(nvmeBinary, opts)
+	output, err := executor.Execute(nvmeBinary, opts)
 	if err != nil {
 		return "", err
 	}
@@ -103,7 +94,7 @@ func DiscoverTarget(ip, port string, execute func(name string, args []string) (s
 	return subnqn, nil
 }
 
-func ConnectTarget(ip, port, nqn string, execute func(name string, args []string) (string, error)) (controllerName string, err error) {
+func ConnectTarget(ip, port, nqn string, executor util.Executor) (controllerName string, err error) {
 	opts := []string{
 		"connect",
 		"-t", DefaultTransportType,
@@ -115,7 +106,7 @@ func ConnectTarget(ip, port, nqn string, execute func(name string, args []string
 
 	// Trying to connect an existing subsystem will error out with exit code 114.
 	// Hence, it's better to check the existence first.
-	if devices, err := GetDevices(ip, port, nqn, execute); err == nil && len(devices) > 0 {
+	if devices, err := GetDevices(ip, port, nqn, executor); err == nil && len(devices) > 0 {
 		return devices[0].Controllers[0].Controller, nil
 	}
 
@@ -123,7 +114,7 @@ func ConnectTarget(ip, port, nqn string, execute func(name string, args []string
 	// {
 	//  "device" : "nvme0"
 	// }
-	outputStr, err := execute(nvmeBinary, opts)
+	outputStr, err := executor.Execute(nvmeBinary, opts)
 	if err != nil {
 		return "", err
 	}
@@ -136,7 +127,7 @@ func ConnectTarget(ip, port, nqn string, execute func(name string, args []string
 	return output["device"], nil
 }
 
-func DisconnectTarget(nqn string, execute func(name string, args []string) (string, error)) error {
+func DisconnectTarget(nqn string, executor util.Executor) error {
 	opts := []string{
 		"disconnect",
 		"--nqn", nqn,
@@ -144,11 +135,11 @@ func DisconnectTarget(nqn string, execute func(name string, args []string) (stri
 
 	// The output example:
 	// NQN:nqn.2023-01.io.spdk:raid01 disconnected 1 controller(s)
-	_, err := execute(nvmeBinary, opts)
+	_, err := executor.Execute(nvmeBinary, opts)
 	return err
 }
 
-func GetDevices(ip, port, nqn string, execute func(name string, args []string) (string, error)) (devices []Device, err error) {
+func GetDevices(ip, port, nqn string, executor util.Executor) (devices []Device, err error) {
 	opts := []string{
 		"list",
 		"-v",
@@ -160,7 +151,7 @@ func GetDevices(ip, port, nqn string, execute func(name string, args []string) (
 	//  "Devices" : [
 	//    {
 	//      "Subsystem" : "nvme-subsys0",
-	//      "SubsystemNQN" : "nqn.2023-01.io.spdk:raid01",
+	//      "SubsystemNQN" : "nqn.2023-01.io.longhorn.spdk:raid01",
 	//      "Controllers" : [
 	//        {
 	//          "Controller" : "nvme0",
@@ -197,7 +188,7 @@ func GetDevices(ip, port, nqn string, execute func(name string, args []string) (
 	//    }
 	//  ]
 	// }
-	outputStr, err := execute(nvmeBinary, opts)
+	outputStr, err := executor.Execute(nvmeBinary, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -211,24 +202,24 @@ func GetDevices(ip, port, nqn string, execute func(name string, args []string) (
 	}
 
 	res := []Device{}
-	addressPrefix, addressSuffix := "", ""
-	if ip != "" {
-		addressPrefix = fmt.Sprintf("traddr=%s ", ip)
-	}
-	if port != "" {
-		addressSuffix = fmt.Sprintf(" trsvcid=%s", port)
-	}
 	for _, d := range output["Devices"] {
 		match := false
 		if d.SubsystemNQN != nqn {
 			continue
 		}
 		for _, c := range d.Controllers {
-			if !strings.HasPrefix(c.Address, addressPrefix) || !strings.HasSuffix(c.Address, addressSuffix) {
+			controllerIP, controllerPort := GetIPAndPortFromControllerAddress(c.Address)
+			if ip != "" && ip != controllerIP {
+				continue
+			}
+			if port != "" && port != controllerPort {
 				continue
 			}
 			match = true
 			break
+		}
+		if len(d.Namespaces) == 0 {
+			continue
 		}
 		if match {
 			res = append(res, d)
@@ -236,7 +227,15 @@ func GetDevices(ip, port, nqn string, execute func(name string, args []string) (
 	}
 
 	if len(res) == 0 {
-		return nil, fmt.Errorf("nvme device with subsystem NQN %s and address %s:%s not found", nqn, ip, port)
+		return nil, fmt.Errorf("cannot find a valid nvme device with subsystem NQN %s and address %s:%s", nqn, ip, port)
 	}
 	return res, nil
+}
+
+func GetIPAndPortFromControllerAddress(addr string) (ip, port string) {
+	reg := regexp.MustCompile(`traddr=([^"]*) trsvcid=\d*$`)
+	ip = reg.ReplaceAllString(addr, "${1}")
+	reg = regexp.MustCompile(`traddr=.* trsvcid=([^"]*)$`)
+	port = reg.ReplaceAllString(addr, "${1}")
+	return ip, port
 }

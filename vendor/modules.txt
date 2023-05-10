@@ -53,7 +53,7 @@ github.com/beorn7/perks/quantile
 # github.com/bits-and-blooms/bitset v1.2.0
 ## explicit; go 1.14
 github.com/bits-and-blooms/bitset
-# github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b
+# github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8
 ## explicit
 github.com/c9s/goprocinfo/linux
 # github.com/cespare/xxhash/v2 v2.2.0
@@ -120,7 +120,7 @@ github.com/longhorn/backupstore/vfs
 # github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
 ## explicit; go 1.13
 github.com/longhorn/go-iscsi-helper/util
-# github.com/longhorn/go-spdk-helper v0.0.0-20230428184001-b185b2f90a72
+# github.com/longhorn/go-spdk-helper v0.0.0-20230509182213-8371443810f2
 ## explicit; go 1.17
 github.com/longhorn/go-spdk-helper/pkg/jsonrpc
 github.com/longhorn/go-spdk-helper/pkg/nvme
@@ -203,7 +203,7 @@ github.com/slok/goresilience
 github.com/slok/goresilience/errors
 github.com/slok/goresilience/metrics
 github.com/slok/goresilience/timeout
-# github.com/urfave/cli v1.22.12
+# github.com/urfave/cli v1.22.13
 ## explicit; go 1.11
 github.com/urfave/cli
 # go.uber.org/multierr v1.11.0
@@ -222,7 +222,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.1.0
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.7.0
+# golang.org/x/sys v0.8.0
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
