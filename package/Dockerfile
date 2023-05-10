@@ -48,7 +48,7 @@ RUN git clone https://github.com/derekbit/spdk.git ${SPDK_DIR} --recursive && \
     git checkout 83584882eecf1837a4e0cc632d730e1ff6c8d888 && \
     ./scripts/pkgdep.sh && \
     git submodule update --init && \
-    ./configure --disable-tests --disable-unit-tests --disable-examples && \
+    ./configure --target-arch=ivybridge --disable-tests --disable-unit-tests --disable-examples && \
     make -j$(nproc) && \
     make install && \
     rm -rf ${SPDK_DIR}
