@@ -38,6 +38,3 @@ protoc -I pkg/imrpc/ -I proto/vendor/ -I proto/vendor/protobuf/src/ pkg/imrpc/di
 python3 -m grpc_tools.protoc -I pkg/imrpc -I proto/vendor/ -I proto/vendor/protobuf/src/ --python_out=integration/rpc/instance --grpc_python_out=integration/rpc/instance pkg/imrpc/instance.proto
 protoc -I pkg/imrpc/ -I proto/vendor/ -I proto/vendor/protobuf/src/ pkg/imrpc/instance.proto --go_out=plugins=grpc:pkg/imrpc/
 
-# spdk
-python3 -m grpc_tools.protoc -I pkg/imrpc -I proto/vendor/ -I proto/vendor/protobuf/src/ --python_out=integration/rpc/spdk --grpc_python_out=integration/rpc/spdk pkg/imrpc/spdk.proto
-protoc -I pkg/imrpc/ -I proto/vendor/ -I proto/vendor/protobuf/src/ pkg/imrpc/spdk.proto --go_out=plugins=grpc:pkg/imrpc/
