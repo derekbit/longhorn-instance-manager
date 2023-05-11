@@ -20,15 +20,11 @@ RUN zypper refresh && \
     zypper -n --gpg-auto-import-keys ref
 
 # Install packages
-RUN if [ ${ARCH} == "amd64" ]; then \
-        zypper -n install autoconf libtool libunwind-devel; \
-    fi
-
 RUN zypper -n install cmake wget curl git less file \
         libglib-2_0-0 libkmod-devel libnl3-devel linux-glibc-devel pkg-config \
-        psmisc tox qemu-tools fuse python3-devel git zlib-devel zlib-devel-static \
+        psmisc tox qemu-tools fuse zlib-devel zlib-devel-static \
         bash-completion rdma-core-devel libibverbs xsltproc docbook-xsl-stylesheets \
-        perl-Config-General libaio-devel glibc-devel-static glibc-devel iptables libltdl7 libdevmapper1_03 iproute2 jq docker gcc gcc-c++ && \
+        perl-Config-General glibc-devel-static glibc-devel iptables libltdl7 libdevmapper1_03 iproute2 jq docker gcc gcc-c++ && \
         rm -rf /var/cache/zypp/*
 
 # needed for ${!var} substitution
@@ -43,22 +39,6 @@ ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm64=arm64 GOLANG_ARCH_s390x=s390x GOLA
     GOPATH=/go PATH=/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash
 RUN wget -O - https://storage.googleapis.com/golang/go1.20.3.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
     go install golang.org/x/lint/golint@latest
-
-# Build liblonghorn
-RUN cd /usr/src && \
-    git clone https://github.com/rancher/liblonghorn.git && \
-    cd liblonghorn && \
-    git checkout 53d1c063b95efc8d949b095bd4bf04637230265f && \
-    make; \
-    make install
-
-# Build TGT
-RUN cd /usr/src && \
-    git clone https://github.com/rancher/tgt.git && \
-    cd tgt && \
-    git checkout 3a8bc4823b5390e046f7aa8231ed262c0365c42c && \
-    make; \
-    make install
 
 # Install libqcow to resolve error:
 #   vendor/github.com/longhorn/longhorn-engine/pkg/qcow/libqcow.go:6:11: fatal error: libqcow.h: No such file or directory
