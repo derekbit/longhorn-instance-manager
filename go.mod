@@ -7,15 +7,14 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230502155402-f71b33a72840
-	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b
 	github.com/longhorn/go-spdk-helper v0.0.0-20230511065055-efafb658b660
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230503033304-7f1c1a149269
+	github.com/longhorn/longhorn-spdk-engine v0.0.0-20230511052911-3fed658be57a
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli v1.22.13
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.8.0
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -38,6 +37,7 @@ require (
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b // indirect
 	github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003 // indirect
 	github.com/longhorn/sparse-tools v0.0.0-20230408015858-c849def39d3c // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -53,6 +53,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/slok/goresilience v0.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	k8s.io/apimachinery v0.27.1 // indirect
@@ -62,3 +63,5 @@ require (
 )
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
+
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20230511052911-3fed658be57a => github.com/derekbit/longhorn-spdk-engine v0.0.0-20230511154206-0811b4bc0d72
