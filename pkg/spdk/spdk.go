@@ -219,7 +219,9 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *rpc.ReplicaDeleteReques
 	defer spdkClient.Close()
 
 	nqn := spdkutil.GetNQN(req.Name)
-	subsystems, err := spdkClient.NvmfGetSubsystems(nqn, "")
+	// https://github.com/longhorn/go-spdk-helper/pull/13
+	// subsystems, err := spdkClient.NvmfGetSubsystems(nqn, "")
+	subsystems, err := spdkClient.NvmfGetSubsystems("")
 	if err != nil {
 		resp, parseErr := parseErrorMessage(err.Error())
 		if parseErr != nil || !isNoSuchDevice(resp.Message) {
