@@ -1,6 +1,8 @@
 package api
 
 import (
+	spdkrpc "github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
+
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
@@ -140,30 +142,30 @@ func (s *ProcessStream) Recv() (*rpc.ProcessResponse, error) {
 }
 
 type ReplicaStream struct {
-	stream rpc.SPDKService_ReplicaWatchClient
+	stream spdkrpc.SPDKService_ReplicaWatchClient
 }
 
-func NewReplicaStream(stream rpc.SPDKService_ReplicaWatchClient) *ReplicaStream {
+func NewReplicaStream(stream spdkrpc.SPDKService_ReplicaWatchClient) *ReplicaStream {
 	return &ReplicaStream{
 		stream,
 	}
 }
 
-func (s *ReplicaStream) Recv() (*rpc.Replica, error) {
+func (s *ReplicaStream) Recv() (*spdkrpc.Replica, error) {
 	return s.stream.Recv()
 }
 
 type EngineStream struct {
-	stream rpc.SPDKService_EngineWatchClient
+	stream spdkrpc.SPDKService_EngineWatchClient
 }
 
-func NewEngineStream(stream rpc.SPDKService_EngineWatchClient) *EngineStream {
+func NewEngineStream(stream spdkrpc.SPDKService_EngineWatchClient) *EngineStream {
 	return &EngineStream{
 		stream,
 	}
 }
 
-func (s *EngineStream) Recv() (*rpc.Engine, error) {
+func (s *EngineStream) Recv() (*spdkrpc.Engine, error) {
 	return s.stream.Recv()
 }
 

@@ -7,12 +7,13 @@ import (
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 
-	"github.com/longhorn/longhorn-instance-manager/pkg/client"
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
-
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	esync "github.com/longhorn/longhorn-engine/pkg/sync"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
+	spdktypes "github.com/longhorn/longhorn-spdk-engine/pkg/types"
+
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
 func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest) (resp *empty.Empty, err error) {
@@ -91,20 +92,20 @@ func (p *Proxy) replicaListFromEngine(ctx context.Context, req *rpc.ProxyEngineR
 	}, nil
 }
 
-func replicaModeToGRPCReplicaMode(mode rpc.ReplicaMode) eptypes.ReplicaMode {
+func replicaModeToGRPCReplicaMode(mode spdktypes.Mode) eptypes.ReplicaMode {
 	switch mode {
-	case rpc.ReplicaMode_WO:
+	case spdktypes.ModeWO:
 		return eptypes.ReplicaMode_WO
-	case rpc.ReplicaMode_RW:
+	case spdktypes.ModeRW:
 		return eptypes.ReplicaMode_RW
-	case rpc.ReplicaMode_ERR:
+	case spdktypes.ModeERR:
 		return eptypes.ReplicaMode_ERR
 	}
 	return eptypes.ReplicaMode_ERR
 }
 
 func (p *Proxy) replicaListFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
-	c, err := client.NewSPDKServiceClient("tcp://"+p.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"os"
@@ -18,13 +19,17 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
+	spdk "github.com/longhorn/longhorn-spdk-engine/pkg/spdk"
+	spdkrpc "github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
+
 	"github.com/longhorn/longhorn-instance-manager/pkg/disk"
 	"github.com/longhorn/longhorn-instance-manager/pkg/health"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/instance"
 	"github.com/longhorn/longhorn-instance-manager/pkg/process"
 	"github.com/longhorn/longhorn-instance-manager/pkg/proxy"
-	"github.com/longhorn/longhorn-instance-manager/pkg/spdk"
+
+	//"github.com/longhorn/longhorn-instance-manager/pkg/spdk"
 	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
@@ -131,7 +136,7 @@ func start(c *cli.Context) (err error) {
 	}
 
 	// Start disk server
-	diskGRPCServer, diskGRPCListener, err := setupDiskGRPCServer(diskServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
+	diskGRPCServer, diskGRPCListener, err := setupDiskGRPCServer(diskServiceAddress, spdkServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
 	if err != nil {
 		return err
 	}
@@ -189,18 +194,20 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager process manager gRPC server listening to %v", listen)
 
 	// Start SPDK server
-	spdkGRPCServer, spdkGRPCListener, err := setupSPDKGRPCServer(spdkPortRange, spdkServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
-	if err != nil {
-		return err
-	}
-	go func() {
-		if err := spdkGRPCServer.Serve(spdkGRPCListener); err != nil {
-			logrus.WithError(err).Error("Stopping SPDK gRPC server")
+	if spdkEnabled {
+		spdkGRPCServer, spdkGRPCListener, err := setupSPDKGRPCServer(spdkPortRange, spdkServiceAddress, tlsConfig, shutdownCh)
+		if err != nil {
+			return err
 		}
-		// graceful shutdown before exit
-		close(shutdownCh)
-	}()
-	logrus.Infof("Instance Manager SPDK gRPC server listening to %v", spdkServiceAddress)
+		go func() {
+			if err := spdkGRPCServer.Serve(spdkGRPCListener); err != nil {
+				logrus.WithError(err).Error("Stopping SPDK gRPC server")
+			}
+			// graceful shutdown before exit
+			close(shutdownCh)
+		}()
+		logrus.Infof("Instance Manager SPDK gRPC server listening to %v", spdkServiceAddress)
+	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -232,8 +239,8 @@ func getServiceAddresses(listen string) (processManagerServiceAddress, proxyServ
 		nil
 }
 
-func setupDiskGRPCServer(listen string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
-	srv, err := disk.NewServer(spdkEnabled, shutdownCh)
+func setupDiskGRPCServer(listen, spdkServiceAddress string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	srv, err := disk.NewServer(spdkEnabled, spdkServiceAddress, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -256,8 +263,10 @@ func setupDiskGRPCServer(listen string, tlsConfig *tls.Config, spdkEnabled bool,
 	return grpcServer, rpcListener, nil
 }
 
-func setupSPDKGRPCServer(portRange, listen string, tlsConfig *tls.Config, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
-	srv, err := spdk.NewServer(portRange, spdkEnabled, shutdownCh)
+func setupSPDKGRPCServer(portRange, listen string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
+	portStart, portEnd, err := util.ParsePortRange(portRange)
+
+	srv, err := spdk.NewServer(context.Background(), portStart, portEnd)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -273,7 +282,7 @@ func setupSPDKGRPCServer(portRange, listen string, tlsConfig *tls.Config, spdkEn
 		return nil, nil, errors.Wrap(err, "failed to setup SPDK gRPC server")
 	}
 
-	rpc.RegisterSPDKServiceServer(grpcServer, srv)
+	spdkrpc.RegisterSPDKServiceServer(grpcServer, srv)
 	healthpb.RegisterHealthServer(grpcServer, hc)
 	reflection.Register(grpcServer)
 

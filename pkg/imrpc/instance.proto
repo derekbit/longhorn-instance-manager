@@ -29,6 +29,7 @@ message SpdkSpecific {
 	string disk_uuid = 4;
 	uint64 size = 5;
 	bool expose_required = 6;
+	string frontend = 7;
 }
 
 message InstanceSpec {

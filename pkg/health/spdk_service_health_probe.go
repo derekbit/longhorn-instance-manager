@@ -8,7 +8,8 @@ import (
 	"golang.org/x/net/context"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/longhorn/longhorn-instance-manager/pkg/spdk"
+	spdk "github.com/longhorn/longhorn-spdk-engine/pkg/spdk"
+	//"github.com/longhorn/longhorn-instance-manager/pkg/spdk"
 )
 
 type CheckSPDKServer struct {

@@ -10,8 +10,8 @@ import (
 	"github.com/longhorn/go-spdk-helper/pkg/types"
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
 
-	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 )
 
@@ -63,7 +63,7 @@ func (p *Proxy) volumeGetFromEngine(ctx context.Context, req *rpc.ProxyEngineReq
 
 func (p *Proxy) volumeGetFromSpdkService(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineVolumeGetProxyResponse, err error) {
 	// TODO: Should connect to SPDK service
-	c, err := client.NewSPDKServiceClient("tcp://"+p.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}

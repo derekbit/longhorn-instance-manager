@@ -2,6 +2,7 @@ package disk
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -14,56 +15,46 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
-	"github.com/longhorn/go-spdk-helper/pkg/types"
+	spdkhelpertypes "github.com/longhorn/go-spdk-helper/pkg/types"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
+	spdkrpc "github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
 	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
 )
 
 const (
-	defaultClusterSize = 4 * 1024 * 1024 // 4MB
-	defaultBlockSize   = 4096            // 4KB
-
-	hostPrefix = "/host"
+	spdkTgtReadinessProbeTimeout = 60 * time.Second
 )
 
 type Server struct {
 	sync.RWMutex
 
-	shutdownCh    chan error
-	HealthChecker HealthChecker
+	spdkServiceAddress string
+	shutdownCh         chan error
+	HealthChecker      HealthChecker
 
 	spdkEnabled bool
 
-	spdkClient *spdkclient.Client
+	spdkClient *spdkclient.SPDKClient
 }
 
-func isSPDKTgtReady(socketPath string, timeout time.Duration) bool {
-	for i := 0; i < int(timeout.Seconds()); i++ {
-		conn, err := net.DialTimeout(types.DefaultJSONServerNetwork, types.DefaultUnixDomainSocketPath, 1*time.Second)
-		if err == nil {
-			conn.Close()
-			return true
-		}
-		time.Sleep(time.Second)
-	}
-	return false
-}
-
-func NewServer(spdkEnabled bool, shutdownCh chan error) (*Server, error) {
+func NewServer(spdkEnabled bool, spdkServiceAddress string, shutdownCh chan error) (*Server, error) {
 	s := &Server{
-		spdkEnabled:   spdkEnabled,
-		shutdownCh:    shutdownCh,
-		HealthChecker: &GRPCHealthChecker{},
+		spdkEnabled:        spdkEnabled,
+		spdkServiceAddress: spdkServiceAddress,
+		shutdownCh:         shutdownCh,
+		HealthChecker:      &GRPCHealthChecker{},
 	}
 
 	if s.spdkEnabled {
-		if !isSPDKTgtReady(types.DefaultUnixDomainSocketPath, 60*time.Second) {
-			return nil, errors.New("spdk_tgt is not ready")
+		logrus.Info("Creating SPDK client since SPDK is enabled")
+
+		if !isSPDKTgtReady(spdkTgtReadinessProbeTimeout) {
+			return nil, fmt.Errorf("spdk_tgt is not ready in %v", spdkTgtReadinessProbeTimeout)
 		}
 
-		spdkClient, err := spdkclient.NewClient()
+		spdkClient, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create SPDK client")
 		}
@@ -126,7 +117,14 @@ func (s *Server) DiskCreate(ctx context.Context, req *rpc.DiskCreateRequest) (*r
 
 	switch req.DiskType {
 	case rpc.DiskType_block:
-		return s.blockTypeDiskCreate(ctx, req)
+		ret, err := s.spdkClient.DiskCreate(req.DiskName, req.DiskPath, req.BlockSize)
+		if err != nil {
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		return spdkDiskToDisk(ret), nil
+	case rpc.DiskType_filesystem:
+		// TODO: implement filesystem disk type
+		fallthrough
 	default:
 		return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "unsupported disk type %v", req.DiskType)
 	}
@@ -148,7 +146,7 @@ func (s *Server) DiskDelete(ctx context.Context, req *rpc.DiskDeleteRequest) (*e
 	defer s.Unlock()
 
 	if s.spdkEnabled {
-		return &empty.Empty{}, s.blockTypeDiskDelete(ctx, req)
+		return &empty.Empty{}, s.spdkClient.DiskDelete(req.DiskName, req.DiskUuid)
 	}
 	return &empty.Empty{}, nil
 }
@@ -171,8 +169,42 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 
 	switch req.DiskType {
 	case rpc.DiskType_block:
-		return s.blockTypeDiskGet(ctx, req)
+		ret, err := s.spdkClient.DiskGet(req.DiskName, req.DiskPath)
+		if err != nil {
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		return spdkDiskToDisk(ret), nil
+	case rpc.DiskType_filesystem:
+		// TODO: implement filesystem disk type
+		fallthrough
 	default:
 		return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "unsupported disk type %v", req.DiskType)
+	}
+}
+
+func isSPDKTgtReady(timeout time.Duration) bool {
+	for i := 0; i < int(timeout.Seconds()); i++ {
+		conn, err := net.DialTimeout(spdkhelpertypes.DefaultJSONServerNetwork, spdkhelpertypes.DefaultUnixDomainSocketPath, 1*time.Second)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		time.Sleep(time.Second)
+	}
+	return false
+}
+
+func spdkDiskToDisk(disk *spdkrpc.Disk) *rpc.Disk {
+	return &rpc.Disk{
+		Id:          disk.Id,
+		Uuid:        disk.Uuid,
+		Path:        disk.Path,
+		Type:        disk.Type,
+		TotalSize:   disk.TotalSize,
+		FreeSize:    disk.FreeSize,
+		TotalBlocks: disk.TotalBlocks,
+		FreeBlocks:  disk.FreeBlocks,
+		BlockSize:   disk.BlockSize,
+		ClusterSize: disk.ClusterSize,
 	}
 }

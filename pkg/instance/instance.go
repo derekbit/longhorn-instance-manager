@@ -8,10 +8,12 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	spdkapi "github.com/longhorn/longhorn-spdk-engine/pkg/api"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
@@ -112,7 +114,7 @@ func (s *Server) processInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Ins
 }
 
 func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +122,7 @@ func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Instan
 
 	switch req.Spec.Type {
 	case types.InstanceTypeEngine:
-		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Size, req.Spec.SpdkSpecific.ReplicaAddressMap)
+		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.SpdkSpecific.Frontend, req.Spec.SpdkSpecific.Size, req.Spec.SpdkSpecific.ReplicaAddressMap)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +172,7 @@ func (s *Server) processInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.Ins
 }
 
 func (s *Server) spdkInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +180,7 @@ func (s *Server) spdkInstanceDelete(req *rpc.InstanceDeleteRequest) (*rpc.Instan
 
 	switch req.Type {
 	case types.InstanceTypeEngine:
-		err = c.EngineDelete(req.Name)
+		err = c.EngineDelete(req.Name, req.CleanupRequired)
 	case types.InstanceTypeReplica:
 		err = c.ReplicaDelete(req.Name, req.CleanupRequired)
 	default:
@@ -231,7 +233,7 @@ func (s *Server) processInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceR
 }
 
 func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResponse, error) {
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +297,7 @@ func (s *Server) processInstanceList(instances map[string]*rpc.InstanceResponse)
 }
 
 func (s *Server) spdkInstanceList(instances map[string]*rpc.InstanceResponse) error {
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return err
 	}
@@ -411,34 +413,35 @@ func (s *Server) spdkInstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceSe
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	logrus.Info("Start watching instances")
 
-	ctx := context.Background()
-	g, ctx := errgroup.WithContext(ctx)
-
-	g.Go(func() error {
-		return s.watchProcess(ctx, req, srv)
-	})
-
-	if s.spdkEnabled {
-		g.Go(func() error {
-			return s.watchSpdkReplica(ctx, req, srv)
-		})
+	/*
+		ctx := context.Background()
+		g, ctx := errgroup.WithContext(ctx)
 
 		g.Go(func() error {
-			return s.watchSpdkEngine(ctx, req, srv)
+			return s.watchProcess(ctx, req, srv)
 		})
-	}
 
-	if err := g.Wait(); err != nil {
-		return errors.Wrap(err, "failed to watch instances")
-	}
+		if s.spdkEnabled {
+			g.Go(func() error {
+				return s.watchSpdkReplica(ctx, req, srv)
+			})
 
+			g.Go(func() error {
+				return s.watchSpdkEngine(ctx, req, srv)
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return errors.Wrap(err, "failed to watch instances")
+		}
+	*/
 	return nil
 }
 
 func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	logrus.Info("Start watching SPDK replica")
 
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")
 	}
@@ -469,7 +472,7 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 }
 
 func (s *Server) watchSpdkEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
-	c, err := client.NewSPDKServiceClient("tcp://"+s.spdkServiceAddress, nil)
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")
 	}
@@ -556,7 +559,7 @@ func processResponseToInstanceResponse(p *rpc.ProcessResponse) *rpc.InstanceResp
 	}
 }
 
-func replicaResponseToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
+func replicaResponseToInstanceResponse(r *spdkapi.Replica) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name:               r.Name,
@@ -564,14 +567,15 @@ func replicaResponseToInstanceResponse(r *rpc.Replica) *rpc.InstanceResponse {
 			BackendStoreDriver: rpc.BackendStoreDriver_spdk,
 		},
 		Status: &rpc.InstanceStatus{
-			State:     types.ProcessStateRunning,
-			PortStart: r.Port,
-			PortEnd:   r.Port,
+			State: types.ProcessStateRunning,
+			// TODO: Add port
+			//PortStart: r.Port,
+			//PortEnd:   r.Port,
 		},
 	}
 }
 
-func engineResponseToInstanceResponse(e *rpc.Engine) *rpc.InstanceResponse {
+func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name:               e.Name,
