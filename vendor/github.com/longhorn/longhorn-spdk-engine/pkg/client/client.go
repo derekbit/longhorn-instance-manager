@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/longhorn/longhorn-spdk-engine/pkg/api"
-	"github.com/longhorn/longhorn-spdk-engine/proto/ptypes"
+	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 
 type SPDKServiceContext struct {
 	cc      *grpc.ClientConn
-	service ptypes.SPDKServiceClient
+	service spdkrpc.SPDKServiceClient
 }
 
 func (c SPDKServiceContext) Close() error {
@@ -28,7 +28,7 @@ func (c SPDKServiceContext) Close() error {
 	return c.cc.Close()
 }
 
-func (c *SPDKClient) getSPDKServiceClient() ptypes.SPDKServiceClient {
+func (c *SPDKClient) getSPDKServiceClient() spdkrpc.SPDKServiceClient {
 	return c.service
 }
 
@@ -46,7 +46,7 @@ func NewSPDKClient(serviceUrl string) (*SPDKClient, error) {
 
 		return SPDKServiceContext{
 			cc:      connection,
-			service: ptypes.NewSPDKServiceClient(connection),
+			service: spdkrpc.NewSPDKServiceClient(connection),
 		}, nil
 	}
 
@@ -70,7 +70,7 @@ func (c *SPDKClient) ReplicaCreate(name, lvsName, lvsUUID string, specSize uint6
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	resp, err := client.ReplicaCreate(ctx, &ptypes.ReplicaCreateRequest{
+	resp, err := client.ReplicaCreate(ctx, &spdkrpc.ReplicaCreateRequest{
 		Name:           name,
 		LvsName:        lvsName,
 		LvsUuid:        lvsUUID,
@@ -93,7 +93,7 @@ func (c *SPDKClient) ReplicaDelete(name string, cleanupRequired bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	_, err := client.ReplicaDelete(ctx, &ptypes.ReplicaDeleteRequest{
+	_, err := client.ReplicaDelete(ctx, &spdkrpc.ReplicaDeleteRequest{
 		Name:            name,
 		CleanupRequired: cleanupRequired,
 	})
@@ -109,7 +109,7 @@ func (c *SPDKClient) ReplicaGet(name string) (*api.Replica, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	resp, err := client.ReplicaGet(ctx, &ptypes.ReplicaGetRequest{
+	resp, err := client.ReplicaGet(ctx, &spdkrpc.ReplicaGetRequest{
 		Name: name,
 	})
 	if err != nil {
@@ -137,7 +137,7 @@ func (c *SPDKClient) EngineCreate(name, frontend string, specSize uint64, replic
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	resp, err := client.EngineCreate(ctx, &ptypes.EngineCreateRequest{
+	resp, err := client.EngineCreate(ctx, &spdkrpc.EngineCreateRequest{
 		Name:              name,
 		SpecSize:          specSize,
 		ReplicaAddressMap: replicaAddressMap,
@@ -159,7 +159,7 @@ func (c *SPDKClient) EngineDelete(name string, cleanupRequired bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	_, err := client.EngineDelete(ctx, &ptypes.EngineDeleteRequest{
+	_, err := client.EngineDelete(ctx, &spdkrpc.EngineDeleteRequest{
 		Name: name,
 	})
 	return errors.Wrapf(err, "failed to delete SPDK engine %v", name)
@@ -174,7 +174,7 @@ func (c *SPDKClient) EngineGet(name string) (*api.Engine, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	resp, err := client.EngineGet(ctx, &ptypes.EngineGetRequest{
+	resp, err := client.EngineGet(ctx, &spdkrpc.EngineGetRequest{
 		Name: name,
 	})
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *SPDKClient) EngineWatch(ctx context.Context) (*api.EngineStream, error)
 	return nil, nil
 }
 
-func (c *SPDKClient) DiskCreate(diskName, diskPath string, blockSize int64) (*ptypes.Disk, error) {
+func (c *SPDKClient) DiskCreate(diskName, diskPath string, blockSize int64) (*spdkrpc.Disk, error) {
 	if diskName == "" || diskPath == "" {
 		return nil, fmt.Errorf("failed to create disk: missing required parameter")
 	}
@@ -202,15 +202,15 @@ func (c *SPDKClient) DiskCreate(diskName, diskPath string, blockSize int64) (*pt
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	return client.DiskCreate(ctx, &ptypes.DiskCreateRequest{
+	return client.DiskCreate(ctx, &spdkrpc.DiskCreateRequest{
 		DiskName:  diskName,
 		DiskPath:  diskPath,
 		BlockSize: blockSize,
 	})
 }
 
-func (c *SPDKClient) DiskGet(diskName, diskPath string) (*ptypes.Disk, error) {
-	if diskPath == "" {
+func (c *SPDKClient) DiskGet(diskName, diskPath string) (*spdkrpc.Disk, error) {
+	if diskName == "" || diskPath == "" {
 		return nil, fmt.Errorf("failed to get disk info: missing required parameter")
 	}
 
@@ -218,7 +218,7 @@ func (c *SPDKClient) DiskGet(diskName, diskPath string) (*ptypes.Disk, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	return client.DiskGet(ctx, &ptypes.DiskGetRequest{
+	return client.DiskGet(ctx, &spdkrpc.DiskGetRequest{
 		DiskName: diskName,
 		DiskPath: diskPath,
 	})
@@ -233,7 +233,7 @@ func (c *SPDKClient) DiskDelete(diskName, diskUUID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
-	_, err := client.DiskDelete(ctx, &ptypes.DiskDeleteRequest{
+	_, err := client.DiskDelete(ctx, &spdkrpc.DiskDeleteRequest{
 		DiskName: diskName,
 		DiskUuid: diskUUID,
 	})

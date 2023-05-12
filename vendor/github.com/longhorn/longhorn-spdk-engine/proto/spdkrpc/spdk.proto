@@ -1,6 +1,6 @@
 syntax="proto3";
 
-package ptypes;
+package spdkrpc;
 
 import "google/protobuf/empty.proto";
 
@@ -9,7 +9,7 @@ service SPDKService {
     rpc ReplicaDelete(ReplicaDeleteRequest) returns (google.protobuf.Empty);
     rpc ReplicaGet(ReplicaGetRequest) returns (Replica);
     rpc ReplicaSnapshotCreate(SnapshotRequest) returns (Replica);
-    rpc ReplicaSnapshotDelete(SnapshotRequest) returns (Replica);
+    rpc ReplicaSnapshotDelete(SnapshotRequest) returns (google.protobuf.Empty);
     rpc ReplicaList(google.protobuf.Empty) returns (ReplicaListResponse);
     rpc ReplicaWatch(google.protobuf.Empty) returns (stream Replica) {}
 
@@ -18,13 +18,13 @@ service SPDKService {
     rpc EngineDelete(EngineDeleteRequest) returns (google.protobuf.Empty);
     rpc EngineGet(EngineGetRequest) returns (Engine);
     rpc EngineSnapshotCreate(SnapshotRequest) returns (Engine);
-    rpc EngineSnapshotDelete(SnapshotRequest) returns (Engine);
+    rpc EngineSnapshotDelete(SnapshotRequest) returns (google.protobuf.Empty);
     rpc EngineList(google.protobuf.Empty) returns (EngineListResponse);
     rpc EngineWatch(google.protobuf.Empty) returns (stream Engine) {}
 
     rpc DiskCreate(DiskCreateRequest) returns (Disk);
     rpc DiskDelete(DiskDeleteRequest) returns (google.protobuf.Empty);
-	rpc DiskGet(DiskGetRequest) returns (Disk);
+    rpc DiskGet(DiskGetRequest) returns (Disk);
 
     rpc VersionDetailGet(google.protobuf.Empty) returns(VersionDetailGetReply);
 }

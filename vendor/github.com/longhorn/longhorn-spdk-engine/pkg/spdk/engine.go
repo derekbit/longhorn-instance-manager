@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 
 	"github.com/longhorn/go-spdk-helper/pkg/nvme"
@@ -15,10 +16,10 @@ import (
 
 	"github.com/longhorn/longhorn-spdk-engine/pkg/types"
 	"github.com/longhorn/longhorn-spdk-engine/pkg/util"
-	"github.com/longhorn/longhorn-spdk-engine/proto/ptypes"
+	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
 
-func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, replicaAddressMap map[string]string, port int32) (ret *ptypes.Engine, err error) {
+func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, replicaAddressMap map[string]string, port int32) (ret *spdkrpc.Engine, err error) {
 	if frontend != types.FrontendSPDKTCPBlockdev && frontend != types.FrontendSPDKTCPNvmf {
 		return nil, fmt.Errorf("invalid frontend %s", frontend)
 	}
@@ -133,11 +134,11 @@ func SvcEngineDelete(spdkClient *spdkclient.Client, name string) (err error) {
 	return nil
 }
 
-func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *ptypes.Engine, err error) {
-	res = &ptypes.Engine{
+func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *spdkrpc.Engine, err error) {
+	res = &spdkrpc.Engine{
 		Name:              name,
 		ReplicaAddressMap: map[string]string{},
-		ReplicaModeMap:    map[string]ptypes.ReplicaMode{},
+		ReplicaModeMap:    map[string]spdkrpc.ReplicaMode{},
 	}
 
 	podIP, err := util.GetIPForPod()
@@ -147,7 +148,7 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *ptypes.Engin
 	res.Ip = podIP
 
 	nqn := helpertypes.GetNQN(name)
-	subsystemList, err := spdkClient.NvmfGetSubsystems("")
+	subsystemList, err := spdkClient.NvmfGetSubsystems("", "")
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +204,7 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *ptypes.Engin
 			// This replica must be a local lvol
 			replicaName := spdktypes.GetLvolNameFromAlias(baseBdev.Name)
 			res.ReplicaAddressMap[replicaName] = ""
-			res.ReplicaModeMap[replicaName] = ptypes.ReplicaMode_RW
+			res.ReplicaModeMap[replicaName] = spdkrpc.ReplicaMode_RW
 			continue
 		}
 
@@ -216,7 +217,7 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *ptypes.Engin
 		}
 		replicaName := helperutil.GetNvmeControllerNameFromNamespaceName(bdevNvme.Name)
 		res.ReplicaAddressMap[replicaName] = fmt.Sprintf("%s:%s", nvmeInfo.Trid.Traddr, nvmeInfo.Trid.Trsvcid)
-		res.ReplicaModeMap[replicaName] = ptypes.ReplicaMode_RW
+		res.ReplicaModeMap[replicaName] = spdkrpc.ReplicaMode_RW
 	}
 
 	volumeName := util.GetVolumeNameFromEngineName(name)
@@ -239,10 +240,10 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *ptypes.Engin
 	return res, nil
 }
 
-func SvcEngineSnapshotCreate(spdkClient *spdkclient.Client, name, snapshotName string) (res *ptypes.Engine, err error) {
+func SvcEngineSnapshotCreate(spdkClient *spdkclient.Client, name, snapshotName string) (res *spdkrpc.Engine, err error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-func SvcEngineSnapshotDelete(spdkClient *spdkclient.Client, name, snapshotName string) (res *ptypes.Engine, err error) {
+func SvcEngineSnapshotDelete(spdkClient *spdkclient.Client, name, snapshotName string) (res *empty.Empty, err error) {
 	return nil, fmt.Errorf("unimplemented")
 }

@@ -23,8 +23,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/derekbit/longhorn-spdk-engine v0.0.0-20230511154206-0811b4bc0d72 h1:/PNr9M1nmzrM4Yh3Gw7JU6gCnvdLHzasA7pWIm12p5M=
-github.com/derekbit/longhorn-spdk-engine v0.0.0-20230511154206-0811b4bc0d72/go.mod h1:NnT57UQkvALllr9yzfVKSRdbMkvc+qn6qfkV/3PfoDo=
+github.com/derekbit/longhorn-spdk-engine v0.0.0-20230512123356-2331208ef6bb h1:uenZL55bGDjZBkp920zGeLIyQ4z+B+MJbUxV1SvpRrw=
+github.com/derekbit/longhorn-spdk-engine v0.0.0-20230512123356-2331208ef6bb/go.mod h1:P4Nn7s734KwSXyq9kwDwnzdlRkW4noteKJJqRRjVoCI=
 github.com/felixge/httpsnoop v1.0.1 h1:lvB5Jl89CsZtGIWuTcDM1E/vkVs49/Ml7JJe07l8SPQ=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/gammazero/deque v0.2.1 h1:qSdsbG6pgp6nL7A0+K/B7s12mcCY/5l5SIUpMOl+dC0=
@@ -63,8 +63,8 @@ github.com/longhorn/backupstore v0.0.0-20230502155402-f71b33a72840 h1:RoR9hDUdNT
 github.com/longhorn/backupstore v0.0.0-20230502155402-f71b33a72840/go.mod h1:08c2weOA6tSVyhDiu9k/XoBsFCZy/NujcLZ6HnG4mz4=
 github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b h1:5QFvn8mnlNULzL76zi5dKdLMzq+rGc9A9qFRq/N63Rc=
 github.com/longhorn/go-iscsi-helper v0.0.0-20230215054929-acb305e1031b/go.mod h1:fd9uUT+B0BTwilZn/3a42ZOErQmSdSLrwHD50lXVG/E=
-github.com/longhorn/go-spdk-helper v0.0.0-20230511065055-efafb658b660 h1:DUEpQtugXj4YFAjSbmUtrkNGfrCU6mnUSLAuVTSMaAY=
-github.com/longhorn/go-spdk-helper v0.0.0-20230511065055-efafb658b660/go.mod h1:XoGXOYHw1KW3qdvTSimwY+Anyg5cPl6EVkjXxS25Upg=
+github.com/longhorn/go-spdk-helper v0.0.0-20230511072325-7af99589dd44 h1:dooaHnEbsdp+JYmbM8RrcuWKLbyGdBxFT0Io8iSgeZ4=
+github.com/longhorn/go-spdk-helper v0.0.0-20230511072325-7af99589dd44/go.mod h1:XoGXOYHw1KW3qdvTSimwY+Anyg5cPl6EVkjXxS25Upg=
 github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230503033304-7f1c1a149269 h1:Og1XohIqyd3Tl1Arz8PjKgnxmPt2UC/UKSKMjxm8x3k=
 github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230503033304-7f1c1a149269/go.mod h1:C/ZIV9ynA/r91p9UCiXZAFVL+yiNEmW4EY/uaOD3EQI=
 github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003 h1:Jw9uANsGcHTxp6HcC++/vN17LfeuDmozHI2j6DoZf5E=
@@ -151,8 +151,6 @@ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
-golang.org/x/sync v0.1.0 h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=
-golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
