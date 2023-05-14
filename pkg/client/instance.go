@@ -129,6 +129,7 @@ func (c *InstanceServiceClient) InstanceCreate(req *InstanceCreateRequest) (*api
 				Size: req.Size,
 				// Engine creation parameters
 				ReplicaAddressMap: req.Engine.ReplicaAddressMap,
+				Frontend:          req.Engine.Frontend,
 				// Replica creation parameters
 				DiskName:       req.Replica.DiskName,
 				DiskUuid:       req.Replica.DiskUUID,
