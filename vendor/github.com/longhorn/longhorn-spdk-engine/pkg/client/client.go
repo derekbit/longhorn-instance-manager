@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-spdk-engine/pkg/api"
 	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
@@ -205,7 +204,7 @@ func (c *SPDKClient) EngineGet(name string) (*api.Engine, error) {
 
 func (c *SPDKClient) EngineList() (map[string]*api.Engine, error) {
 	client := c.getSPDKServiceClient()
-	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
 	defer cancel()
 
 	resp, err := client.EngineList(ctx, &empty.Empty{})

@@ -64,4 +64,4 @@ require (
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
 
-replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20230511052911-3fed658be57a => github.com/derekbit/longhorn-spdk-engine v0.0.0-20230513092008-09f8308ffae2
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20230511052911-3fed658be57a => github.com/derekbit/longhorn-spdk-engine v0.0.0-20230514021146-1d4723ba5c4d

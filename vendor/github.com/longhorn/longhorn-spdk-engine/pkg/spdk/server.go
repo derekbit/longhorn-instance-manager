@@ -1,11 +1,11 @@
 package spdk
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	grpccodes "google.golang.org/grpc/codes"
@@ -24,7 +24,7 @@ import (
 const (
 	MonitorInterval = 3 * time.Second
 
-	defaultClusterSize = 1 * 1024 * 1024 // 1MB
+	defaultClusterSize = 4 * 1024 * 1024 // 4MB
 	defaultBlockSize   = 4096            // 4KB
 
 	hostPrefix = "/host"
@@ -120,7 +120,6 @@ func (s *Server) monitoringReplicas() {
 			}
 			s.Unlock()
 		case r := <-s.updateChs[types.InstanceTypeReplica]:
-			logrus.Infof("Debug ====> handle r: %v", r)
 			s.broadcastChs[types.InstanceTypeReplica] <- interface{}(r)
 		}
 		if done {
@@ -131,9 +130,12 @@ func (s *Server) monitoringReplicas() {
 
 func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRequest) (ret *spdkrpc.Replica, err error) {
 	s.Lock()
-	if s.replicaMap[req.Name] == nil {
-		s.replicaMap[req.Name] = NewReplica(req.Name, req.LvsName, req.LvsUuid, req.SpecSize)
+	if _, ok := s.replicaMap[req.Name]; ok {
+		s.Unlock()
+		return nil, grpcstatus.Errorf(grpccodes.AlreadyExists, "replica %v already exists", req.Name)
 	}
+
+	s.replicaMap[req.Name] = NewReplica(req.Name, req.LvsName, req.LvsUuid, req.SpecSize)
 	r := s.replicaMap[req.Name]
 	s.Unlock()
 
@@ -142,20 +144,14 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 		return nil, err
 	}
 
-	ret, err = r.Create(s.spdkClient, portStart, req.ExposeRequired)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Infof("Debug ====> send r: %v", ret)
-	s.updateChs[types.InstanceTypeReplica] <- interface{}(ret)
-	return ret, nil
+	return r.Create(s.spdkClient, portStart, req.ExposeRequired)
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRequest) (ret *empty.Empty, err error) {
 	s.RLock()
 	r := s.replicaMap[req.Name]
 	delete(s.replicaMap, req.Name)
-	s.RUnlock()
+	s.Unlock()
 
 	if r != nil {
 		if err := r.Delete(s.spdkClient, req.CleanupRequired); err != nil {
@@ -172,7 +168,7 @@ func (s *Server) ReplicaGet(ctx context.Context, req *spdkrpc.ReplicaGetRequest)
 	s.RUnlock()
 
 	if r == nil {
-		return nil, grpcstatus.Error(grpccodes.NotFound, fmt.Sprintf("replica %s is not found during get", req.Name))
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %v", req.Name)
 	}
 
 	return r.Get()
@@ -213,7 +209,7 @@ func (s *Server) ReplicaWatch(req *empty.Empty, srv spdkrpc.SPDKService_ReplicaW
 	for resp := range responseCh {
 		r, ok := resp.(*spdkrpc.Replica)
 		if !ok {
-			return fmt.Errorf("cannot get Replica from channel")
+			return grpcstatus.Error(grpccodes.Internal, "cannot get Replica from channel")
 		}
 		if err := srv.Send(r); err != nil {
 			return err
@@ -229,7 +225,7 @@ func (s *Server) ReplicaSnapshotCreate(ctx context.Context, req *spdkrpc.Snapsho
 	s.RUnlock()
 
 	if r == nil {
-		return nil, fmt.Errorf("replica %s is not found during snapshot create", req.Name)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during snapshot create", req.Name)
 	}
 
 	return r.SnapshotCreate(s.spdkClient, req.Name)
@@ -241,9 +237,8 @@ func (s *Server) ReplicaSnapshotDelete(ctx context.Context, req *spdkrpc.Snapsho
 	s.RUnlock()
 
 	if r == nil {
-		return nil, fmt.Errorf("replica %s is not found during snapshot delete", req.Name)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during snapshot delete", req.Name)
 	}
-
 	_, err = r.SnapshotDelete(s.spdkClient, req.Name)
 	return &empty.Empty{}, err
 }
@@ -296,7 +291,7 @@ func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWat
 	for resp := range responseCh {
 		e, ok := resp.(*spdkrpc.Engine)
 		if !ok {
-			return fmt.Errorf("cannot get Engine from channel")
+			return grpcstatus.Error(grpccodes.Internal, "cannot get Engine from channel")
 		}
 		if err := srv.Send(e); err != nil {
 			return err
@@ -315,16 +310,128 @@ func (s *Server) EngineSnapshotDelete(ctx context.Context, req *spdkrpc.Snapshot
 	return &empty.Empty{}, err
 }
 
-func (s *Server) DiskCreate(ctx context.Context, req *spdkrpc.DiskCreateRequest) (ret *spdkrpc.Disk, err error) {
-	return SvcDiskCreate(s.spdkClient, req.DiskName, req.DiskPath, req.BlockSize)
+func (s *Server) DiskCreate(ctx context.Context, req *spdkrpc.DiskCreateRequest) (*spdkrpc.Disk, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"diskName":  req.DiskName,
+		"diskPath":  req.DiskPath,
+		"blockSize": req.BlockSize,
+	})
+
+	log.Info("Creating disk")
+
+	if req.DiskName == "" || req.DiskPath == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and disk path are required")
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if err := s.validateDiskCreateRequest(req); err != nil {
+		log.WithError(err).Error("Failed to validate disk create request")
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, errors.Wrap(err, "failed to validate disk create request").Error())
+	}
+
+	blockSize := uint64(defaultBlockSize)
+	if req.BlockSize > 0 {
+		log.Infof("Using custom block size %v", req.BlockSize)
+		blockSize = uint64(req.BlockSize)
+	}
+
+	uuid, err := s.addBlockDevice(req.DiskName, req.DiskPath, blockSize)
+	if err != nil {
+		log.WithError(err).Error("Failed to add block device")
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to add block device").Error())
+	}
+
+	return s.lvstoreToDisk(req.DiskPath, "", uuid)
 }
 
-func (s *Server) DiskDelete(ctx context.Context, req *spdkrpc.DiskDeleteRequest) (ret *emptypb.Empty, err error) {
-	return SvcDiskDelete(s.spdkClient, req.DiskName, req.DiskUuid)
+func (s *Server) DiskDelete(ctx context.Context, req *spdkrpc.DiskDeleteRequest) (*emptypb.Empty, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"diskName": req.DiskName,
+		"diskUUID": req.DiskUuid,
+	})
+
+	log.Info("Deleting disk")
+
+	if req.DiskName == "" || req.DiskUuid == "" {
+		return &empty.Empty{}, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and disk UUID are required")
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	lvstores, err := s.spdkClient.BdevLvolGetLvstore("", req.DiskUuid)
+	if err != nil {
+		resp, parseErr := parseErrorMessage(err.Error())
+		if parseErr != nil || !isNoSuchDevice(resp.Message) {
+			return nil, errors.Wrapf(err, "failed to get lvstore with UUID %v", req.DiskUuid)
+		}
+		log.WithError(err).Errorf("Cannot find lvstore with UUID %v", req.DiskUuid)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find lvstore with UUID %v", req.DiskUuid)
+	}
+
+	lvstore := &lvstores[0]
+
+	if lvstore.Name != req.DiskName {
+		log.Warnf("Disk name %v does not match lvstore name %v", req.DiskName, lvstore.Name)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "disk name %v does not match lvstore name %v", req.DiskName, lvstore.Name)
+	}
+
+	_, err = s.spdkClient.BdevAioDelete(lvstore.BaseBdev)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to delete AIO bdev %v", lvstore.BaseBdev)
+		return nil, errors.Wrapf(err, "failed to delete AIO bdev %v", lvstore.BaseBdev)
+	}
+	return &empty.Empty{}, nil
 }
 
-func (s *Server) DiskGet(ctx context.Context, req *spdkrpc.DiskGetRequest) (ret *spdkrpc.Disk, err error) {
-	return SvcDiskGet(s.spdkClient, req.DiskName, req.DiskPath)
+func (s *Server) DiskGet(ctx context.Context, req *spdkrpc.DiskGetRequest) (*spdkrpc.Disk, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"diskName": req.DiskName,
+		"diskPath": req.DiskPath,
+	})
+
+	log.Info("Getting disk info")
+
+	if req.DiskName == "" || req.DiskPath == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and disk path are required")
+	}
+
+	s.RLock()
+	defer s.RUnlock()
+
+	// Check if the disk exists
+	bdevs, err := s.spdkClient.BdevAioGet(req.DiskName, 0)
+	if err != nil {
+		resp, parseErr := parseErrorMessage(err.Error())
+		if parseErr != nil || !isNoSuchDevice(resp.Message) {
+			log.WithError(err).Errorf("Failed to get AIO bdev with name %v", req.DiskName)
+			return nil, grpcstatus.Errorf(grpccodes.Internal, errors.Wrapf(err, "failed to get AIO bdev with name %v", req.DiskName).Error())
+		}
+	}
+	if len(bdevs) == 0 {
+		log.WithError(err).Errorf("Cannot find AIO bdev with name %v", req.DiskName)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find AIO bdev with name %v", req.DiskName)
+	}
+
+	diskPath := getDiskPath(req.DiskPath)
+
+	var targetBdev *spdktypes.BdevInfo
+	for i, bdev := range bdevs {
+		if bdev.DriverSpecific != nil ||
+			bdev.DriverSpecific.Aio != nil ||
+			bdev.DriverSpecific.Aio.FileName == diskPath {
+			targetBdev = &bdevs[i]
+			break
+		}
+	}
+	if targetBdev == nil {
+		log.WithError(err).Errorf("Failed to get AIO bdev name for disk path %v", diskPath)
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, errors.Wrapf(err, "failed to get AIO bdev name for disk path %v", diskPath).Error())
+	}
+
+	return s.lvstoreToDisk(req.DiskPath, req.DiskName, "")
 }
 
 func (s *Server) VersionDetailGet(context.Context, *empty.Empty) (*spdkrpc.VersionDetailGetReply, error) {
