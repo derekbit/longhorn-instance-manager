@@ -8,12 +8,16 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
 
+	"github.com/longhorn/longhorn-spdk-engine/pkg/types"
 	"github.com/longhorn/longhorn-spdk-engine/pkg/util"
+	"github.com/longhorn/longhorn-spdk-engine/pkg/util/broadcaster"
 	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
 
@@ -35,12 +39,26 @@ type Server struct {
 	portAllocator *util.Bitmap
 
 	replicaMap map[string]*Replica
+
+	broadcasters map[types.InstanceType]*broadcaster.Broadcaster
+	broadcastChs map[types.InstanceType]chan interface{}
+	updateChs    map[types.InstanceType]chan interface{}
 }
 
 func NewServer(ctx context.Context, portStart, portEnd int32) (*Server, error) {
 	cli, err := spdkclient.NewClient()
 	if err != nil {
 		return nil, err
+	}
+
+	broadcasters := map[types.InstanceType]*broadcaster.Broadcaster{}
+	broadcastChs := map[types.InstanceType]chan interface{}{}
+	updateChs := map[types.InstanceType]chan interface{}{}
+
+	for _, t := range []types.InstanceType{types.InstanceTypeReplica, types.InstanceTypeEngine} {
+		broadcasters[t] = &broadcaster.Broadcaster{}
+		broadcastChs[t] = make(chan interface{})
+		updateChs[t] = make(chan interface{})
 	}
 
 	s := &Server{
@@ -50,6 +68,19 @@ func NewServer(ctx context.Context, portStart, portEnd int32) (*Server, error) {
 		portAllocator: util.NewBitmap(portStart, portEnd),
 
 		replicaMap: map[string]*Replica{},
+
+		broadcasters: broadcasters,
+		broadcastChs: broadcastChs,
+		updateChs:    updateChs,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for _, t := range []types.InstanceType{types.InstanceTypeReplica, types.InstanceTypeEngine} {
+		if _, err := s.broadcasters[t].Subscribe(ctx, s.broadcastConnector, string(t)); err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO: There is no need to maintain the replica map in cache when we can use one SPDK JSON API call to fetch the Lvol tree/chain info
@@ -88,6 +119,9 @@ func (s *Server) monitoringReplicas() {
 				r.ValidateAndUpdate(bdevLvolMap)
 			}
 			s.Unlock()
+		case r := <-s.updateChs[types.InstanceTypeReplica]:
+			logrus.Infof("Debug ====> handle r: %v", r)
+			s.broadcastChs[types.InstanceTypeReplica] <- interface{}(r)
 		}
 		if done {
 			break
@@ -108,14 +142,20 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 		return nil, err
 	}
 
-	return r.Create(s.spdkClient, portStart, req.ExposeRequired)
+	ret, err = r.Create(s.spdkClient, portStart, req.ExposeRequired)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("Debug ====> send r: %v", ret)
+	s.updateChs[types.InstanceTypeReplica] <- interface{}(ret)
+	return ret, nil
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRequest) (ret *empty.Empty, err error) {
 	s.RLock()
 	r := s.replicaMap[req.Name]
 	delete(s.replicaMap, req.Name)
-	s.Unlock()
+	s.RUnlock()
 
 	if r != nil {
 		if err := r.Delete(s.spdkClient, req.CleanupRequired); err != nil {
@@ -132,19 +172,54 @@ func (s *Server) ReplicaGet(ctx context.Context, req *spdkrpc.ReplicaGetRequest)
 	s.RUnlock()
 
 	if r == nil {
-		return nil, fmt.Errorf("replica %s is not found during get", req.Name)
+		return nil, grpcstatus.Error(grpccodes.NotFound, fmt.Sprintf("replica %s is not found during get", req.Name))
 	}
 
 	return r.Get()
 }
 
 func (s *Server) ReplicaList(ctx context.Context, req *empty.Empty) (*spdkrpc.ReplicaListResponse, error) {
-	// TODO: Implement this
-	return &spdkrpc.ReplicaListResponse{}, nil
+	s.RLock()
+	defer s.RUnlock()
+	replicas := map[string]*spdkrpc.Replica{}
+	for _, r := range s.replicaMap {
+		replica, err := r.Get()
+		if err != nil {
+			return nil, err
+		}
+		replicas[replica.Name] = replica
+	}
+
+	return &spdkrpc.ReplicaListResponse{
+		Replicas: replicas,
+	}, nil
 }
 
 func (s *Server) ReplicaWatch(req *empty.Empty, srv spdkrpc.SPDKService_ReplicaWatchServer) error {
-	// TODO: Implement this
+	responseCh, err := s.subscribe(types.InstanceTypeReplica)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			logrus.WithError(err).Error("SPDK service update watch errored out")
+		} else {
+			logrus.Info("SPDK service update watch ended successfully")
+		}
+	}()
+	logrus.Info("Started new SPDK service update watch")
+
+	for resp := range responseCh {
+		r, ok := resp.(*spdkrpc.Replica)
+		if !ok {
+			return fmt.Errorf("cannot get Replica from channel")
+		}
+		if err := srv.Send(r); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -179,7 +254,12 @@ func (s *Server) EngineCreate(ctx context.Context, req *spdkrpc.EngineCreateRequ
 		return nil, err
 	}
 
-	return SvcEngineCreate(s.spdkClient, req.Name, req.Frontend, req.ReplicaAddressMap, portStart)
+	ret, err = SvcEngineCreate(s.spdkClient, req.Name, req.Frontend, req.ReplicaAddressMap, portStart)
+	if err != nil {
+		return nil, err
+	}
+	s.updateChs[types.InstanceTypeEngine] <- interface{}(ret)
+	return ret, nil
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *spdkrpc.EngineDeleteRequest) (ret *empty.Empty, err error) {
@@ -199,7 +279,30 @@ func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*spdkrpc.Eng
 }
 
 func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWatchServer) error {
-	// TODO: Implement this
+	responseCh, err := s.subscribe(types.InstanceTypeEngine)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			logrus.WithError(err).Error("SPDK service update watch errored out")
+		} else {
+			logrus.Info("SPDK service update watch ended successfully")
+		}
+	}()
+	logrus.Info("Started new SPDK service update watch")
+
+	for resp := range responseCh {
+		e, ok := resp.(*spdkrpc.Engine)
+		if !ok {
+			return fmt.Errorf("cannot get Engine from channel")
+		}
+		if err := srv.Send(e); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -229,4 +332,12 @@ func (s *Server) VersionDetailGet(context.Context, *empty.Empty) (*spdkrpc.Versi
 	return &spdkrpc.VersionDetailGetReply{
 		Version: &spdkrpc.VersionOutput{},
 	}, nil
+}
+
+func (s *Server) subscribe(t types.InstanceType) (<-chan interface{}, error) {
+	return s.broadcasters[t].Subscribe(context.TODO(), s.broadcastConnector, string(t))
+}
+
+func (s *Server) broadcastConnector(t string) (chan interface{}, error) {
+	return s.broadcastChs[types.InstanceType(t)], nil
 }

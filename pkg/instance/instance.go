@@ -8,6 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -413,32 +414,31 @@ func (s *Server) spdkInstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceSe
 func (s *Server) InstanceWatch(req *empty.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	logrus.Info("Start watching instances")
 
-	/*
-		ctx := context.Background()
-		g, ctx := errgroup.WithContext(ctx)
+	ctx := context.Background()
+	g, ctx := errgroup.WithContext(ctx)
 
+	g.Go(func() error {
+		return s.watchProcess(ctx, req, srv)
+	})
+
+	if s.spdkEnabled {
 		g.Go(func() error {
-			return s.watchProcess(ctx, req, srv)
+			return s.watchSPDKReplica(ctx, req, srv)
 		})
 
-		if s.spdkEnabled {
-			g.Go(func() error {
-				return s.watchSpdkReplica(ctx, req, srv)
-			})
+		g.Go(func() error {
+			return s.watchSPDKEngine(ctx, req, srv)
+		})
+	}
 
-			g.Go(func() error {
-				return s.watchSpdkEngine(ctx, req, srv)
-			})
-		}
+	if err := g.Wait(); err != nil {
+		return errors.Wrap(err, "failed to watch instances")
+	}
 
-		if err := g.Wait(); err != nil {
-			return errors.Wrap(err, "failed to watch instances")
-		}
-	*/
 	return nil
 }
 
-func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+func (s *Server) watchSPDKReplica(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	logrus.Info("Start watching SPDK replica")
 
 	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
@@ -462,6 +462,7 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 			if err != nil {
 				logrus.WithError(err).Error("Failed to receive next item in SPDK replica watch")
 			} else {
+				logrus.Infof("Debug ====> receive replica watch event: %v", v)
 				instance := replicaResponseToInstanceResponse(v)
 				if err := srv.Send(instance); err != nil {
 					return errors.Wrap(err, "failed to send instance response")
@@ -471,7 +472,7 @@ func (s *Server) watchSpdkReplica(ctx context.Context, req *emptypb.Empty, srv r
 	}
 }
 
-func (s *Server) watchSpdkEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
+func (s *Server) watchSPDKEngine(ctx context.Context, req *emptypb.Empty, srv rpc.InstanceService_InstanceWatchServer) error {
 	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DiskServiceClient")

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/longhorn/longhorn-instance-manager/pkg/types"
 	"github.com/longhorn/longhorn-spdk-engine/pkg/api"
 	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
@@ -119,13 +121,31 @@ func (c *SPDKClient) ReplicaGet(name string) (*api.Replica, error) {
 }
 
 func (c *SPDKClient) ReplicaList() (map[string]*api.Replica, error) {
-	// TODO: implement
-	return nil, nil
+	client := c.getSPDKServiceClient()
+	ctx, cancel := context.WithTimeout(context.Background(), GRPCServiceTimeout)
+	defer cancel()
+
+	resp, err := client.ReplicaList(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	replicas := map[string]*api.Replica{}
+	for _, replica := range resp.Replicas {
+		replicas[replica.Name] = api.ProtoReplicaToReplica(replica)
+	}
+
+	return replicas, nil
 }
 
 func (c *SPDKClient) ReplicaWatch(ctx context.Context) (*api.ReplicaStream, error) {
-	// TODO: implement
-	return nil, nil
+	client := c.getSPDKServiceClient()
+	stream, err := client.ReplicaWatch(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open replica update stream")
+	}
+
+	return api.NewReplicaStream(stream), nil
 }
 
 func (c *SPDKClient) EngineCreate(name, frontend string, specSize uint64, replicaAddressMap map[string]string) (*api.Engine, error) {
@@ -184,13 +204,31 @@ func (c *SPDKClient) EngineGet(name string) (*api.Engine, error) {
 }
 
 func (c *SPDKClient) EngineList() (map[string]*api.Engine, error) {
-	// TODO: implement
-	return nil, nil
+	client := c.getSPDKServiceClient()
+	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
+	defer cancel()
+
+	resp, err := client.EngineList(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	engines := map[string]*api.Engine{}
+	for _, engine := range resp.Engines {
+		engines[engine.Name] = api.ProtoEngineToEngine(engine)
+	}
+
+	return engines, nil
 }
 
 func (c *SPDKClient) EngineWatch(ctx context.Context) (*api.EngineStream, error) {
-	// TODO: implement
-	return nil, nil
+	client := c.getSPDKServiceClient()
+	stream, err := client.EngineWatch(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open engine update stream")
+	}
+
+	return api.NewEngineStream(stream), nil
 }
 
 func (c *SPDKClient) DiskCreate(diskName, diskPath string, blockSize int64) (*spdkrpc.Disk, error) {
