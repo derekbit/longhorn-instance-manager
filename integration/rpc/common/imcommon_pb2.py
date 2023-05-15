@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0eimcommon.proto\x12\x05imrpc\"\xaa\x03\n\x0fVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\tgitCommit\x18\x02 \x01(\t\x12\x11\n\tbuildDate\x18\x03 \x01(\t\x12!\n\x19instanceManagerAPIVersion\x18\x04 \x01(\x03\x12$\n\x1cinstanceManagerAPIMinVersion\x18\x05 \x01(\x03\x12&\n\x1einstanceManagerProxyAPIVersion\x18\x06 \x01(\x03\x12)\n!instanceManagerProxyAPIMinVersion\x18\x07 \x01(\x03\x12,\n$instanceManagerDiskServiceAPIVersion\x18\x08 \x01(\x03\x12/\n\'instanceManagerDiskServiceAPIMinVersion\x18\t \x01(\x03\x12\x30\n(instanceManagerInstanceServiceAPIVersion\x18\n \x01(\x03\x12\x33\n+instanceManagerInstanceServiceAPIMinVersion\x18\x0b \x01(\x03\"\x1b\n\x0bLogResponse\x12\x0c\n\x04line\x18\x02 \x01(\t*,\n\x12\x42\x61\x63kendStoreDriver\x12\x0c\n\x08longhorn\x10\x00\x12\x08\n\x04spdk\x10\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x0eimcommon.proto\x12\x05imrpc\"\xe4\x01\n\x0fVersionResponse\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\tgitCommit\x18\x02 \x01(\t\x12\x11\n\tbuildDate\x18\x03 \x01(\t\x12!\n\x19instanceManagerAPIVersion\x18\x04 \x01(\x03\x12$\n\x1cinstanceManagerAPIMinVersion\x18\x05 \x01(\x03\x12&\n\x1einstanceManagerProxyAPIVersion\x18\x06 \x01(\x03\x12)\n!instanceManagerProxyAPIMinVersion\x18\x07 \x01(\x03\"\x1b\n\x0bLogResponse\x12\x0c\n\x04line\x18\x02 \x01(\t*,\n\x12\x42\x61\x63kendStoreDriver\x12\x0c\n\x08longhorn\x10\x00\x12\x08\n\x04spdk\x10\x01\x62\x06proto3')
 )
 
 _BACKENDSTOREDRIVER = _descriptor.EnumDescriptor(
@@ -41,8 +41,8 @@ _BACKENDSTOREDRIVER = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=483,
-  serialized_end=527,
+  serialized_start=285,
+  serialized_end=329,
 )
 _sym_db.RegisterEnumDescriptor(_BACKENDSTOREDRIVER)
 
@@ -108,34 +108,6 @@ _VERSIONRESPONSE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerDiskServiceAPIVersion', full_name='imrpc.VersionResponse.instanceManagerDiskServiceAPIVersion', index=7,
-      number=8, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerDiskServiceAPIMinVersion', full_name='imrpc.VersionResponse.instanceManagerDiskServiceAPIMinVersion', index=8,
-      number=9, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerInstanceServiceAPIVersion', full_name='imrpc.VersionResponse.instanceManagerInstanceServiceAPIVersion', index=9,
-      number=10, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='instanceManagerInstanceServiceAPIMinVersion', full_name='imrpc.VersionResponse.instanceManagerInstanceServiceAPIMinVersion', index=10,
-      number=11, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -149,7 +121,7 @@ _VERSIONRESPONSE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=26,
-  serialized_end=452,
+  serialized_end=254,
 )
 
 
@@ -179,8 +151,8 @@ _LOGRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=454,
-  serialized_end=481,
+  serialized_start=256,
+  serialized_end=283,
 )
 
 DESCRIPTOR.message_types_by_name['VersionResponse'] = _VERSIONRESPONSE
