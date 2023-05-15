@@ -1,13 +1,21 @@
 package meta
 
 const (
-	// InstanceManagerAPIVersion used to communicate with the user e.g. longhorn-manager
+	// InstanceManagerAPIVersion is used for compatibility check for longhorn-manager
 	InstanceManagerAPIVersion    = 4
 	InstanceManagerAPIMinVersion = 1
 
 	// InstanceManagerProxyAPIVersion is used for compatibility check for longhorn-manager
 	InstanceManagerProxyAPIVersion    = 4
 	InstanceManagerProxyAPIMinVersion = 1
+
+	// InstanceManagerDiskServiceAPIVersion used to communicate with the user e.g. longhorn-manager
+	InstanceManagerDiskServiceAPIVersion    = 1
+	InstanceManagerDiskServiceAPIMinVersion = 1
+
+	// InstanceManagerInstanceServiceAPIVersion used to communicate with the user e.g. longhorn-manager
+	InstanceManagerInstanceServiceAPIVersion    = 1
+	InstanceManagerInstanceServiceAPIMinVersion = 1
 )
 
 // Following variables are filled in by main.go
@@ -27,6 +35,12 @@ type VersionOutput struct {
 
 	InstanceManagerProxyAPIVersion    int `json:"instanceManagerProxyAPIVersion"`
 	InstanceManagerProxyAPIMinVersion int `json:"instanceManagerProxyAPIMinVersion"`
+
+	InstanceManagerDiskServiceAPIVersion    int `json:"instanceManagerDiskServiceAPIVersion"`
+	InstanceManagerDiskServiceAPIMinVersion int `json:"instanceManagerDiskServiceAPIMinVersion"`
+
+	InstanceManagerInstanceServiceAPIVersion    int `json:"instanceManagerInstanceServiceAPIVersion"`
+	InstanceManagerInstanceServiceAPIMinVersion int `json:"instanceManagerInstanceServiceAPIMinVersion"`
 }
 
 func GetVersion() VersionOutput {
@@ -40,5 +54,11 @@ func GetVersion() VersionOutput {
 
 		InstanceManagerProxyAPIVersion:    InstanceManagerProxyAPIVersion,
 		InstanceManagerProxyAPIMinVersion: InstanceManagerProxyAPIMinVersion,
+
+		InstanceManagerDiskServiceAPIVersion:    InstanceManagerDiskServiceAPIVersion,
+		InstanceManagerDiskServiceAPIMinVersion: InstanceManagerDiskServiceAPIMinVersion,
+
+		InstanceManagerInstanceServiceAPIVersion:    InstanceManagerInstanceServiceAPIVersion,
+		InstanceManagerInstanceServiceAPIMinVersion: InstanceManagerInstanceServiceAPIMinVersion,
 	}
 }

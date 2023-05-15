@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	spdkhelpertypes "github.com/longhorn/go-spdk-helper/pkg/types"
 )
 
 const (
@@ -119,4 +121,16 @@ func ParsePortRange(portRange string) (int32, int32, error) {
 	}
 
 	return int32(portStart), int32(portEnd), nil
+}
+
+func IsSPDKTgtReady(timeout time.Duration) bool {
+	for i := 0; i < int(timeout.Seconds()); i++ {
+		conn, err := net.DialTimeout(spdkhelpertypes.DefaultJSONServerNetwork, spdkhelpertypes.DefaultUnixDomainSocketPath, 1*time.Second)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+		time.Sleep(time.Second)
+	}
+	return false
 }
