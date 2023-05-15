@@ -1,6 +1,8 @@
 package spdk
 
 import (
+	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -85,6 +87,7 @@ func NewServer(ctx context.Context, portStart, portEnd int32) (*Server, error) {
 
 	// TODO: There is no need to maintain the replica map in cache when we can use one SPDK JSON API call to fetch the Lvol tree/chain info
 	go s.monitoringReplicas()
+	go s.monitoringEngines()
 
 	return s, nil
 }
@@ -128,6 +131,25 @@ func (s *Server) monitoringReplicas() {
 	}
 }
 
+func (s *Server) monitoringEngines() {
+	ticker := time.NewTicker(MonitorInterval)
+	defer ticker.Stop()
+
+	done := false
+	for {
+		select {
+		case <-s.ctx.Done():
+			logrus.Info("SPDK Server: stopped monitoring engines due to the context done")
+			done = true
+		case e := <-s.updateChs[types.InstanceTypeEngine]:
+			s.broadcastChs[types.InstanceTypeEngine] <- interface{}(e)
+		}
+		if done {
+			break
+		}
+	}
+}
+
 func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRequest) (ret *spdkrpc.Replica, err error) {
 	s.Lock()
 	if _, ok := s.replicaMap[req.Name]; ok {
@@ -144,14 +166,19 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 		return nil, err
 	}
 
-	return r.Create(s.spdkClient, portStart, req.ExposeRequired)
+	ret, err = r.Create(s.spdkClient, portStart, req.ExposeRequired)
+	if err != nil {
+		return nil, err
+	}
+	s.updateChs[types.InstanceTypeReplica] <- interface{}(ret)
+	return ret, nil
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRequest) (ret *empty.Empty, err error) {
 	s.RLock()
 	r := s.replicaMap[req.Name]
 	delete(s.replicaMap, req.Name)
-	s.Unlock()
+	s.RUnlock()
 
 	if r != nil {
 		if err := r.Delete(s.spdkClient, req.CleanupRequired); err != nil {
@@ -249,12 +276,50 @@ func (s *Server) EngineCreate(ctx context.Context, req *spdkrpc.EngineCreateRequ
 		return nil, err
 	}
 
-	ret, err = SvcEngineCreate(s.spdkClient, req.Name, req.Frontend, req.ReplicaAddressMap, portStart)
+	bdevAddressMap, err := s.replicaAddressMapToBdevAddressMap(portStart, req.ReplicaAddressMap)
 	if err != nil {
 		return nil, err
 	}
+
+	logrus.Infof("Debug ===> bdevAddressMap=%+v", bdevAddressMap)
+
+	ret, err = SvcEngineCreate(s.spdkClient, req.Name, req.Frontend, bdevAddressMap, portStart)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("Debug ===> sending %v", req.Name)
 	s.updateChs[types.InstanceTypeEngine] <- interface{}(ret)
+	logrus.Infof("Debug ===> finish sending %v", req.Name)
 	return ret, nil
+}
+
+func (s *Server) replicaAddressMapToBdevAddressMap(port int32, replicaAddressMap map[string]string) (map[string]string, error) {
+	podIP, err := util.GetIPForPod()
+	if err != nil {
+		return nil, err
+	}
+
+	bdevAddressMap := make(map[string]string)
+	for replicaName, replicaAddr := range replicaAddressMap {
+		replicaIP, _, err := net.SplitHostPort(replicaAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid replica %s address %s in engine creation", replicaName, replicaAddr)
+		}
+		if replicaIP == podIP {
+			s.RLock()
+			r, ok := s.replicaMap[replicaName]
+			if !ok {
+				s.RUnlock()
+				return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s in engine creation", replicaName)
+			}
+			bdevName := fmt.Sprintf("%s/%s", r.LvsName, replicaName)
+			bdevAddressMap[bdevName] = replicaAddr
+			s.RUnlock()
+			continue
+		}
+		bdevAddressMap[replicaName] = replicaAddr
+	}
+	return bdevAddressMap, nil
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *spdkrpc.EngineDeleteRequest) (ret *empty.Empty, err error) {
@@ -269,8 +334,7 @@ func (s *Server) EngineGet(ctx context.Context, req *spdkrpc.EngineGetRequest) (
 }
 
 func (s *Server) EngineList(ctx context.Context, req *empty.Empty) (*spdkrpc.EngineListResponse, error) {
-	// TODO: Implement this
-	return &spdkrpc.EngineListResponse{}, nil
+	return SvcEngineList(s.spdkClient)
 }
 
 func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWatchServer) error {
@@ -293,6 +357,8 @@ func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWat
 		if !ok {
 			return grpcstatus.Error(grpccodes.Internal, "cannot get Engine from channel")
 		}
+
+		logrus.Infof("Debug ---> send e=%+v", e)
 		if err := srv.Send(e); err != nil {
 			return err
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ import (
 	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
 
-func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, replicaAddressMap map[string]string, port int32) (ret *spdkrpc.Engine, err error) {
+func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, bdevAddressMap map[string]string, port int32) (ret *spdkrpc.Engine, err error) {
 	if frontend != types.FrontendSPDKTCPBlockdev && frontend != types.FrontendSPDKTCPNvmf {
 		return nil, fmt.Errorf("invalid frontend %s", frontend)
 	}
@@ -32,21 +33,21 @@ func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, repli
 	// TODO: May need to do cleanup when there is an error
 
 	replicaBdevList := []string{}
-	for replicaName, replicaAddr := range replicaAddressMap {
+	for bdevName, replicaAddr := range bdevAddressMap {
 		replicaIP, replicaPort, err := net.SplitHostPort(replicaAddr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid replica %s address %s in engine %s creation", replicaName, replicaAddr, name)
+			return nil, errors.Wrapf(err, "invalid bdev %s address %s in engine %s creation", bdevName, replicaAddr, name)
 		}
 		if replicaIP == podIP {
-			replicaBdevList = append(replicaBdevList, replicaName)
+			replicaBdevList = append(replicaBdevList, bdevName)
 			continue
 		}
-		nvmeBdevNameList, err := spdkClient.BdevNvmeAttachController(replicaName, helpertypes.GetNQN(replicaName), replicaIP, replicaPort, spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
+		nvmeBdevNameList, err := spdkClient.BdevNvmeAttachController(bdevName, helpertypes.GetNQN(bdevName), replicaIP, replicaPort, spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4)
 		if err != nil {
 			return nil, err
 		}
 		if len(nvmeBdevNameList) != 1 {
-			return nil, fmt.Errorf("attaching replica %s with address %s as a NVMe bdev does not get one result: %+v", replicaName, replicaAddr, nvmeBdevNameList)
+			return nil, fmt.Errorf("attaching bdev %s with address %s as a NVMe bdev does not get one result: %+v", bdevName, replicaAddr, nvmeBdevNameList)
 		}
 		replicaBdevList = append(replicaBdevList, nvmeBdevNameList[0])
 	}
@@ -55,7 +56,7 @@ func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, repli
 		return nil, err
 	}
 
-	if err := spdkClient.StartExposeBdev(helpertypes.GetNQN(name), name, podIP, string(port)); err != nil {
+	if err := spdkClient.StartExposeBdev(helpertypes.GetNQN(name), name, podIP, strconv.Itoa(int(port))); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +68,7 @@ func SvcEngineCreate(spdkClient *spdkclient.Client, name, frontend string, repli
 	}
 
 	if frontend == types.FrontendSPDKTCPBlockdev {
-		if err := initiator.Start(podIP, string(port)); err != nil {
+		if err := initiator.Start(podIP, strconv.Itoa(int(port))); err != nil {
 			return nil, err
 		}
 	}
@@ -163,7 +164,8 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *spdkrpc.Engi
 		return nil, fmt.Errorf("cannot find the Nvmf subsystem for engine %s", name)
 	}
 	for _, listenAddr := range subsystem.ListenAddresses {
-		if listenAddr.Adrfam != spdktypes.NvmeAddressFamilyIPv4 || listenAddr.Trtype != spdktypes.NvmeTransportTypeTCP {
+		if !strings.EqualFold(string(listenAddr.Adrfam), string(spdktypes.NvmeAddressFamilyIPv4)) ||
+			!strings.EqualFold(string(listenAddr.Trtype), string(spdktypes.NvmeTransportTypeTCP)) {
 			continue
 		}
 		port, err := strconv.Atoi(listenAddr.Trsvcid)
@@ -212,7 +214,8 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *spdkrpc.Engi
 			return nil, fmt.Errorf("found a remote base bdev %v that does not contain nvme info", bdevNvme.Name)
 		}
 		nvmeInfo := (*bdevNvme.DriverSpecific.Nvme)[0]
-		if nvmeInfo.Trid.Adrfam != spdktypes.NvmeAddressFamilyIPv4 || nvmeInfo.Trid.Trtype != spdktypes.NvmeTransportTypeTCP {
+		if !strings.EqualFold(string(nvmeInfo.Trid.Adrfam), string(spdktypes.NvmeAddressFamilyIPv4)) ||
+			!strings.EqualFold(string(nvmeInfo.Trid.Trtype), string(spdktypes.NvmeTransportTypeTCP)) {
 			return nil, fmt.Errorf("found a remote base bdev %v that contains invalid address family %s and transport type %s", bdevNvme.Name, nvmeInfo.Trid.Adrfam, nvmeInfo.Trid.Trtype)
 		}
 		replicaName := helperutil.GetNvmeControllerNameFromNamespaceName(bdevNvme.Name)
@@ -238,6 +241,27 @@ func SvcEngineGet(spdkClient *spdkclient.Client, name string) (res *spdkrpc.Engi
 	res.Endpoint = initiator.GetEndpoint()
 
 	return res, nil
+}
+
+func SvcEngineList(spdkClient *spdkclient.Client) (*spdkrpc.EngineListResponse, error) {
+	engines := map[string]*spdkrpc.Engine{}
+
+	bdevRaidList, err := spdkClient.BdevRaidGet("", 0)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, bdevRaid := range bdevRaidList {
+		engine, err := SvcEngineGet(spdkClient, bdevRaid.Name)
+		if err != nil {
+			return nil, err
+		}
+		engines[bdevRaid.Name] = engine
+	}
+
+	return &spdkrpc.EngineListResponse{
+		Engines: engines,
+	}, nil
 }
 
 func SvcEngineSnapshotCreate(spdkClient *spdkclient.Client, name, snapshotName string) (res *spdkrpc.Engine, err error) {

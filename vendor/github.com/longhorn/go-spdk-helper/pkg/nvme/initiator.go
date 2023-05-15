@@ -2,6 +2,7 @@ package nvme
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,8 @@ const (
 
 	RetryCounts   = 5
 	RetryInterval = 3 * time.Second
+
+	waitDeviceTimeout = 60 * time.Second
 
 	HostProc = "/host/proc"
 )
@@ -134,7 +137,13 @@ func (i *Initiator) Start(transportAddress, transportServiceID string) (err erro
 		return fmt.Errorf("failed to start NVMe initiator %s within %d * %vsec retrys", i.Name, RetryCounts, RetryInterval.Seconds())
 	}
 
-	if err := i.loadNVMeDeviceInfoWithoutLock(); err != nil {
+	for t := 0; t < int(waitDeviceTimeout.Seconds()); t++ {
+		if err = i.loadNVMeDeviceInfoWithoutLock(); err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	if err != nil {
 		return errors.Wrapf(err, "failed to load device info after starting NVMe initiator %s", i.Name)
 	}
 
@@ -234,11 +243,23 @@ func (i *Initiator) loadNVMeDeviceInfoWithoutLock() error {
 		"transportServiceID": i.TransportServiceID,
 	})
 
-	devices, err := util.GetKnownDevices(i.executor)
+	deviceGlob := fmt.Sprintf("/dev/%s*", i.NamespaceName)
+	matches, err := filepath.Glob(deviceGlob)
 	if err != nil {
 		return err
 	}
-	i.dev = devices[i.NamespaceName]
+	for _, match := range matches {
+		if match != fmt.Sprintf("/dev/%s", i.NamespaceName) {
+			continue
+		}
+		logrus.Infof("Debug ===> found=%v", match)
+		dev, err := util.DetectDevice(match, i.executor)
+		if err == nil {
+			i.dev = dev
+			break
+		}
+	}
+
 	if i.dev == nil {
 		return fmt.Errorf("cannot find the device for NVMe initiator %s with namespace name %s", i.Name, i.NamespaceName)
 	}

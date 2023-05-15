@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
+	"github.com/sirupsen/logrus"
 )
 
 func (c *Client) AddDevice(devicePath, name string, clusterSize uint32) (bdevAioName, lvsName, lvsUUID string, err error) {
@@ -64,6 +65,7 @@ func (c *Client) StartExposeBdev(nqn, bdevName, ip, port string) error {
 		return err
 	}
 
+	logrus.Infof("Debug ===> nqn=%v, bdevName=%v", nqn, bdevName)
 	if _, err := c.NvmfSubsystemAddNs(nqn, bdevName); err != nil {
 		return err
 	}

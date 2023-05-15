@@ -80,7 +80,7 @@ func (p *Proxy) volumeGetFromSpdkService(ctx context.Context, req *rpc.ProxyEngi
 			Size:                      int64(recv.SpecSize),
 			ReplicaCount:              int32(len(recv.ReplicaAddressMap)),
 			Endpoint:                  recv.Endpoint,
-			Frontend:                  types.FrontendSPDKTCPBlockDev,
+			Frontend:                  types.FrontendSPDKTCPBlockdev,
 			FrontendState:             "",
 			IsExpanding:               false,
 			LastExpansionError:        "",

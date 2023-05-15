@@ -84,6 +84,8 @@ func (c *Client) SendMsgWithTimeout(method string, params interface{}, timeoutIn
 		return nil, err
 	}
 
+	logrus.Infof("Debug ---> method=%v, msg=%+v", method, msg)
+
 	for count := 0; count <= timeoutInSec; count++ {
 		if c.decoder.More() {
 			break
