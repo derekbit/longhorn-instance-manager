@@ -14,3 +14,19 @@ const (
 
 	DefaultReplicaReservedPortCount = 5
 )
+
+type InstanceState string
+
+const (
+	InstanceStatePending = "pending"
+	InstanceStateStopped = "stopped"
+	InstanceStateRunning = "running"
+	InstanceStateError   = "error"
+)
+
+type InstanceType string
+
+const (
+	InstanceTypeReplica = InstanceType("replica")
+	InstanceTypeEngine  = InstanceType("engine")
+)

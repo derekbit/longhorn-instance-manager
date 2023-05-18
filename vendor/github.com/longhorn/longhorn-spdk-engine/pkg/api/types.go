@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/longhorn/longhorn-spdk-engine/pkg/types"
 	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 )
@@ -113,9 +114,8 @@ func NewReplicaStream(stream spdkrpc.SPDKService_ReplicaWatchClient) *ReplicaStr
 	}
 }
 
-func (s *ReplicaStream) Recv() (*Replica, error) {
-	resp, err := s.stream.Recv()
-	return ProtoReplicaToReplica(resp), err
+func (s *ReplicaStream) Recv() (*empty.Empty, error) {
+	return s.stream.Recv()
 }
 
 type EngineStream struct {
@@ -128,7 +128,6 @@ func NewEngineStream(stream spdkrpc.SPDKService_EngineWatchClient) *EngineStream
 	}
 }
 
-func (s *EngineStream) Recv() (*Engine, error) {
-	resp, err := s.stream.Recv()
-	return ProtoEngineToEngine(resp), err
+func (s *EngineStream) Recv() (*empty.Empty, error) {
+	return s.stream.Recv()
 }

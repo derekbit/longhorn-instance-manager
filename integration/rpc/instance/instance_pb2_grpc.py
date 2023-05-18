@@ -44,7 +44,7 @@ class InstanceServiceStub(object):
     self.InstanceWatch = channel.unary_stream(
         '/imrpc.InstanceService/InstanceWatch',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-        response_deserializer=instance__pb2.InstanceResponse.FromString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
     self.InstanceReplace = channel.unary_unary(
         '/imrpc.InstanceService/InstanceReplace',
@@ -149,7 +149,7 @@ def add_InstanceServiceServicer_to_server(servicer, server):
       'InstanceWatch': grpc.unary_stream_rpc_method_handler(
           servicer.InstanceWatch,
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-          response_serializer=instance__pb2.InstanceResponse.SerializeToString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
       'InstanceReplace': grpc.unary_unary_rpc_method_handler(
           servicer.InstanceReplace,

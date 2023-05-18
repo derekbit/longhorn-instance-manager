@@ -37,10 +37,15 @@ type Engine struct {
 	Frontend           string
 	Endpoint           string
 
+	State types.InstanceState
+
+	// UpdateCh should not be protected by the engine lock
+	UpdateCh chan interface{}
+
 	log logrus.FieldLogger
 }
 
-func NewEngine(engineName, volumeName, frontend string, specSize uint64) *Engine {
+func NewEngine(engineName, volumeName, frontend string, specSize uint64, engineUpdateCh chan interface{}) *Engine {
 	log := logrus.StandardLogger().WithFields(logrus.Fields{
 		"engineName": engineName,
 		"volumeName": volumeName,
@@ -62,13 +67,37 @@ func NewEngine(engineName, volumeName, frontend string, specSize uint64) *Engine
 		ReplicaBdevNameMap: map[string]string{},
 		ReplicaModeMap:     map[string]types.Mode{},
 
+		State: types.InstanceStatePending,
+
+		UpdateCh: engineUpdateCh,
+
 		log: log,
 	}
 }
 
 func (e *Engine) Create(spdkClient *spdkclient.Client, replicaAddressMap, localReplicaBdevMap map[string]string, superiorPortAllocator *util.Bitmap) (ret *spdkrpc.Engine, err error) {
+	requireUpdate := true
+
 	e.Lock()
-	defer e.Unlock()
+	defer func() {
+		e.Unlock()
+
+		if requireUpdate {
+			logrus.Infof("Debug ====> UpdateCh engine")
+			e.UpdateCh <- nil
+		}
+	}()
+
+	if e.State != types.InstanceStatePending {
+		requireUpdate = false
+		return nil, fmt.Errorf("invalid state %s for engine %s creation", e.State, e.Name)
+	}
+
+	defer func() {
+		if err != nil && e.State != types.InstanceStateError {
+			e.State = types.InstanceStateError
+		}
+	}()
 
 	podIP, err := util.GetIPForPod()
 	if err != nil {
@@ -121,6 +150,7 @@ func (e *Engine) Create(spdkClient *spdkclient.Client, replicaAddressMap, localR
 		return nil, fmt.Errorf("unknown frontend type %s", e.Frontend)
 
 	}
+	e.State = types.InstanceStateRunning
 
 	return e.getWithoutLock(), nil
 }
@@ -147,23 +177,38 @@ func getBdevNameForReplica(spdkClient *spdkclient.Client, localReplicaBdevMap ma
 	}
 	return nvmeBdevNameList[0], nil
 }
-
 func (e *Engine) Delete(spdkClient *spdkclient.Client, superiorPortAllocator *util.Bitmap) (err error) {
+	requireUpdate := false
+
 	e.Lock()
-	defer e.Unlock()
+	defer func() {
+		if err != nil && e.State != types.InstanceStateError {
+			e.State = types.InstanceStateError
+		}
+		e.Unlock()
 
-	nqn := helpertypes.GetNQN(e.Name)
+		if requireUpdate {
+			e.UpdateCh <- nil
+		}
+	}()
 
-	initiator, err := nvme.NewInitiator(e.VolumeName, nqn, nvme.HostProc)
-	if err != nil {
-		return err
-	}
-	if err := initiator.Stop(); err != nil {
-		return err
-	}
+	if e.Endpoint != "" {
+		nqn := helpertypes.GetNQN(e.Name)
 
-	if err := spdkClient.StopExposeBdev(nqn); err != nil {
-		return err
+		initiator, err := nvme.NewInitiator(e.VolumeName, nqn, nvme.HostProc)
+		if err != nil {
+			return err
+		}
+		if err := initiator.Stop(); err != nil {
+			return err
+		}
+
+		if err := spdkClient.StopExposeBdev(nqn); err != nil {
+			return err
+		}
+
+		e.Endpoint = ""
+		requireUpdate = true
 	}
 
 	if e.Port != 0 {
@@ -171,27 +216,51 @@ func (e *Engine) Delete(spdkClient *spdkclient.Client, superiorPortAllocator *ut
 			return err
 		}
 		e.Port = 0
+		requireUpdate = true
 	}
 
 	if _, err := spdkClient.BdevRaidDelete(e.Name); err != nil && !jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
 		return err
 	}
 
-	for replicaName, replicaAddress := range e.ReplicaAddressMap {
-		replicaIP, _, err := net.SplitHostPort(replicaAddress)
-		if err != nil {
+	for replicaName := range e.ReplicaAddressMap {
+		if err := e.removeReplica(spdkClient, replicaName); err != nil {
+			if e.ReplicaModeMap[replicaName] != types.ModeERR {
+				e.ReplicaModeMap[replicaName] = types.ModeERR
+				requireUpdate = true
+			}
 			return err
 		}
-		if replicaIP == e.IP {
-			continue
-		}
-		bdevName := e.ReplicaBdevNameMap[replicaName]
-		if bdevName == "" {
-			continue
-		}
-		if _, err := spdkClient.BdevNvmeDetachController(helperutil.GetNvmeControllerNameFromNamespaceName(bdevName)); err != nil && !jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
-			return err
-		}
+
+		delete(e.ReplicaAddressMap, replicaName)
+		delete(e.ReplicaBdevNameMap, replicaName)
+		delete(e.ReplicaModeMap, replicaName)
+		requireUpdate = true
+	}
+	// This is a transient state. It means the engine is cleaned up but have not been removed from the cache.
+	if e.State != types.InstanceStateStopped {
+		e.State = types.InstanceStateStopped
+		requireUpdate = true
+	}
+
+	return nil
+}
+
+func (e *Engine) removeReplica(spdkClient *spdkclient.Client, replicaName string) (err error) {
+	replicaIP, _, err := net.SplitHostPort(e.ReplicaAddressMap[replicaName])
+	if err != nil {
+		return err
+	}
+	if replicaIP == e.IP {
+		return nil
+	}
+
+	bdevName := e.ReplicaBdevNameMap[replicaName]
+	if bdevName == "" {
+		return nil
+	}
+	if _, err := spdkClient.BdevNvmeDetachController(helperutil.GetNvmeControllerNameFromNamespaceName(bdevName)); err != nil && !jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
+		return err
 	}
 
 	return nil
@@ -226,8 +295,27 @@ func (e *Engine) getWithoutLock() (res *spdkrpc.Engine) {
 
 func (e *Engine) ValidateAndUpdate(
 	bdevMap map[string]*spdktypes.BdevInfo, subsystemMap map[string]*spdktypes.NvmfSubsystem) (err error) {
+	updateRequired := false
+
 	e.Lock()
-	defer e.Unlock()
+	defer func() {
+		// TODO: we may not need to mark the engine as ERR for each error
+		if err != nil && e.State != types.InstanceStateError {
+			e.State = types.InstanceStateError
+			e.log.Errorf("Found error during engine validation and update: %v", err)
+			updateRequired = true
+		}
+		e.Unlock()
+
+		if updateRequired {
+			e.UpdateCh <- nil
+		}
+	}()
+
+	// Syncing with the SPDK TGT server only when the engine is running.
+	if e.State != types.InstanceStateRunning {
+		return nil
+	}
 
 	podIP, err := util.GetIPForPod()
 	if err != nil {
@@ -274,16 +362,22 @@ func (e *Engine) ValidateAndUpdate(
 			return err
 		}
 		blockDevEndpoint := initiator.GetEndpoint()
-		if e.Endpoint != "" && e.Endpoint != blockDevEndpoint {
+		if e.Endpoint == "" {
+			e.Endpoint = blockDevEndpoint
+			updateRequired = true
+		}
+		if e.Endpoint != blockDevEndpoint {
 			return fmt.Errorf("found mismatching between engine endpoint %s and actual block device endpoint %s for engine %s", e.Endpoint, blockDevEndpoint, e.Name)
 		}
-		e.Endpoint = blockDevEndpoint
 	case types.FrontendSPDKTCPNvmf:
 		nvmfEndpoint := GetNvmfEndpoint(nqn, e.IP, e.Port)
+		if e.Endpoint == "" {
+			e.Endpoint = nvmfEndpoint
+			updateRequired = true
+		}
 		if e.Endpoint != "" && e.Endpoint != nvmfEndpoint {
 			return fmt.Errorf("found mismatching between engine endpoint %s and actual nvmf endpoint %s for engine %s", e.Endpoint, nvmfEndpoint, e.Name)
 		}
-		e.Endpoint = nvmfEndpoint
 	default:
 		return fmt.Errorf("unknown frontend type %s", e.Frontend)
 	}
@@ -297,17 +391,33 @@ func (e *Engine) ValidateAndUpdate(
 		return fmt.Errorf("found mismatching between engine spec size %d and actual raid bdev size %d for engine %s", e.SpecSize, bdevRaidSize, e.Name)
 	}
 
+	containValidReplica := false
 	for replicaName, bdevName := range e.ReplicaBdevNameMap {
+		if e.ReplicaModeMap[replicaName] == types.ModeERR {
+			continue
+		}
 		mode, err := e.validateAndUpdateReplicaMode(replicaName, bdevMap[bdevName])
 		if err != nil {
-			e.log.WithError(err).Errorf("Replica %s is invalid, will update the mode from %s to %s", replicaName, e.ReplicaModeMap[replicaName], types.ModeERR)
-			e.ReplicaModeMap[replicaName] = types.ModeERR
+			if e.ReplicaModeMap[replicaName] != types.ModeERR {
+				e.log.WithError(err).Errorf("Replica %s is invalid, will update the mode from %s to %s", replicaName, e.ReplicaModeMap[replicaName], types.ModeERR)
+				e.ReplicaModeMap[replicaName] = types.ModeERR
+				updateRequired = true
+			}
 			continue
 		}
 		if e.ReplicaModeMap[replicaName] != mode {
 			e.log.Debugf("Replica %s mode is updated from %s to %s", replicaName, e.ReplicaModeMap[replicaName], mode)
 			e.ReplicaModeMap[replicaName] = mode
+			updateRequired = true
 		}
+		if e.ReplicaModeMap[replicaName] == types.ModeRW {
+			containValidReplica = true
+		}
+	}
+	if !containValidReplica {
+		e.State = types.InstanceStateError
+		updateRequired = true
+		// TODO: should we delete the engine automatically here?
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/golang/protobuf/ptypes/empty"
 	spdkrpc "github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
@@ -72,12 +73,8 @@ func NewInstanceStream(stream rpc.InstanceService_InstanceWatchClient) *Instance
 	}
 }
 
-func (s *InstanceStream) Recv() (*Instance, error) {
-	resp, err := s.stream.Recv()
-	if err != nil {
-		return nil, err
-	}
-	return RPCToInstance(resp), nil
+func (s *InstanceStream) Recv() (*empty.Empty, error) {
+	return s.stream.Recv()
 }
 
 type Process struct {
@@ -151,7 +148,7 @@ func NewReplicaStream(stream spdkrpc.SPDKService_ReplicaWatchClient) *ReplicaStr
 	}
 }
 
-func (s *ReplicaStream) Recv() (*spdkrpc.Replica, error) {
+func (s *ReplicaStream) Recv() (*empty.Empty, error) {
 	return s.stream.Recv()
 }
 
@@ -165,7 +162,7 @@ func NewEngineStream(stream spdkrpc.SPDKService_EngineWatchClient) *EngineStream
 	}
 }
 
-func (s *EngineStream) Recv() (*spdkrpc.Engine, error) {
+func (s *EngineStream) Recv() (*empty.Empty, error) {
 	return s.stream.Recv()
 }
 

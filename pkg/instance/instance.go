@@ -460,12 +460,11 @@ func (s *Server) watchSPDKReplica(ctx context.Context, req *emptypb.Empty, srv r
 			logrus.Info("Stop watching SPDK replica")
 			return nil
 		default:
-			v, err := notifier.Recv()
+			_, err := notifier.Recv()
 			if err != nil {
 				logrus.WithError(err).Error("Failed to receive next item in SPDK replica watch")
 			} else {
-				instance := replicaResponseToInstanceResponse(v)
-				if err := srv.Send(instance); err != nil {
+				if err := srv.Send(&empty.Empty{}); err != nil {
 					return errors.Wrap(err, "failed to send instance response")
 				}
 			}
@@ -491,12 +490,11 @@ func (s *Server) watchSPDKEngine(ctx context.Context, req *emptypb.Empty, srv rp
 			logrus.Info("Stop watching SPDK engine")
 			return nil
 		default:
-			v, err := notifier.Recv()
+			_, err := notifier.Recv()
 			if err != nil {
 				logrus.WithError(err).Error("Failed to receive next item in SPDK engine watch")
 			} else {
-				instance := engineResponseToInstanceResponse(v)
-				if err := srv.Send(instance); err != nil {
+				if err := srv.Send(&empty.Empty{}); err != nil {
 					return errors.Wrap(err, "failed to send instance response")
 				}
 			}
@@ -524,12 +522,11 @@ func (s *Server) watchProcess(ctx context.Context, req *emptypb.Empty, srv rpc.I
 			logrus.Info("Stop watching processes")
 			return nil
 		default:
-			process, err := notifier.Recv()
+			_, err := notifier.Recv()
 			if err != nil {
 				logrus.WithError(err).Error("Failed to receive next item in process watch")
 			} else {
-				instance := processResponseToInstanceResponse(process)
-				if err := srv.Send(instance); err != nil {
+				if err := srv.Send(&empty.Empty{}); err != nil {
 					return errors.Wrap(err, "failed to send instance response")
 				}
 			}

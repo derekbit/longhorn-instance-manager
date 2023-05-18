@@ -11,7 +11,7 @@ service InstanceService {
 	rpc InstanceGet(InstanceGetRequest) returns (InstanceResponse) {}
 	rpc InstanceList(google.protobuf.Empty) returns (InstanceListResponse) {}
 	rpc InstanceLog(InstanceLogRequest) returns (stream LogResponse) {}
-	rpc InstanceWatch(google.protobuf.Empty) returns (stream InstanceResponse) {}
+	rpc InstanceWatch(google.protobuf.Empty) returns (stream google.protobuf.Empty) {}
 	rpc InstanceReplace(InstanceReplaceRequest) returns (InstanceResponse) {}
 
 	rpc VersionGet(google.protobuf.Empty) returns(VersionResponse);
