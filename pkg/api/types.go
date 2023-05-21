@@ -196,3 +196,9 @@ type DiskInfo struct {
 	BlockSize   int64
 	ClusterSize int64
 }
+
+type ReplicaInstance struct {
+	UUID       string
+	SpecSize   uint64
+	ActualSize uint64
+}

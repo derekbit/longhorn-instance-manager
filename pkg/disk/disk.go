@@ -182,6 +182,74 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 	}
 }
 
+func (s *Server) DiskReplicaInstanceList(ctx context.Context, req *rpc.DiskReplicaInstanceListRequest) (*rpc.DiskReplicaInstanceListResponse, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"diskType": req.DiskType,
+		"diskName": req.DiskName,
+	})
+
+	log.Info("Listing disk replica instances")
+
+	if req.DiskName == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name is required")
+	}
+
+	s.RLock()
+	defer s.RUnlock()
+
+	switch req.DiskType {
+	case rpc.DiskType_block:
+		ret, err := s.spdkClient.DiskLvolList(req.DiskName)
+		if err != nil {
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		instances := map[string]*rpc.ReplicaInstance{}
+		for name, lvol := range ret.Lvols {
+			instances[name] = spdkLvolToReplicaInstance(lvol)
+		}
+		return &rpc.DiskReplicaInstanceListResponse{
+			ReplicaInstances: instances,
+		}, nil
+	case rpc.DiskType_filesystem:
+		// TODO: implement filesystem disk type
+		fallthrough
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "unsupported disk type %v", req.DiskType)
+	}
+}
+
+func (s *Server) DiskReplicaInstanceDelete(ctx context.Context, req *rpc.DiskReplicaInstanceDeleteRequest) (*empty.Empty, error) {
+	log := logrus.WithFields(logrus.Fields{
+		"diskType":            req.DiskType,
+		"diskName":            req.DiskName,
+		"diskUUID":            req.DiskUuid,
+		"replciaInstanceName": req.ReplciaInstanceName,
+	})
+
+	log.Info("Deleting disk replica instance")
+
+	if req.DiskName == "" || req.DiskUuid == "" || req.ReplciaInstanceName == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name, disk UUID and replica instance name are required")
+	}
+
+	s.RLock()
+	defer s.RUnlock()
+
+	switch req.DiskType {
+	case rpc.DiskType_block:
+		err := s.spdkClient.DiskLvolDelete(req.DiskName, req.DiskUuid, req.ReplciaInstanceName)
+		if err != nil {
+			return nil, grpcstatus.Error(grpccodes.Internal, err.Error())
+		}
+		return &empty.Empty{}, nil
+	case rpc.DiskType_filesystem:
+		// TODO: implement filesystem disk type
+		fallthrough
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "unsupported disk type %v", req.DiskType)
+	}
+}
+
 func isSPDKTgtReady(timeout time.Duration) bool {
 	for i := 0; i < int(timeout.Seconds()); i++ {
 		conn, err := net.DialTimeout(spdkhelpertypes.DefaultJSONServerNetwork, spdkhelpertypes.DefaultUnixDomainSocketPath, 1*time.Second)
@@ -206,5 +274,13 @@ func spdkDiskToDisk(disk *spdkrpc.Disk) *rpc.Disk {
 		FreeBlocks:  disk.FreeBlocks,
 		BlockSize:   disk.BlockSize,
 		ClusterSize: disk.ClusterSize,
+	}
+}
+
+func spdkLvolToReplicaInstance(lvol *spdkrpc.Lvol) *rpc.ReplicaInstance {
+	return &rpc.ReplicaInstance{
+		Uuid:       lvol.Uuid,
+		SpecSize:   lvol.SpecSize,
+		ActualSize: lvol.ActualSize,
 	}
 }

@@ -7,12 +7,12 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/longhorn/backupstore v0.0.0-20230518134155-aa42d35366e3
-	github.com/longhorn/go-spdk-helper v0.0.0-20230516063852-65e0805ec8f4
+	github.com/longhorn/go-spdk-helper v0.0.0-20230519094506-dc2220b82e0b
 	github.com/longhorn/longhorn-engine v1.4.0-rc1.0.20230518180217-e9f40c98d84c
 	github.com/longhorn/longhorn-spdk-engine v0.0.0-20230519084201-002e3226db98
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli v1.22.12
+	github.com/sirupsen/logrus v1.9.2
+	github.com/urfave/cli v1.22.13
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.53.0
@@ -27,7 +27,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
-	github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b // indirect
+	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/slok/goresilience v0.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	k8s.io/apimachinery v0.27.1 // indirect
@@ -65,3 +65,5 @@ require (
 )
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
+
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20230519084201-002e3226db98 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20230521111841-85ca147a212a
