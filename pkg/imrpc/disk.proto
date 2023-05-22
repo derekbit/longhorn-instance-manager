@@ -9,6 +9,8 @@ service DiskService {
     rpc DiskCreate(DiskCreateRequest) returns (Disk);
     rpc DiskDelete(DiskDeleteRequest) returns (google.protobuf.Empty);
 	rpc DiskGet(DiskGetRequest) returns (Disk);
+    rpc DiskReplicaInstanceList(DiskReplicaInstanceListRequest) returns (DiskReplicaInstanceListResponse);
+    rpc DiskReplicaInstanceDelete(DiskReplicaInstanceDeleteRequest) returns (google.protobuf.Empty);
 
     rpc VersionGet(google.protobuf.Empty) returns(VersionResponse);
 }
@@ -27,6 +29,15 @@ message Disk {
 
     int64 block_size = 9;
     int64 cluster_size = 10;
+}
+
+message ReplicaInstance {
+    string name = 1;
+    string uuid = 2;
+    string disk_name = 3;
+    string disk_uuid = 4;
+    uint64 spec_size = 5;
+    uint64 actual_size = 6;
 }
 
 enum DiskType {
@@ -52,4 +63,22 @@ message DiskGetRequest {
 message DiskDeleteRequest {
     string disk_name = 1;
     string disk_uuid = 2;
+}
+
+message DiskReplicaInstanceListRequest {
+    DiskType disk_type = 1;
+
+    string disk_name = 2;
+}
+
+message DiskReplicaInstanceListResponse {
+	map<string, ReplicaInstance> replica_instances = 1;
+}
+
+message DiskReplicaInstanceDeleteRequest {
+    DiskType disk_type = 1;
+
+    string disk_name = 2;
+    string disk_uuid = 3;
+    string replcia_instance_name = 4;
 }

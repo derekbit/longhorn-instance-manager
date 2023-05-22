@@ -31,6 +31,16 @@ class DiskServiceStub(object):
         request_serializer=disk__pb2.DiskGetRequest.SerializeToString,
         response_deserializer=disk__pb2.Disk.FromString,
         )
+    self.DiskReplicaInstanceList = channel.unary_unary(
+        '/imrpc.DiskService/DiskReplicaInstanceList',
+        request_serializer=disk__pb2.DiskReplicaInstanceListRequest.SerializeToString,
+        response_deserializer=disk__pb2.DiskReplicaInstanceListResponse.FromString,
+        )
+    self.DiskReplicaInstanceDelete = channel.unary_unary(
+        '/imrpc.DiskService/DiskReplicaInstanceDelete',
+        request_serializer=disk__pb2.DiskReplicaInstanceDeleteRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
     self.VersionGet = channel.unary_unary(
         '/imrpc.DiskService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -63,6 +73,20 @@ class DiskServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def DiskReplicaInstanceList(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def DiskReplicaInstanceDelete(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def VersionGet(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -87,6 +111,16 @@ def add_DiskServiceServicer_to_server(servicer, server):
           servicer.DiskGet,
           request_deserializer=disk__pb2.DiskGetRequest.FromString,
           response_serializer=disk__pb2.Disk.SerializeToString,
+      ),
+      'DiskReplicaInstanceList': grpc.unary_unary_rpc_method_handler(
+          servicer.DiskReplicaInstanceList,
+          request_deserializer=disk__pb2.DiskReplicaInstanceListRequest.FromString,
+          response_serializer=disk__pb2.DiskReplicaInstanceListResponse.SerializeToString,
+      ),
+      'DiskReplicaInstanceDelete': grpc.unary_unary_rpc_method_handler(
+          servicer.DiskReplicaInstanceDelete,
+          request_deserializer=disk__pb2.DiskReplicaInstanceDeleteRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,

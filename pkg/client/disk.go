@@ -74,7 +74,7 @@ func NewDiskServiceClientWithTLS(serviceURL, caFile, certFile, keyFile, peerName
 
 func (c *DiskServiceClient) DiskCreate(diskType, diskName, diskPath string, blockSize int64) (*api.DiskInfo, error) {
 	if diskName == "" || diskPath == "" {
-		return nil, fmt.Errorf("failed to create disk: missing required parameter")
+		return nil, fmt.Errorf("failed to create disk: missing required parameters")
 	}
 
 	t, ok := rpc.DiskType_value[diskType]
@@ -111,8 +111,8 @@ func (c *DiskServiceClient) DiskCreate(diskType, diskName, diskPath string, bloc
 }
 
 func (c *DiskServiceClient) DiskGet(diskType, diskName, diskPath string) (*api.DiskInfo, error) {
-	if diskPath == "" {
-		return nil, fmt.Errorf("failed to get disk info: missing required parameter")
+	if diskName == "" || diskPath == "" {
+		return nil, fmt.Errorf("failed to get disk info: missing required parameters")
 	}
 
 	t, ok := rpc.DiskType_value[diskType]
@@ -149,7 +149,7 @@ func (c *DiskServiceClient) DiskGet(diskType, diskName, diskPath string) (*api.D
 
 func (c *DiskServiceClient) DiskDelete(diskName, diskUUID string) error {
 	if diskName == "" || diskUUID == "" {
-		return fmt.Errorf("failed to delete disk: missing required parameter")
+		return fmt.Errorf("failed to delete disk: missing required parameters")
 	}
 
 	client := c.getControllerServiceClient()
@@ -160,6 +160,57 @@ func (c *DiskServiceClient) DiskDelete(diskName, diskUUID string) error {
 		DiskName: diskName,
 		DiskUuid: diskUUID,
 	})
+	return err
+}
+
+func (c *DiskServiceClient) DiskReplicaInstanceList(diskType, diskName string) (map[string]*api.ReplicaInstance, error) {
+	if diskName == "" {
+		return nil, fmt.Errorf("failed to list replica instances on disk: missing required parameter")
+	}
+
+	client := c.getControllerServiceClient()
+	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
+	defer cancel()
+
+	resp, err := client.DiskReplicaInstanceList(ctx, &rpc.DiskReplicaInstanceListRequest{
+		DiskType: rpc.DiskType(rpc.DiskType_value[diskType]),
+		DiskName: diskName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	instances := map[string]*api.ReplicaInstance{}
+	for name, instance := range resp.ReplicaInstances {
+		instances[name] = &api.ReplicaInstance{
+			Name:       instance.Name,
+			UUID:       instance.Uuid,
+			DiskName:   instance.DiskName,
+			DiskUUID:   instance.DiskUuid,
+			SpecSize:   instance.SpecSize,
+			ActualSize: instance.ActualSize,
+		}
+	}
+
+	return instances, nil
+}
+
+func (c *DiskServiceClient) DiskReplicaInstanceDelete(diskType, diskName, diskUUID, replciaInstanceName string) error {
+	if diskName == "" || diskUUID == "" || replciaInstanceName == "" {
+		return fmt.Errorf("failed to delete replica instance on disk: missing required parameters")
+	}
+
+	client := c.getControllerServiceClient()
+	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
+	defer cancel()
+
+	_, err := client.DiskReplicaInstanceDelete(ctx, &rpc.DiskReplicaInstanceDeleteRequest{
+		DiskType:            rpc.DiskType(rpc.DiskType_value[diskType]),
+		DiskName:            diskName,
+		DiskUuid:            diskUUID,
+		ReplciaInstanceName: replciaInstanceName,
+	})
+
 	return err
 }
 
