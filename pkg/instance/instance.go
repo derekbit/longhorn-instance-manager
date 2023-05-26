@@ -129,6 +129,7 @@ func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Instan
 		}
 		return engineResponseToInstanceResponse(engine), nil
 	case types.InstanceTypeReplica:
+		logrus.Infof("Debug ===> req.Spec.SpdkSpecific=%+v", req.Spec.SpdkSpecific)
 		replica, err := c.ReplicaCreate(req.Spec.Name, req.Spec.SpdkSpecific.DiskName, req.Spec.SpdkSpecific.DiskUuid, req.Spec.SpdkSpecific.Size, req.Spec.SpdkSpecific.ExposeRequired)
 		if err != nil {
 			return nil, err
@@ -250,7 +251,7 @@ func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResp
 		}
 		return engineResponseToInstanceResponse(engine), nil
 	case types.InstanceTypeReplica:
-		replica, err := c.ReplicaGet(req.DiskUuid + "/" + req.Name)
+		replica, err := c.ReplicaGet(req.Name)
 		if err != nil {
 			return nil, err
 		}

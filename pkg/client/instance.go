@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/api"
@@ -113,6 +114,34 @@ func (c *InstanceServiceClient) InstanceCreate(req *InstanceCreateRequest) (*api
 	ctx, cancel := context.WithTimeout(context.Background(), types.GRPCServiceTimeout)
 	defer cancel()
 
+	var processSpecific *rpc.ProcessSpecific
+	var spdkSpecific *rpc.SpdkSpecific
+	if rpc.BackendStoreDriver(driver) == rpc.BackendStoreDriver_longhorn {
+		processSpecific = &rpc.ProcessSpecific{
+			Binary: req.Binary,
+			Args:   req.BinaryArgs,
+		}
+	} else {
+		switch req.InstanceType {
+		case types.InstanceTypeEngine:
+			spdkSpecific = &rpc.SpdkSpecific{
+				Size:              req.Size,
+				ReplicaAddressMap: req.Engine.ReplicaAddressMap,
+				Frontend:          req.Engine.Frontend,
+			}
+		case types.InstanceTypeReplica:
+			logrus.Infof("Debug ===> create replica")
+			spdkSpecific = &rpc.SpdkSpecific{
+				Size:           req.Size,
+				DiskName:       req.Replica.DiskName,
+				DiskUuid:       req.Replica.DiskUUID,
+				ExposeRequired: req.Replica.ExposeRequired,
+			}
+		default:
+			return nil, fmt.Errorf("failed to create instance: invalid instance type %v", req.InstanceType)
+		}
+	}
+
 	p, err := client.InstanceCreate(ctx, &rpc.InstanceCreateRequest{
 		Spec: &rpc.InstanceSpec{
 			BackendStoreDriver: rpc.BackendStoreDriver(driver),
@@ -122,21 +151,8 @@ func (c *InstanceServiceClient) InstanceCreate(req *InstanceCreateRequest) (*api
 			PortCount:          int32(req.PortCount),
 			PortArgs:           req.PortArgs,
 
-			ProcessSpecific: &rpc.ProcessSpecific{
-				Binary: req.Binary,
-				Args:   req.BinaryArgs,
-			},
-
-			SpdkSpecific: &rpc.SpdkSpecific{
-				Size: req.Size,
-				// Engine creation parameters
-				ReplicaAddressMap: req.Engine.ReplicaAddressMap,
-				Frontend:          req.Engine.Frontend,
-				// Replica creation parameters
-				DiskName:       req.Replica.DiskName,
-				DiskUuid:       req.Replica.DiskUUID,
-				ExposeRequired: req.Replica.ExposeRequired,
-			},
+			ProcessSpecific: processSpecific,
+			SpdkSpecific:    spdkSpecific,
 		},
 	})
 	if err != nil {
@@ -191,7 +207,6 @@ func (c *InstanceServiceClient) InstanceGet(backendStoreDriver, name, instanceTy
 		Name:               name,
 		Type:               instanceType,
 		BackendStoreDriver: rpc.BackendStoreDriver(driver),
-		DiskUuid:           diskUUID,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get instance %v", name)

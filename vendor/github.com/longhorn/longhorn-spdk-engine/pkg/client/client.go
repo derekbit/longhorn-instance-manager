@@ -64,7 +64,8 @@ func NewSPDKClient(serviceUrl string) (*SPDKClient, error) {
 
 func (c *SPDKClient) ReplicaCreate(name, lvsName, lvsUUID string, specSize uint64, exposeRequired bool) (*api.Replica, error) {
 	if name == "" || lvsName == "" || lvsUUID == "" {
-		return nil, fmt.Errorf("failed to start SPDK replica: missing required parameter")
+		return nil, fmt.Errorf("failed to start SPDK replica: missing required parameters, name=%v, lvsName=%v, lvsUUID=%v",
+			name, lvsName, lvsUUID)
 	}
 
 	client := c.getSPDKServiceClient()
