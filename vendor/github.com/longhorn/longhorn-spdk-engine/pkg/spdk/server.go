@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/longhorn/go-spdk-helper/pkg/jsonrpc"
 	spdkclient "github.com/longhorn/go-spdk-helper/pkg/spdk/client"
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
 
@@ -263,7 +265,16 @@ func (s *Server) ReplicaGet(ctx context.Context, req *spdkrpc.ReplicaGetRequest)
 	s.RUnlock()
 
 	if r == nil {
-		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %v", req.Name)
+		logrus.Warnf("cannot find replica %v in replicaMap", req.Name)
+
+		_, err := s.spdkClient.BdevLvolGet(fmt.Sprintf("%s/%s", req.DiskUuid, req.Name), 0)
+		if err != nil {
+			if jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
+				return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %v", req.Name)
+			}
+		}
+
+		return nil, grpcstatus.Errorf(grpccodes.Internal, errors.Wrapf(err, "failed to get replica %v", req.Name).Error())
 	}
 
 	return r.Get(), nil

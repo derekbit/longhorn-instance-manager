@@ -247,7 +247,7 @@ func (s *Server) spdkInstanceGet(req *rpc.InstanceGetRequest) (*rpc.InstanceResp
 		}
 		return engineResponseToInstanceResponse(engine), nil
 	case types.InstanceTypeReplica:
-		replica, err := c.ReplicaGet(req.Name)
+		replica, err := c.ReplicaGet(req.Name, req.DiskUuid)
 		if err != nil {
 			return nil, err
 		}

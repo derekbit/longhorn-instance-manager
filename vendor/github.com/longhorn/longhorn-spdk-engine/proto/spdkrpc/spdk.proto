@@ -69,6 +69,7 @@ message ReplicaDeleteRequest {
 
 message ReplicaGetRequest {
     string name = 1;
+    string disk_uuid = 2;
 }
 
 message ReplicaListResponse {
