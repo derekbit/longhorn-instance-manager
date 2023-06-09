@@ -55,7 +55,18 @@ func (p *Proxy) replicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 }
 
 func (p *Proxy) spdkReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest) (resp *empty.Empty, err error) {
-	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "spdk replica add is not implemented")
+	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	err = c.EngineReplicaAdd(req.ProxyEngineRequest.EngineName, req.ReplicaName, req.ReplicaAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &empty.Empty{}, nil
 }
 
 func (p *Proxy) ReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
