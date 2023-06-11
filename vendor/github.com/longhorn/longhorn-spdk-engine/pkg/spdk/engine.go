@@ -566,8 +566,9 @@ func (e *Engine) ReplicaAddStart(replicaName, replicaAddress string) (err error)
 
 	// TODO: For online rebuilding, the IO should be paused first
 	snapshotName := GenerateRebuildingSnapshotName()
+	e.log.Infof("Creating snapshot %s for replica %s", snapshotName, replicaName)
 	updateRequired = e.snapshotOperationWithoutLock(snapshotName, SnapshotOperationCreate)
-
+	e.log.Infof("Successfully created snapshot %s for replica %s", snapshotName, replicaName)
 	// TODO: For online rebuilding, this replica should be attached (if it's a remote one) then added to the RAID base bdev list with mode WO
 	e.ReplicaAddressMap[replicaName] = replicaAddress
 	e.ReplicaBdevNameMap[replicaName] = ""
@@ -648,6 +649,8 @@ func (e *Engine) ReplicaShallowCopy(dstReplicaName, dstReplicaAddress string) (e
 	e.Lock()
 	defer e.Unlock()
 
+	e.log.Infof("Engine %s replica %s shallow copy to %s", e.Name, dstReplicaName, dstReplicaAddress)
+
 	// Syncing with the SPDK TGT server only when the engine is running.
 	if e.State != types.InstanceStateRunning {
 		return fmt.Errorf("invalid state %v for engine %s replica %s shallow copy", e.State, e.Name, dstReplicaName)
@@ -671,10 +674,12 @@ func (e *Engine) ReplicaShallowCopy(dstReplicaName, dstReplicaAddress string) (e
 	}
 
 	// TODO: Can we share the clients in the whole server?
+	e.log.Infof("Getting service client for source replica %s", srcReplicaAddress)
 	srcReplicaServiceCli, err := GetServiceClient(srcReplicaAddress)
 	if err != nil {
 		return err
 	}
+	e.log.Infof("Getting service client for destination replica %s", dstReplicaAddress)
 	dstReplicaServiceCli, err := GetServiceClient(dstReplicaAddress)
 	if err != nil {
 		return err
@@ -709,10 +714,12 @@ func (e *Engine) ReplicaShallowCopy(dstReplicaName, dstReplicaAddress string) (e
 		}
 	}()
 
+	e.log.Infof("Starting destination replica %v for rebuilding replica", dstReplicaName)
 	if err = dstReplicaServiceCli.ReplicaRebuildingDstStart(dstReplicaName, srcReplicaIP != dstReplicaIP); err != nil {
 		return err
 	}
 
+	e.log.Infof("Starting source replica %v rebuilding replica", srcReplicaName)
 	if err = srcReplicaServiceCli.ReplicaRebuildingSrcStart(srcReplicaName, dstReplicaName, dstReplicaAddress); err != nil {
 		return err
 	}
@@ -721,10 +728,12 @@ func (e *Engine) ReplicaShallowCopy(dstReplicaName, dstReplicaAddress string) (e
 	stack := []string{ancestorSnapshotName}
 	for currentSnapshotName := stack[len(stack)-1]; len(stack) > 0; {
 		stack = stack[:len(stack)-1]
+		e.log.Infof("Doing shallow copy for snapshot %s", currentSnapshotName)
 		if err = srcReplicaServiceCli.ReplicaSnapshotShallowCopy(srcReplicaName, currentSnapshotName); err != nil {
 			e.ReplicaModeMap[dstReplicaName] = types.ModeERR
 			return err
 		}
+		e.log.Infof("Creating snapshot %s for destination replica %s", currentSnapshotName, dstReplicaName)
 		if err = dstReplicaServiceCli.ReplicaRebuildingDstSnapshotCreate(dstReplicaName, currentSnapshotName); err != nil {
 			e.ReplicaModeMap[dstReplicaName] = types.ModeERR
 			return err
@@ -743,15 +752,18 @@ func (e *Engine) ReplicaShallowCopy(dstReplicaName, dstReplicaAddress string) (e
 		}
 	}
 
+	e.log.Infof("Finishing source replica %v rebuilding replica", srcReplicaName)
 	if err = srcReplicaServiceCli.ReplicaRebuildingSrcFinish(srcReplicaName, dstReplicaName); err != nil {
 		return err
 	}
 
 	// TODO: Connect the previously found latest snapshot lvol with the head lvol chain
 	// TODO: For online rebuilding, the rebuilding lvol must be unexposed
+	e.log.Infof("Finishing destination replica %v for rebuilding replica", dstReplicaName)
 	if err = dstReplicaServiceCli.ReplicaRebuildingDstFinish(dstReplicaName, e.IP == dstReplicaIP); err != nil {
 		return err
 	}
+	e.log.Infof("Finished engine %s replica %s shallow copy", e.Name, dstReplicaName)
 	return nil
 }
 

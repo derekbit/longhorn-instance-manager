@@ -794,6 +794,8 @@ func (r *Replica) RebuildingSrcStart(spdkClient *SPDKClient, localReplicaLvsName
 func (r *Replica) RebuildingSrcFinish(spdkClient *SPDKClient, dstReplicaName string) (err error) {
 	updateRequired := false
 
+	r.log.Infof("Finishing rebuilding src for replica %s", r.Name)
+
 	r.Lock()
 	defer func() {
 		r.Unlock()
@@ -812,6 +814,7 @@ func (r *Replica) RebuildingSrcFinish(spdkClient *SPDKClient, dstReplicaName str
 	}
 
 	// TODO: After launching online rebuilding, the destination lvol name would be GetReplicaRebuildingLvolName(dstReplicaName)
+	r.log.Infof("Finishing rebuilding src for replica %s with dst replica %s type=%v", r.Name, dstReplicaName, r.rebuildingDstBdevType)
 	dstRebuildingLvolName := dstReplicaName
 	switch r.rebuildingDstBdevType {
 	case spdktypes.BdevTypeLvol:
@@ -837,6 +840,7 @@ func (r *Replica) RebuildingSrcFinish(spdkClient *SPDKClient, dstReplicaName str
 	r.rebuildingDstBdevType = ""
 	updateRequired = true
 
+	r.log.Infof("Finished rebuilding src for replica %s", r.Name)
 	return nil
 }
 

@@ -1,7 +1,5 @@
 package types
 
-import "sync"
-
 type Mode string
 
 const (
@@ -36,5 +34,3 @@ const (
 )
 
 const SPDKServicePort = 8504
-
-var spdkLock sync.Mutex

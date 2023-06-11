@@ -27,6 +27,7 @@ const (
 
 type Server struct {
 	sync.RWMutex
+	mapLock sync.RWMutex
 
 	ctx context.Context
 
@@ -106,8 +107,13 @@ func (s *Server) monitoring() {
 }
 
 func (s *Server) verify() error {
+	logrus.Infof("verify lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("verify unlock")
+	}()
+	logrus.Infof("verify got lock")
 
 	lvsList, err := s.spdkClient.BdevLvolGetLvstore("", "")
 	if err != nil {
@@ -226,20 +232,33 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "lvs name or lvs UUID are required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
-
+	logrus.Infof("ReplicaCreate lock")
+	/*
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaCreate unlock")
+		}()
+		logrus.Infof("ReplicaCreate got lock")
+	*/
+	s.mapLock.Lock()
 	if _, ok := s.replicaMap[req.Name]; !ok {
 		s.replicaMap[req.Name] = NewReplica(req.Name, req.LvsName, req.LvsUuid, req.SpecSize, s.updateChs[types.InstanceTypeReplica])
 	}
 	r := s.replicaMap[req.Name]
+	s.mapLock.Unlock()
 
 	return r.Create(s.spdkClient, req.ExposeRequired, s.portAllocator)
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRequest) (ret *empty.Empty, err error) {
+	logrus.Infof("ReplicaDelete lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("ReplicaDelete unlock")
+	}()
+	logrus.Infof("ReplicaDelete got lock")
 
 	r := s.replicaMap[req.Name]
 	defer func() {
@@ -258,9 +277,9 @@ func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRe
 }
 
 func (s *Server) ReplicaGet(ctx context.Context, req *spdkrpc.ReplicaGetRequest) (ret *spdkrpc.Replica, err error) {
-	s.RLock()
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-	s.RUnlock()
+	s.mapLock.Unlock()
 
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %v", req.Name)
@@ -320,11 +339,18 @@ func (s *Server) ReplicaSnapshotCreate(ctx context.Context, req *spdkrpc.Snapsho
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
-
+	/*
+		logrus.Infof("ReplicaSnapshotCreate lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaSnapshotCreate unlock")
+		}()
+		logrus.Infof("ReplicaSnapshotCreate got lock")
+	*/
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during snapshot create", req.Name)
 	}
@@ -337,11 +363,19 @@ func (s *Server) ReplicaSnapshotDelete(ctx context.Context, req *spdkrpc.Snapsho
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("ReplicaSnapshotDelete lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaSnapshotDelete unlock")
+		}()
+		logrus.Infof("ReplicaSnapshotDelete got lock")
+	*/
 
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during snapshot delete", req.Name)
 	}
@@ -358,14 +392,24 @@ func (s *Server) ReplicaRebuildingSrcStart(ctx context.Context, req *spdkrpc.Rep
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "dst replica name and dst rebuilding lvol address are required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("ReplicaRebuildingSrcStart lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaRebuildingSrcStart unlock")
+		}()
+		logrus.Infof("ReplicaRebuildingSrcStart got lock")
+	*/
 
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during rebuilding src start", req.Name)
 	}
+
+	logrus.Infof("Starting rebuilding src for replica %s", req.Name)
 
 	if err = r.RebuildingSrcStart(s.spdkClient, s.getLocalReplicaLvsNameMap(map[string]string{req.DstReplicaName: ""}), req.DstReplicaName, req.DstRebuildingLvolAddress); err != nil {
 		return nil, err
@@ -381,11 +425,19 @@ func (s *Server) ReplicaRebuildingSrcFinish(ctx context.Context, req *spdkrpc.Re
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "dst replica name is required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("ReplicaRebuildingSrcFinish lock")
+		s.Lock()
+		defer func() {
+			logrus.Infof("ReplicaRebuildingSrcFinish unlock")
+			s.Unlock()
+		}()
+	*/
+	logrus.Infof("ReplicaRebuildingSrcFinish got lock")
 
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during rebuilding src finish", req.Name)
 	}
@@ -401,9 +453,9 @@ func (s *Server) ReplicaSnapshotShallowCopy(ctx context.Context, req *spdkrpc.Re
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica snapshot name is required")
 	}
 
-	s.RLock()
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-	s.RUnlock()
+	s.mapLock.Unlock()
 
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during snapshot %s shallow copy", req.Name, req.SnapshotName)
@@ -421,15 +473,23 @@ func (s *Server) ReplicaRebuildingDstStart(ctx context.Context, req *spdkrpc.Rep
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name is required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
-
+	/*
+		logrus.Infof("ReplicaRebuildingDstStart lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaRebuildingDstStart unlock")
+		}()
+		logrus.Infof("ReplicaRebuildingDstStart got lock")
+	*/
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during rebuilding dst start", req.Name)
 	}
 
+	logrus.Infof("Starting rebuilding dst for replica %s", req.Name)
 	address, err := r.RebuildingDstStart(s.spdkClient, req.ExposeRequired)
 	if err != nil {
 		return nil, err
@@ -442,11 +502,19 @@ func (s *Server) ReplicaRebuildingDstFinish(ctx context.Context, req *spdkrpc.Re
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name is required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("ReplicaRebuildingDstFinish lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaRebuildingDstFinish unlock")
+		}()
+		logrus.Infof("ReplicaRebuildingDstFinish got lock")
+	*/
 
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
-
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during rebuilding dst finish", req.Name)
 	}
@@ -462,10 +530,19 @@ func (s *Server) ReplicaRebuildingDstSnapshotCreate(ctx context.Context, req *sp
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("ReplicaRebuildingDstSnapshotCreate lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("ReplicaRebuildingDstSnapshotCreate unlock")
+		}()
+		logrus.Infof("ReplicaRebuildingDstSnapshotCreate got lock")
+	*/
 
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
+	s.mapLock.Unlock()
 	if r == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find replica %s during rebuilding dst snapshot create", req.Name)
 	}
@@ -487,15 +564,24 @@ func (s *Server) EngineCreate(ctx context.Context, req *spdkrpc.EngineCreateRequ
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine frontend is required")
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("EngineCreate lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("EngineCreate unlock")
+		}()
+		logrus.Infof("EngineCreate got lock")
+	*/
 
+	s.mapLock.Lock()
 	if _, ok := s.engineMap[req.Name]; ok {
 		return nil, grpcstatus.Errorf(grpccodes.AlreadyExists, "engine %v already exists", req.Name)
 	}
 
 	s.engineMap[req.Name] = NewEngine(req.Name, req.VolumeName, req.Frontend, req.SpecSize, s.updateChs[types.InstanceTypeEngine])
 	e := s.engineMap[req.Name]
+	s.mapLock.Unlock()
 
 	return e.Create(s.spdkClient, req.ReplicaAddressMap, s.getLocalReplicaLvsNameMap(req.ReplicaAddressMap), s.portAllocator)
 }
@@ -514,8 +600,13 @@ func (s *Server) getLocalReplicaLvsNameMap(replicaMap map[string]string) (replic
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *spdkrpc.EngineDeleteRequest) (ret *empty.Empty, err error) {
+	logrus.Infof("EngineDelete lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("EngineDelete unlock")
+	}()
+	logrus.Infof("EngineDelete got lock")
 
 	e := s.engineMap[req.Name]
 	defer func() {
@@ -534,9 +625,9 @@ func (s *Server) EngineDelete(ctx context.Context, req *spdkrpc.EngineDeleteRequ
 }
 
 func (s *Server) EngineGet(ctx context.Context, req *spdkrpc.EngineGetRequest) (ret *spdkrpc.Engine, err error) {
-	s.RLock()
+	s.mapLock.Lock()
 	e := s.engineMap[req.Name]
-	s.RUnlock()
+	s.mapLock.Unlock()
 
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v", req.Name)
@@ -592,37 +683,67 @@ func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWat
 }
 
 func (s *Server) EngineReplicaAdd(ctx context.Context, req *spdkrpc.EngineReplicaAddRequest) (ret *empty.Empty, err error) {
-	s.Lock()
+	/*
+		logrus.Infof("EngineReplicaAdd lock")
+		s.Lock()
+		logrus.Infof("EngineReplicaAdd got lock")
+		e := s.engineMap[req.EngineName]
+		s.Unlock()
+		logrus.Infof("EngineReplicaAdd unlock")
+	*/
+
+	s.mapLock.Lock()
 	e := s.engineMap[req.EngineName]
-	s.Unlock()
+	s.mapLock.Unlock()
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for replica %s with address %s add", req.EngineName, req.ReplicaName, req.ReplicaAddress)
 	}
 
+	logrus.Infof("Starting to add replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	if err := e.ReplicaAddStart(req.ReplicaName, req.ReplicaAddress); err != nil {
+		e.log.WithError(err).Errorf("Failed to add replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 		return nil, err
 	}
 
 	// Cannot add a lock for this call
+	logrus.Infof("Starting to shallow copy replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	if err := e.ReplicaShallowCopy(req.ReplicaName, req.ReplicaAddress); err != nil {
+		e.log.WithError(err).Errorf("Failed to shallow copy replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 		return nil, err
 	}
 
+	logrus.Infof("EngineReplicaAdd lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("EngineReplicaAdd unlock")
+	}()
+	logrus.Infof("EngineReplicaAdd got lock")
 
+	logrus.Infof("Starting to finish adding replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	if err := e.ReplicaAddFinish(s.spdkClient, req.ReplicaName, req.ReplicaAddress, s.getLocalReplicaLvsNameMap(map[string]string{req.ReplicaName: ""})); err != nil {
+		e.log.WithError(err).Errorf("Failed to finish adding replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 		return nil, err
 	}
 
+	e.log.Infof("Successfully added replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	return &empty.Empty{}, nil
 }
 
 func (s *Server) EngineReplicaDelete(ctx context.Context, req *spdkrpc.EngineReplicaDeleteRequest) (ret *empty.Empty, err error) {
-	s.Lock()
-	defer s.Unlock()
+	/*
+		logrus.Infof("EngineReplicaDelete lock")
+		s.Lock()
+		defer func() {
+			s.Unlock()
+			logrus.Infof("EngineReplicaDelete unlock")
+		}()
+		logrus.Infof("EngineReplicaDelete got lock")
+	*/
 
+	s.mapLock.Lock()
 	e := s.engineMap[req.EngineName]
+	s.mapLock.Unlock()
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for replica %s with address %s delete", req.EngineName, req.ReplicaName, req.ReplicaAddress)
 	}
@@ -639,9 +760,9 @@ func (s *Server) EngineSnapshotCreate(ctx context.Context, req *spdkrpc.Snapshot
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine name and snapshot name are required")
 	}
 
-	s.RLock()
+	s.mapLock.Lock()
 	e := s.engineMap[req.Name]
-	s.RUnlock()
+	s.mapLock.Unlock()
 
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for snapshot creation", req.Name)
@@ -655,9 +776,9 @@ func (s *Server) EngineSnapshotDelete(ctx context.Context, req *spdkrpc.Snapshot
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine name and snapshot name are required")
 	}
 
-	s.RLock()
+	s.mapLock.Lock()
 	e := s.engineMap[req.Name]
-	s.RUnlock()
+	s.mapLock.Unlock()
 
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for snapshot deletion", req.Name)
@@ -671,22 +792,37 @@ func (s *Server) EngineSnapshotDelete(ctx context.Context, req *spdkrpc.Snapshot
 }
 
 func (s *Server) DiskCreate(ctx context.Context, req *spdkrpc.DiskCreateRequest) (ret *spdkrpc.Disk, err error) {
+	logrus.Infof("DiskCreate lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("DiskCreate unlock")
+	}()
+	logrus.Infof("DiskCreate got lock")
 
 	return svcDiskCreate(s.spdkClient, req.DiskName, req.DiskPath, req.BlockSize)
 }
 
 func (s *Server) DiskDelete(ctx context.Context, req *spdkrpc.DiskDeleteRequest) (ret *emptypb.Empty, err error) {
+	logrus.Infof("DiskDelete lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("DiskDelete unlock")
+	}()
+	logrus.Infof("DiskDelete got lock")
 
 	return svcDiskDelete(s.spdkClient, req.DiskName, req.DiskUuid)
 }
 
 func (s *Server) DiskGet(ctx context.Context, req *spdkrpc.DiskGetRequest) (ret *spdkrpc.Disk, err error) {
+	logrus.Infof("DiskGet lock")
 	s.Lock()
-	defer s.Unlock()
+	defer func() {
+		s.Unlock()
+		logrus.Infof("DiskGet unlock")
+	}()
+	logrus.Infof("DiskGet got lock")
 
 	return svcDiskGet(s.spdkClient, req.DiskName)
 }
