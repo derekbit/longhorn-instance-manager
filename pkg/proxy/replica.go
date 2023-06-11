@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"strings"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -18,13 +20,15 @@ import (
 
 func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest) (resp *empty.Empty, err error) {
 	log := logrus.WithFields(logrus.Fields{
-		"serviceURL":  req.ProxyEngineRequest.Address,
-		"restore":     req.Restore,
-		"size":        req.Size,
-		"currentSize": req.CurrentSize,
-		"fastSync":    req.FastSync,
+		"serviceURL":     req.ProxyEngineRequest.Address,
+		"replicaName":    req.ReplicaName,
+		"replicaAddress": req.ReplicaAddress,
+		"restore":        req.Restore,
+		"size":           req.Size,
+		"currentSize":    req.CurrentSize,
+		"fastSync":       req.FastSync,
 	})
-	log.Infof("Adding replica %v", req.ReplicaAddress)
+	log.Info("Adding replica")
 
 	switch req.ProxyEngineRequest.BackendStoreDriver {
 	case rpc.BackendStoreDriver_longhorn:
@@ -61,7 +65,9 @@ func (p *Proxy) spdkReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddReq
 	}
 	defer c.Close()
 
-	err = c.EngineReplicaAdd(req.ProxyEngineRequest.EngineName, req.ReplicaName, req.ReplicaAddress)
+	replicaAddress := strings.TrimPrefix(req.ReplicaAddress, "tcp://")
+
+	err = c.EngineReplicaAdd(req.ProxyEngineRequest.EngineName, req.ReplicaName, replicaAddress)
 	if err != nil {
 		return nil, err
 	}
