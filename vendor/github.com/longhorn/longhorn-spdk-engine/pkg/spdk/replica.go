@@ -42,6 +42,7 @@ type Replica struct {
 	State     types.InstanceState
 	IsExposed bool
 
+	isRebuilding   bool
 	rebuildingLvol *Lvol
 	rebuildingPort int32
 
@@ -171,18 +172,16 @@ func (r *Replica) construct(bdevLvolMap map[string]*spdktypes.BdevInfo) (err err
 	defer func() {
 		if err != nil {
 			r.State = types.InstanceStateError
-			r.log.WithError(err).Errorf("Failed to construct replica %s", r.Name)
 		}
 	}()
 
 	switch r.State {
 	case types.InstanceStatePending:
 		break
-	case types.InstanceStateStopped, types.InstanceStateRunning:
-		if r.rebuildingLvol == nil {
+	case types.InstanceStateRunning:
+		if r.isRebuilding {
 			break
 		}
-		fallthrough
 	default:
 		return fmt.Errorf("invalid state %s for replica %s construct", r.Name, r.State)
 	}
@@ -203,7 +202,9 @@ func (r *Replica) construct(bdevLvolMap map[string]*spdktypes.BdevInfo) (err err
 	r.ActiveChain = newChain
 	r.ChainLength = len(r.ActiveChain)
 	r.SnapshotMap = newSnapshotMap
-	//r.State = types.InstanceStateStopped
+	if r.State == types.InstanceStatePending {
+		r.State = types.InstanceStateStopped
+	}
 	r.log.WithField("uuid", r.UUID)
 
 	return nil
@@ -563,6 +564,7 @@ func (r *Replica) Delete(spdkClient *SPDKClient, cleanupRequired bool, superiorP
 		updateRequired = true
 	}
 	r.rebuildingLvol = nil
+	r.isRebuilding = false
 
 	if !cleanupRequired {
 		return nil
@@ -810,7 +812,7 @@ func (r *Replica) RebuildingSrcFinish(spdkClient *SPDKClient, dstReplicaName str
 	}
 
 	if r.rebuildingDstReplicaName != "" && r.rebuildingDstReplicaName != dstReplicaName {
-		return fmt.Errorf("found mismatching between the required dst replica name %s and the recorded dst replica name %s for replica %s rebuilding src finish", dstReplicaName, r.rebuildingDstReplicaName, r.Name)
+		return fmt.Errorf("found mismatching between the required dst replica name %d and the recorded dst replica name %d for replica %s rebuilding src finish", dstReplicaName, r.rebuildingDstReplicaName, r.Name)
 	}
 
 	// TODO: After launching online rebuilding, the destination lvol name would be GetReplicaRebuildingLvolName(dstReplicaName)
@@ -840,7 +842,6 @@ func (r *Replica) RebuildingSrcFinish(spdkClient *SPDKClient, dstReplicaName str
 	r.rebuildingDstBdevType = ""
 	updateRequired = true
 
-	r.log.Infof("Finished rebuilding src for replica %s", r.Name)
 	return nil
 }
 
@@ -876,7 +877,7 @@ func (r *Replica) RebuildingDstStart(spdkClient *SPDKClient, exposeRequired bool
 	if r.State != types.InstanceStateRunning {
 		return "", fmt.Errorf("invalid state %v for replica %s rebuilding start", r.State, r.Name)
 	}
-	if r.rebuildingLvol != nil {
+	if r.isRebuilding || r.rebuildingLvol != nil {
 		return "", fmt.Errorf("replica %s rebuilding is in process", r.Name)
 	}
 
@@ -917,6 +918,7 @@ func (r *Replica) RebuildingDstStart(spdkClient *SPDKClient, exposeRequired bool
 	// 	}
 	// }
 
+	r.isRebuilding = true
 	// TODO: Currently, the online rebuilding related APIs are not ready, we use the exposed head lvol for snapshot lvol rebuilding
 	// TODO: Will use r.portAllocator rather than the reserved first port for rebuilding in the future version
 	r.rebuildingLvol = r.ActiveChain[r.ChainLength-1]
@@ -948,6 +950,9 @@ func (r *Replica) RebuildingDstFinish(spdkClient *SPDKClient, unexposeRequired b
 	if r.State != types.InstanceStateRunning {
 		return fmt.Errorf("invalid state %v for replica %s rebuilding finish", r.State, r.Name)
 	}
+	if !r.isRebuilding {
+		return fmt.Errorf("replica %s is not in rebuilding", r.Name)
+	}
 	if r.rebuildingLvol == nil {
 		return fmt.Errorf("cannot find rebuilding lvol for replica %s rebuilding finish", r.Name)
 	}
@@ -958,6 +963,7 @@ func (r *Replica) RebuildingDstFinish(spdkClient *SPDKClient, unexposeRequired b
 			r.log.WithError(err).Errorf("Failed to finish rebuilding for destination replica %s", r.Name)
 			updateRequired = true
 		}
+		r.isRebuilding = false
 	}()
 
 	// TODO: For the online rebuilding, Remove the temporary rebuilding lvol and release ports for r.portAllocator
@@ -1024,8 +1030,11 @@ func (r *Replica) RebuildingDstSnapshotCreate(spdkClient *SPDKClient, snapshotNa
 		}
 	}()
 
-	if r.State != types.InstanceStateStopped && r.State != types.InstanceStateRunning {
+	if r.State != types.InstanceStateRunning {
 		return fmt.Errorf("invalid state %v for replica %s rebuilding snapshot %s creation", r.State, r.Name, snapshotName)
+	}
+	if !r.isRebuilding {
+		return fmt.Errorf("replica %s is not in rebuilding", r.Name)
 	}
 	if r.rebuildingLvol == nil || r.rebuildingPort == 0 || !r.IsExposed {
 		return fmt.Errorf("rebuilding lvol is not existed or exposed for replica %s rebuilding snapshot %s creation", r.Name, snapshotName)

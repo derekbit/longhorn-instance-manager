@@ -465,6 +465,11 @@ func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.Nv
 			return err
 		}
 		if err := initiator.LoadNVMeDeviceInfo(); err != nil {
+			if strings.Contains(err.Error(), "connecting state") ||
+				strings.Contains(err.Error(), "resetting state") {
+				e.log.WithError(err).Warnf("Ignored to validate and update engine %v, because the device is still in a transient state", e.Name)
+				return nil
+			}
 			return err
 		}
 

@@ -594,39 +594,26 @@ func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWat
 func (s *Server) EngineReplicaAdd(ctx context.Context, req *spdkrpc.EngineReplicaAddRequest) (ret *empty.Empty, err error) {
 	s.mapLock.Lock()
 	e := s.engineMap[req.EngineName]
+	localReplicaLvsNameMap := s.getLocalReplicaLvsNameMap(map[string]string{req.ReplicaName: ""})
 	s.mapLock.Unlock()
+
 	if e == nil {
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for replica %s with address %s add", req.EngineName, req.ReplicaName, req.ReplicaAddress)
 	}
 
-	logrus.Infof("Starting to add replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	if err := e.ReplicaAddStart(req.ReplicaName, req.ReplicaAddress); err != nil {
-		e.log.WithError(err).Errorf("Failed to add replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 		return nil, err
 	}
 
 	// Cannot add a lock for this call
-	logrus.Infof("Starting to shallow copy replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	if err := e.ReplicaShallowCopy(req.ReplicaName, req.ReplicaAddress); err != nil {
-		e.log.WithError(err).Errorf("Failed to shallow copy replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 		return nil, err
 	}
 
-	logrus.Infof("EngineReplicaAdd lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("EngineReplicaAdd unlock")
-	}()
-	logrus.Infof("EngineReplicaAdd got lock")
-
-	logrus.Infof("Starting to finish adding replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
-	if err := e.ReplicaAddFinish(s.spdkClient, req.ReplicaName, req.ReplicaAddress, s.getLocalReplicaLvsNameMap(map[string]string{req.ReplicaName: ""})); err != nil {
-		e.log.WithError(err).Errorf("Failed to finish adding replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
+	if err := e.ReplicaAddFinish(s.spdkClient, req.ReplicaName, req.ReplicaAddress, localReplicaLvsNameMap); err != nil {
 		return nil, err
 	}
 
-	e.log.Infof("Successfully added replica %s with address %s to engine %v", req.ReplicaName, req.ReplicaAddress, req.EngineName)
 	return &empty.Empty{}, nil
 }
 

@@ -421,7 +421,7 @@ func (c *SPDKClient) EngineReplicaDelete(engineName, replicaName, replicaAddress
 		return fmt.Errorf("failed to delete replica from SPDK engine: missing required parameter engine name")
 	}
 	if replicaName == "" && replicaAddress == "" {
-		return fmt.Errorf("failed to delete replica from SPDK engine: missing required parameter replica name or address")
+		return fmt.Errorf("failed to delete replica from SPDK engine: missing required parameter replica name or address, at least one of them is required")
 	}
 
 	client := c.getSPDKServiceClient()
