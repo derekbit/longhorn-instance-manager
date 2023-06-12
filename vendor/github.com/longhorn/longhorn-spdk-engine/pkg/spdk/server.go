@@ -232,15 +232,6 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "lvs name or lvs UUID are required")
 	}
 
-	logrus.Infof("ReplicaCreate lock")
-	/*
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaCreate unlock")
-		}()
-		logrus.Infof("ReplicaCreate got lock")
-	*/
 	s.mapLock.Lock()
 	if _, ok := s.replicaMap[req.Name]; !ok {
 		s.replicaMap[req.Name] = NewReplica(req.Name, req.LvsName, req.LvsUuid, req.SpecSize, s.updateChs[types.InstanceTypeReplica])
@@ -252,18 +243,15 @@ func (s *Server) ReplicaCreate(ctx context.Context, req *spdkrpc.ReplicaCreateRe
 }
 
 func (s *Server) ReplicaDelete(ctx context.Context, req *spdkrpc.ReplicaDeleteRequest) (ret *empty.Empty, err error) {
-	logrus.Infof("ReplicaDelete lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("ReplicaDelete unlock")
-	}()
-	logrus.Infof("ReplicaDelete got lock")
-
+	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
+	s.mapLock.Unlock()
+
 	defer func() {
 		if err == nil && req.CleanupRequired {
+			s.mapLock.Lock()
 			delete(s.replicaMap, req.Name)
+			s.mapLock.Unlock()
 		}
 	}()
 
@@ -339,15 +327,6 @@ func (s *Server) ReplicaSnapshotCreate(ctx context.Context, req *spdkrpc.Snapsho
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
 
-	/*
-		logrus.Infof("ReplicaSnapshotCreate lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaSnapshotCreate unlock")
-		}()
-		logrus.Infof("ReplicaSnapshotCreate got lock")
-	*/
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
 	s.mapLock.Unlock()
@@ -362,16 +341,6 @@ func (s *Server) ReplicaSnapshotDelete(ctx context.Context, req *spdkrpc.Snapsho
 	if req.Name == "" || req.SnapshotName == "" {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
-
-	/*
-		logrus.Infof("ReplicaSnapshotDelete lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaSnapshotDelete unlock")
-		}()
-		logrus.Infof("ReplicaSnapshotDelete got lock")
-	*/
 
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
@@ -391,16 +360,6 @@ func (s *Server) ReplicaRebuildingSrcStart(ctx context.Context, req *spdkrpc.Rep
 	if req.DstReplicaName == "" || req.DstRebuildingLvolAddress == "" {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "dst replica name and dst rebuilding lvol address are required")
 	}
-
-	/*
-		logrus.Infof("ReplicaRebuildingSrcStart lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaRebuildingSrcStart unlock")
-		}()
-		logrus.Infof("ReplicaRebuildingSrcStart got lock")
-	*/
 
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
@@ -425,14 +384,6 @@ func (s *Server) ReplicaRebuildingSrcFinish(ctx context.Context, req *spdkrpc.Re
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "dst replica name is required")
 	}
 
-	/*
-		logrus.Infof("ReplicaRebuildingSrcFinish lock")
-		s.Lock()
-		defer func() {
-			logrus.Infof("ReplicaRebuildingSrcFinish unlock")
-			s.Unlock()
-		}()
-	*/
 	logrus.Infof("ReplicaRebuildingSrcFinish got lock")
 
 	s.mapLock.Lock()
@@ -473,15 +424,6 @@ func (s *Server) ReplicaRebuildingDstStart(ctx context.Context, req *spdkrpc.Rep
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name is required")
 	}
 
-	/*
-		logrus.Infof("ReplicaRebuildingDstStart lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaRebuildingDstStart unlock")
-		}()
-		logrus.Infof("ReplicaRebuildingDstStart got lock")
-	*/
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
 	s.mapLock.Unlock()
@@ -502,16 +444,6 @@ func (s *Server) ReplicaRebuildingDstFinish(ctx context.Context, req *spdkrpc.Re
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name is required")
 	}
 
-	/*
-		logrus.Infof("ReplicaRebuildingDstFinish lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaRebuildingDstFinish unlock")
-		}()
-		logrus.Infof("ReplicaRebuildingDstFinish got lock")
-	*/
-
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
 	s.mapLock.Unlock()
@@ -529,16 +461,6 @@ func (s *Server) ReplicaRebuildingDstSnapshotCreate(ctx context.Context, req *sp
 	if req.Name == "" || req.SnapshotName == "" {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "replica name and snapshot name are required")
 	}
-
-	/*
-		logrus.Infof("ReplicaRebuildingDstSnapshotCreate lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("ReplicaRebuildingDstSnapshotCreate unlock")
-		}()
-		logrus.Infof("ReplicaRebuildingDstSnapshotCreate got lock")
-	*/
 
 	s.mapLock.Lock()
 	r := s.replicaMap[req.Name]
@@ -563,16 +485,6 @@ func (s *Server) EngineCreate(ctx context.Context, req *spdkrpc.EngineCreateRequ
 	if req.Frontend != types.FrontendSPDKTCPBlockdev && req.Frontend != types.FrontendSPDKTCPNvmf && req.Frontend != types.FrontendEmpty {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine frontend is required")
 	}
-
-	/*
-		logrus.Infof("EngineCreate lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("EngineCreate unlock")
-		}()
-		logrus.Infof("EngineCreate got lock")
-	*/
 
 	s.mapLock.Lock()
 	if _, ok := s.engineMap[req.Name]; ok {
@@ -600,18 +512,15 @@ func (s *Server) getLocalReplicaLvsNameMap(replicaMap map[string]string) (replic
 }
 
 func (s *Server) EngineDelete(ctx context.Context, req *spdkrpc.EngineDeleteRequest) (ret *empty.Empty, err error) {
-	logrus.Infof("EngineDelete lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("EngineDelete unlock")
-	}()
-	logrus.Infof("EngineDelete got lock")
-
+	s.mapLock.Lock()
 	e := s.engineMap[req.Name]
+	s.mapLock.Unlock()
+
 	defer func() {
 		if err == nil {
+			s.mapLock.Lock()
 			delete(s.engineMap, req.Name)
+			s.mapLock.Unlock()
 		}
 	}()
 
@@ -683,15 +592,6 @@ func (s *Server) EngineWatch(req *empty.Empty, srv spdkrpc.SPDKService_EngineWat
 }
 
 func (s *Server) EngineReplicaAdd(ctx context.Context, req *spdkrpc.EngineReplicaAddRequest) (ret *empty.Empty, err error) {
-	/*
-		logrus.Infof("EngineReplicaAdd lock")
-		s.Lock()
-		logrus.Infof("EngineReplicaAdd got lock")
-		e := s.engineMap[req.EngineName]
-		s.Unlock()
-		logrus.Infof("EngineReplicaAdd unlock")
-	*/
-
 	s.mapLock.Lock()
 	e := s.engineMap[req.EngineName]
 	s.mapLock.Unlock()
@@ -731,16 +631,6 @@ func (s *Server) EngineReplicaAdd(ctx context.Context, req *spdkrpc.EngineReplic
 }
 
 func (s *Server) EngineReplicaDelete(ctx context.Context, req *spdkrpc.EngineReplicaDeleteRequest) (ret *empty.Empty, err error) {
-	/*
-		logrus.Infof("EngineReplicaDelete lock")
-		s.Lock()
-		defer func() {
-			s.Unlock()
-			logrus.Infof("EngineReplicaDelete unlock")
-		}()
-		logrus.Infof("EngineReplicaDelete got lock")
-	*/
-
 	s.mapLock.Lock()
 	e := s.engineMap[req.EngineName]
 	s.mapLock.Unlock()
@@ -792,38 +682,14 @@ func (s *Server) EngineSnapshotDelete(ctx context.Context, req *spdkrpc.Snapshot
 }
 
 func (s *Server) DiskCreate(ctx context.Context, req *spdkrpc.DiskCreateRequest) (ret *spdkrpc.Disk, err error) {
-	logrus.Infof("DiskCreate lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("DiskCreate unlock")
-	}()
-	logrus.Infof("DiskCreate got lock")
-
 	return svcDiskCreate(s.spdkClient, req.DiskName, req.DiskPath, req.BlockSize)
 }
 
 func (s *Server) DiskDelete(ctx context.Context, req *spdkrpc.DiskDeleteRequest) (ret *emptypb.Empty, err error) {
-	logrus.Infof("DiskDelete lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("DiskDelete unlock")
-	}()
-	logrus.Infof("DiskDelete got lock")
-
 	return svcDiskDelete(s.spdkClient, req.DiskName, req.DiskUuid)
 }
 
 func (s *Server) DiskGet(ctx context.Context, req *spdkrpc.DiskGetRequest) (ret *spdkrpc.Disk, err error) {
-	logrus.Infof("DiskGet lock")
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		logrus.Infof("DiskGet unlock")
-	}()
-	logrus.Infof("DiskGet got lock")
-
 	return svcDiskGet(s.spdkClient, req.DiskName)
 }
 

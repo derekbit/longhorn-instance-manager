@@ -65,3 +65,5 @@ require (
 )
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
+
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20230610074502-56cfdcf0497c => github.com/shuo-wu/longhorn-spdk-engine v0.0.0-20230609135752-c9480205e313
