@@ -29,9 +29,10 @@ const (
 	hostPrefix = "/host"
 )
 
-func svcDiskCreate(spdkClient *SPDKClient, diskName, diskPath string, blockSize int64) (ret *spdkrpc.Disk, err error) {
+func svcDiskCreate(spdkClient *SPDKClient, diskName, diskUUID, diskPath string, blockSize int64) (ret *spdkrpc.Disk, err error) {
 	log := logrus.WithFields(logrus.Fields{
 		"diskName":  diskName,
+		"diskUUID":  diskUUID,
 		"diskPath":  diskPath,
 		"blockSize": blockSize,
 	})
@@ -58,7 +59,7 @@ func svcDiskCreate(spdkClient *SPDKClient, diskName, diskPath string, blockSize 
 		log.Infof("Using default block size %v", blockSize)
 	}
 
-	uuid, err := addBlockDevice(spdkClient, diskName, diskPath, blockSize)
+	uuid, err := addBlockDevice(spdkClient, diskName, diskUUID, diskPath, blockSize)
 	if err != nil {
 		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrap(err, "failed to add block device").Error())
 	}
@@ -232,9 +233,10 @@ func validateDiskCreation(spdkClient *SPDKClient, diskPath string) error {
 	return nil
 }
 
-func addBlockDevice(spdkClient *SPDKClient, diskName, diskPath string, blockSize int64) (string, error) {
+func addBlockDevice(spdkClient *SPDKClient, diskName, diskUUID, diskPath string, blockSize int64) (string, error) {
 	log := logrus.WithFields(logrus.Fields{
 		"diskName":  diskName,
+		"diskUUID":  diskUUID,
 		"diskPath":  diskPath,
 		"blockSize": blockSize,
 	})
@@ -266,15 +268,23 @@ func addBlockDevice(spdkClient *SPDKClient, diskName, diskPath string, blockSize
 			return lvstore.UUID, nil
 		}
 
-		log.Infof("Renaming the existing lvstore %v to %v", lvstore.Name, lvstoreName)
-		renamed, err := spdkClient.BdevLvolRenameLvstore(lvstore.Name, lvstoreName)
-		if err != nil {
-			return "", errors.Wrapf(err, "failed to rename lvstore from %v to %v", lvstore.Name, lvstoreName)
+		// Rename the existing lvstore to the name of the aio bdev
+		if diskUUID == lvstore.UUID {
+			log.Infof("Renaming the existing lvstore %v to %v", lvstore.Name, lvstoreName)
+			renamed, err := spdkClient.BdevLvolRenameLvstore(lvstore.Name, lvstoreName)
+			if err != nil {
+				return "", errors.Wrapf(err, "failed to rename lvstore from %v to %v", lvstore.Name, lvstoreName)
+			}
+			if !renamed {
+				return "", fmt.Errorf("failed to rename lvstore from %v to %v", lvstore.Name, lvstoreName)
+			}
+			return lvstore.UUID, nil
 		}
-		if !renamed {
-			return "", fmt.Errorf("failed to rename lvstore from %v to %v", lvstore.Name, lvstoreName)
-		}
-		return lvstore.UUID, nil
+	}
+
+	// The lvstore should be created before, but it cannot be found now.
+	if diskUUID != "" {
+		return "", grpcstatus.Error(grpccodes.NotFound, fmt.Sprintf("lvstore with UUID %v not found", diskUUID))
 	}
 
 	return spdkClient.BdevLvolCreateLvstore(lvstoreName, diskName, defaultClusterSize)
