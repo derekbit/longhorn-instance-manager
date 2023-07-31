@@ -311,10 +311,32 @@ func (s *Server) spdkInstanceList(instances map[string]*rpc.InstanceResponse) er
 	if err != nil {
 		return err
 	}
-	for _, engine := range engines {
-		instances[engine.Name] = engineResponseToInstanceResponse(engine)
+	for name, engine := range engines {
+		instances[name] = engineResponseToInstanceResponse(engine)
 	}
 	return nil
+}
+
+func (s *Server) InstanceReplaceStart(ctx context.Context, req *rpc.InstanceReplaceStartRequest) (*empty.Empty, error) {
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create SPDK client").Error())
+	}
+	defer c.Close()
+
+	err = c.EngineReplaceStart(req.Name)
+	return &empty.Empty{}, err
+}
+
+func (s *Server) InstanceReplaceFinish(ctx context.Context, req *rpc.InstanceReplaceFinishRequest) (*empty.Empty, error) {
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create SPDK client").Error())
+	}
+	defer c.Close()
+
+	err = c.EngineReplaceFinish(req.Name)
+	return &empty.Empty{}, err
 }
 
 func (s *Server) InstanceReplace(ctx context.Context, req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
@@ -355,7 +377,21 @@ func (s *Server) processInstanceReplace(req *rpc.InstanceReplaceRequest) (*rpc.I
 }
 
 func (s *Server) spdkInstanceReplace(req *rpc.InstanceReplaceRequest) (*rpc.InstanceResponse, error) {
-	return nil, grpcstatus.Error(grpccodes.Unimplemented, "spdk instance replace is not supported")
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create SPDK client").Error())
+	}
+	defer c.Close()
+
+	if req.Spec.Type != types.InstanceTypeEngine {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "only engine instance can be replaced")
+	}
+
+	engine, err := c.EngineReplace(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend, req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount)
+	if err != nil {
+		return nil, err
+	}
+	return engineResponseToInstanceResponse(engine), nil
 }
 
 func (s *Server) InstanceLog(req *rpc.InstanceLogRequest, srv rpc.InstanceService_InstanceLogServer) error {

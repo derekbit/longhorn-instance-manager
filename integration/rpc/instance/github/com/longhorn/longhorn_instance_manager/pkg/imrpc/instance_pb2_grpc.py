@@ -46,10 +46,20 @@ class InstanceServiceStub(object):
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
+    self.InstanceReplaceStart = channel.unary_unary(
+        '/imrpc.InstanceService/InstanceReplaceStart',
+        request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceStartRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
     self.InstanceReplace = channel.unary_unary(
         '/imrpc.InstanceService/InstanceReplace',
         request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceRequest.SerializeToString,
         response_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResponse.FromString,
+        )
+    self.InstanceReplaceFinish = channel.unary_unary(
+        '/imrpc.InstanceService/InstanceReplaceFinish',
+        request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceFinishRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
     self.VersionGet = channel.unary_unary(
         '/imrpc.InstanceService/VersionGet',
@@ -104,7 +114,21 @@ class InstanceServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def InstanceReplaceStart(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def InstanceReplace(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def InstanceReplaceFinish(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -151,10 +175,20 @@ def add_InstanceServiceServicer_to_server(servicer, server):
           request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
           response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
+      'InstanceReplaceStart': grpc.unary_unary_rpc_method_handler(
+          servicer.InstanceReplaceStart,
+          request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceStartRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
       'InstanceReplace': grpc.unary_unary_rpc_method_handler(
           servicer.InstanceReplace,
           request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceRequest.FromString,
           response_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResponse.SerializeToString,
+      ),
+      'InstanceReplaceFinish': grpc.unary_unary_rpc_method_handler(
+          servicer.InstanceReplaceFinish,
+          request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceFinishRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,
