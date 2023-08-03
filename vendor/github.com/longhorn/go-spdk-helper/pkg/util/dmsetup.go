@@ -2,6 +2,8 @@ package util
 
 import (
 	"regexp"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -18,15 +20,32 @@ func DmsetupCreate(dmDeviceName, table string, executor Executor) error {
 
 func DmsetupSuspend(dmDeviceName string, executor Executor) error {
 	opts := []string{
-		"suspend", dmDeviceName,
+		"suspend", "--nolockfs", dmDeviceName,
 	}
 	_, err := executor.Execute(dmsetupBinary, opts)
 	return err
 }
 
+func DmsetupWipeTable(dmDeviceName string, executor Executor) error {
+	opts := []string{
+		"wipe_table", dmDeviceName,
+	}
+	_, err := executor.Execute(dmsetupBinary, opts)
+	return err
+}
+
+func DmsetupInfo(dmDeviceName string, executor Executor) error {
+	opts := []string{
+		"info", dmDeviceName,
+	}
+	output, err := executor.Execute(dmsetupBinary, opts)
+	logrus.Infof("Debug ===> output=%s", output)
+	return err
+}
+
 func DmsetupResume(dmDeviceName string, executor Executor) error {
 	opts := []string{
-		"resume", dmDeviceName,
+		"resume", "--nolockfs", dmDeviceName,
 	}
 	_, err := executor.Execute(dmsetupBinary, opts)
 	return err

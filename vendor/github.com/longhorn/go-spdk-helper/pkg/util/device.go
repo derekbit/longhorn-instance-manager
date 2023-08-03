@@ -179,6 +179,12 @@ func SuspendDeviceMapperDevice(dmDeviceName string, executor Executor) error {
 	return DmsetupSuspend(dmDeviceName, executor)
 }
 
+func WipeDeviceMapperDeviceTable(dmDeviceName string, executor Executor) error {
+	logrus.Infof("Wiping device mapper device %s table", dmDeviceName)
+
+	return DmsetupWipeTable(dmDeviceName, executor)
+}
+
 func ResumeDeviceMapperDevice(dmDeviceName string, executor Executor) error {
 	logrus.Infof("Resuming device mapper device %s", dmDeviceName)
 
@@ -206,6 +212,25 @@ func ReloadDeviceMapperDevice(dmDeviceName string, dev *KernelDevice, executor E
 	logrus.Infof("Reloading device mapper device %s with table %s", dmDeviceName, table)
 
 	return DmsetupReload(dmDeviceName, table, executor)
+}
+
+func FlushNVMeDevice(dmDeviceName string, executor Executor) error {
+	depDevices, err := DmsetupDeps(dmDeviceName, executor)
+	if err != nil {
+		return err
+	}
+
+	for _, depDevice := range depDevices {
+		opts := []string{
+			"flush", fmt.Sprintf("/dev/%s", depDevice),
+		}
+
+		_, err := executor.Execute("nvme", opts)
+		if err != nil {
+			logrus.WithError(err).Warnf("Failed to flush buffers for device %s", depDevice)
+		}
+	}
+	return nil
 }
 
 func CreateDeviceMapperDevice(dmDeviceName string, dev *KernelDevice, executor Executor) error {

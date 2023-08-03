@@ -88,6 +88,10 @@ func (i *Initiator) Suspend() error {
 		return errors.Wrapf(err, "failed to suspend device mapper device for NVMe initiator %s", i.Name)
 	}
 
+	if err := util.FlushNVMeDevice(i.Name, i.executor); err != nil {
+		return errors.Wrapf(err, "failed to flush NVMe device for NVMe initiator %s", i.Name)
+	}
+
 	return nil
 }
 
@@ -204,6 +208,7 @@ func (i *Initiator) stopWithoutLock(onlyDisconnectTarget bool) error {
 		}
 	}
 
+	logrus.Infof("Debug =====> disconnect target %s", i.SubsystemNQN)
 	if err := DisconnectTarget(i.SubsystemNQN, i.executor); err != nil {
 		return errors.Wrapf(err, "failed to logout target")
 	}
