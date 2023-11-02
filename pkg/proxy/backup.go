@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -18,8 +19,10 @@ import (
 	esync "github.com/longhorn/longhorn-engine/pkg/sync"
 	etypes "github.com/longhorn/longhorn-engine/pkg/types"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
 
 func (p *Proxy) SnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
@@ -31,17 +34,6 @@ func (p *Proxy) SnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBacku
 	})
 	log.Infof("Backing up snapshot %v to backup %v", req.SnapshotName, req.BackupName)
 
-	switch req.ProxyEngineRequest.BackendStoreDriver {
-	case rpc.BackendStoreDriver_v1:
-		return p.snapshotBackup(ctx, req)
-	case rpc.BackendStoreDriver_v2:
-		return p.spdkSnapshotBackup(ctx, req)
-	default:
-		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
-	}
-}
-
-func (p *Proxy) snapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
 	for _, env := range req.Envs {
 		part := strings.SplitN(env, "=", 2)
 		if len(part) < 2 {
@@ -63,8 +55,18 @@ func (p *Proxy) snapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBacku
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address, req.ProxyEngineRequest.VolumeName,
-		req.ProxyEngineRequest.EngineName)
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_v1:
+		return p.snapshotBackup(ctx, req, credential, labels)
+	case rpc.BackendStoreDriver_v2:
+		return p.spdkSnapshotBackup(ctx, req, credential, labels)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) snapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest, credential map[string]string, labels []string) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
+	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address, req.ProxyEngineRequest.VolumeName, req.ProxyEngineRequest.EngineName)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +94,46 @@ func (p *Proxy) snapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBacku
 	}, nil
 }
 
-func (p *Proxy) spdkSnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
-	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+func (p *Proxy) spdkSnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBackupRequest, credential map[string]string, labels []string) (resp *rpc.EngineSnapshotBackupProxyResponse, err error) {
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	snapshotName := req.SnapshotName
+	if snapshotName == "" {
+		snapshotName = util.UUID()
+	}
+
+	recv, err := c.EngineBackupCreate(&spdkclient.BackupCreateRequest{
+		BackupName:           req.BackupName,
+		SnapshotName:         snapshotName,
+		VolumeName:           req.ProxyEngineRequest.VolumeName,
+		EngineName:           req.ProxyEngineRequest.EngineName,
+		BackupTarget:         req.BackupTarget,
+		StorageClassName:     req.StorageClassName,
+		BackingImageName:     req.BackingImageName,
+		BackingImageChecksum: req.BackingImageChecksum,
+		CompressionMethod:    req.CompressionMethod,
+		ConcurrentLimit:      req.ConcurrentLimit,
+		Labels:               labels,
+		Credential:           credential,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &rpc.EngineSnapshotBackupProxyResponse{
+		BackupId:      recv.Backup,
+		Replica:       recv.ReplicaAddress,
+		IsIncremental: recv.IsIncremental,
+	}, nil
 }
 
 func (p *Proxy) SnapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapshotBackupStatusRequest) (resp *rpc.EngineSnapshotBackupStatusProxyResponse, err error) {
@@ -166,7 +206,7 @@ func (p *Proxy) snapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapsho
 		}
 		mode := eptypes.GRPCReplicaModeToReplicaMode(r.Mode)
 		if mode != etypes.RW {
-			return nil, errors.Errorf("failed to get %v backup status on unknown replica %s", req.BackupName, replicaAddress)
+			return nil, errors.Errorf("failed to get backup %v status on unknown replica %s", req.BackupName, replicaAddress)
 		}
 	}
 
@@ -193,7 +233,44 @@ func (p *Proxy) snapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapsho
 }
 
 func (p *Proxy) spdkSnapshotBackupStatus(ctx context.Context, req *rpc.EngineSnapshotBackupStatusRequest) (resp *rpc.EngineSnapshotBackupStatusProxyResponse, err error) {
-	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	status, err := c.EngineBackupStatus(req.BackupName, req.ProxyEngineRequest.EngineName, req.ReplicaAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rpc.EngineSnapshotBackupStatusProxyResponse{
+		BackupUrl:      status.BackupUrl,
+		Error:          status.Error,
+		Progress:       int32(status.Progress),
+		SnapshotName:   status.SnapshotName,
+		State:          status.State,
+		ReplicaAddress: status.ReplicaAddress,
+	}, nil
+}
+
+func setEnv(envs []string) error {
+	for _, env := range envs {
+		part := strings.SplitN(env, "=", 2)
+		if len(part) < 2 {
+			continue
+		}
+
+		if err := os.Setenv(part[0], part[1]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *Proxy) BackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
@@ -205,33 +282,9 @@ func (p *Proxy) BackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreR
 	})
 	log.Infof("Restoring backup %v to %v", req.Url, req.VolumeName)
 
-	switch req.ProxyEngineRequest.BackendStoreDriver {
-	case rpc.BackendStoreDriver_v1:
-		return p.backupRestore(ctx, req)
-	case rpc.BackendStoreDriver_v2:
-		return p.spdkBackupRestore(ctx, req)
-	default:
-		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
-	}
-}
-
-func (p *Proxy) backupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
-	log := logrus.WithFields(logrus.Fields{
-		"serviceURL":         req.ProxyEngineRequest.Address,
-		"engineName":         req.ProxyEngineRequest.EngineName,
-		"volumeName":         req.ProxyEngineRequest.VolumeName,
-		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
-	})
-
-	for _, env := range req.Envs {
-		part := strings.SplitN(env, "=", 2)
-		if len(part) < 2 {
-			continue
-		}
-
-		if err := os.Setenv(part[0], part[1]); err != nil {
-			return nil, err
-		}
+	err = setEnv(req.Envs)
+	if err != nil {
+		return nil, err
 	}
 
 	credential, err := butil.GetBackupCredential(req.Target)
@@ -239,16 +292,18 @@ func (p *Proxy) backupRestore(ctx context.Context, req *rpc.EngineBackupRestoreR
 		return nil, err
 	}
 
-	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address, req.ProxyEngineRequest.VolumeName,
-		req.ProxyEngineRequest.EngineName)
-	if err != nil {
-		return nil, err
-	}
-
 	resp = &rpc.EngineBackupRestoreProxyResponse{
 		TaskError: []byte{},
 	}
-	err = task.RestoreBackup(req.Url, credential, int(req.ConcurrentLimit))
+
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_v1:
+		err = p.backupRestore(ctx, req, credential)
+	case rpc.BackendStoreDriver_v2:
+		err = p.spdkBackupRestore(ctx, req, credential)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
 	if err != nil {
 		errInfo, jsonErr := json.Marshal(err)
 		if jsonErr != nil {
@@ -265,8 +320,70 @@ func (p *Proxy) backupRestore(ctx context.Context, req *rpc.EngineBackupRestoreR
 	return resp, nil
 }
 
-func (p *Proxy) spdkBackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest) (resp *rpc.EngineBackupRestoreProxyResponse, err error) {
-	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+func (p *Proxy) backupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest, credential map[string]string) error {
+	task, err := esync.NewTask(ctx, req.ProxyEngineRequest.Address, req.ProxyEngineRequest.VolumeName,
+		req.ProxyEngineRequest.EngineName)
+	if err != nil {
+		return err
+	}
+	return task.RestoreBackup(req.Url, credential, int(req.ConcurrentLimit))
+}
+
+func (p *Proxy) spdkBackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreRequest, credential map[string]string) error {
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	return c.EngineBackupRestore(&spdkclient.BackupRestoreRequest{
+		BackupUrl:       req.Url,
+		EngineName:      req.ProxyEngineRequest.EngineName,
+		Credential:      credential,
+		ConcurrentLimit: req.ConcurrentLimit,
+	})
+}
+
+func (p *Proxy) BackupRestoreFinish(ctx context.Context, req *rpc.EngineBackupRestoreFinishRequest) (resp *empty.Empty, err error) {
+	log := logrus.WithFields(logrus.Fields{
+		"serviceURL":         req.ProxyEngineRequest.Address,
+		"engineName":         req.ProxyEngineRequest.EngineName,
+		"volumeName":         req.ProxyEngineRequest.VolumeName,
+		"backendStoreDriver": req.ProxyEngineRequest.BackendStoreDriver,
+	})
+	log.Infof("Finishing backup restoration")
+
+	switch req.ProxyEngineRequest.BackendStoreDriver {
+	case rpc.BackendStoreDriver_v1:
+		return &empty.Empty{}, nil
+	case rpc.BackendStoreDriver_v2:
+		if err := p.spdkBackupRestoreFinish(ctx, req); err != nil {
+			return nil, err
+		}
+		return &empty.Empty{}, nil
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.ProxyEngineRequest.BackendStoreDriver)
+	}
+}
+
+func (p *Proxy) spdkBackupRestoreFinish(ctx context.Context, req *rpc.EngineBackupRestoreFinishRequest) error {
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	return c.EngineBackupRestoreFinish(req.ProxyEngineRequest.EngineName)
 }
 
 func (p *Proxy) BackupRestoreStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineBackupRestoreStatusProxyResponse, err error) {
@@ -319,8 +436,37 @@ func (p *Proxy) backupRestoreStatus(ctx context.Context, req *rpc.ProxyEngineReq
 }
 
 func (p *Proxy) spdkBackupRestoreStatus(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineBackupRestoreStatusProxyResponse, err error) {
-	/* TODO: implement this */
-	return &rpc.EngineBackupRestoreStatusProxyResponse{
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	recv, err := c.EngineRestoreStatus(req.EngineName)
+	if err != nil {
+		return nil, err
+	}
+
+	resp = &rpc.EngineBackupRestoreStatusProxyResponse{
 		Status: map[string]*rpc.EngineBackupRestoreStatus{},
-	}, nil
+	}
+	for address, status := range recv.Status {
+		replicaURL := "tcp://" + address
+		resp.Status[replicaURL] = &rpc.EngineBackupRestoreStatus{
+			IsRestoring:            status.IsRestoring,
+			LastRestored:           status.LastRestored,
+			CurrentRestoringBackup: status.CurrentRestoringBackup,
+			Progress:               int32(status.Progress),
+			Error:                  status.Error,
+			State:                  status.State,
+			BackupUrl:              status.BackupUrl,
+			Filename:               status.DestFileName,
+		}
+	}
+	return resp, nil
 }

@@ -16,6 +16,7 @@ import (
 	spdktypes "github.com/longhorn/longhorn-spdk-engine/pkg/types"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
 
 func (p *Proxy) ReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest) (resp *empty.Empty, err error) {
@@ -63,7 +64,12 @@ func (p *Proxy) replicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest
 }
 
 func (p *Proxy) spdkReplicaAdd(ctx context.Context, req *rpc.EngineReplicaAddRequest) (resp *empty.Empty, err error) {
-	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +147,12 @@ func replicaModeToGRPCReplicaMode(mode spdktypes.Mode) eptypes.ReplicaMode {
 }
 
 func (p *Proxy) spdkReplicaList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineReplicaListProxyResponse, err error) {
-	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +294,12 @@ func (p *Proxy) replicaDelete(ctx context.Context, req *rpc.EngineReplicaRemoveR
 }
 
 func (p *Proxy) spdkReplicaDelete(ctx context.Context, req *rpc.EngineReplicaRemoveRequest) error {
-	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
 	if err != nil {
 		return err
 	}

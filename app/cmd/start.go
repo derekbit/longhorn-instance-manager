@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -129,10 +128,15 @@ func start(c *cli.Context) (err error) {
 
 	shutdownCh := make(chan error)
 
-	processManagerServiceAddress, proxyServiceAddress, diskServiceAddress, instanceServiceAddress, spdkServiceAddress, err := getServiceAddresses(listen)
+	host, port, err := util.SplitHostPort(listen)
 	if err != nil {
 		return err
 	}
+	processManagerServiceAddress := util.GetServiceAddress(host, util.GetProcessManagerServicePort(port))
+	proxyServiceAddress := util.GetServiceAddress(host, util.GetProxyServicePort(port))
+	diskServiceAddress := util.GetServiceAddress(host, util.GetDiskServicePort(port))
+	instanceServiceAddress := util.GetServiceAddress(host, util.GetInstanceServicePort(port))
+	spdkServiceAddress := util.GetServiceAddress(host, util.GetSpdkServicePort(port))
 
 	// Start disk server
 	diskGRPCServer, diskGRPCListener, err := setupDiskGRPCServer(diskServiceAddress, spdkServiceAddress, spdkEnabled, shutdownCh)
@@ -219,25 +223,6 @@ func start(c *cli.Context) (err error) {
 	return <-shutdownCh
 }
 
-func getServiceAddresses(listen string) (processManagerServiceAddress, proxyServiceAddress, diskServiceAddress, instanceServiceAddress, spdkerviceAddress string, err error) {
-	host, port, err := net.SplitHostPort(listen)
-	if err != nil {
-		return "", "", "", "", "", err
-	}
-
-	intPort, err := strconv.Atoi(port)
-	if err != nil {
-		return "", "", "", "", "", err
-	}
-
-	return net.JoinHostPort(host, strconv.Itoa(intPort)),
-		net.JoinHostPort(host, strconv.Itoa(intPort+1)),
-		net.JoinHostPort(host, strconv.Itoa(intPort+2)),
-		net.JoinHostPort(host, strconv.Itoa(intPort+3)),
-		net.JoinHostPort(host, strconv.Itoa(intPort+4)),
-		nil
-}
-
 func setupDiskGRPCServer(listen, spdkServiceAddress string, spdkEnabled bool, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
 	srv, err := disk.NewServer(spdkEnabled, spdkServiceAddress, shutdownCh)
 	if err != nil {
@@ -290,7 +275,7 @@ func setupSPDKGRPCServer(portRange, listen string, shutdownCh chan error) (*grpc
 
 func setupProxyGRPCServer(logsDir, listen, diskServiceAddress, spdkServiceAddress string, tlsConfig *tls.Config, shutdownCh chan error) (*grpc.Server, net.Listener, error) {
 	// TODO: skip proxy for replica instance manager pod
-	srv, err := proxy.NewProxy(logsDir, diskServiceAddress, spdkServiceAddress, shutdownCh)
+	srv, err := proxy.NewProxy(logsDir, listen, diskServiceAddress, spdkServiceAddress, shutdownCh)
 	if err != nil {
 		return nil, nil, err
 	}

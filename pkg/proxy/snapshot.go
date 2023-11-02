@@ -1,6 +1,10 @@
 package proxy
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -10,8 +14,11 @@ import (
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	esync "github.com/longhorn/longhorn-engine/pkg/sync"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
+	"github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
 
 func (p *Proxy) VolumeSnapshot(ctx context.Context, req *rpc.EngineVolumeSnapshotRequest) (resp *rpc.EngineVolumeSnapshotProxyResponse, err error) {
@@ -54,7 +61,31 @@ func (p *Proxy) volumeSnapshot(ctx context.Context, req *rpc.EngineVolumeSnapsho
 }
 
 func (p *Proxy) spdkVolumeSnapshot(ctx context.Context, req *rpc.EngineVolumeSnapshotRequest) (resp *rpc.EngineVolumeSnapshotProxyResponse, err error) {
-	return nil, grpcstatus.Errorf(grpccodes.Unimplemented, "not implemented")
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.ProxyEngineRequest.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	snapshotName := req.SnapshotVolume.Name
+	if snapshotName == "" {
+		snapshotName = util.UUID()
+	}
+
+	_, err = c.EngineSnapshotCreate(req.ProxyEngineRequest.EngineName, snapshotName)
+	if err != nil {
+		return nil, err
+	}
+	return &rpc.EngineVolumeSnapshotProxyResponse{
+		Snapshot: &eptypes.VolumeSnapshotReply{
+			Name: snapshotName,
+		},
+	}, nil
 }
 
 func (p *Proxy) SnapshotList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotListProxyResponse, err error) {
@@ -113,10 +144,79 @@ func (p *Proxy) snapshotList(ctx context.Context, req *rpc.ProxyEngineRequest) (
 }
 
 func (p *Proxy) spdkSnapshotList(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineSnapshotListProxyResponse, err error) {
-	/* TODO: implement this */
-	return &rpc.EngineSnapshotListProxyResponse{
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	recv, err := c.EngineReplicaList(req.EngineName)
+	if err != nil {
+		return nil, err
+	}
+
+	var replica *spdkrpc.Replica
+	for _, r := range recv.Replicas {
+		replica = r
+		break
+	}
+
+	if replica == nil {
+		return nil, fmt.Errorf("failed to find a RW replica for engine %v", req.EngineName)
+	}
+
+	resp = &rpc.EngineSnapshotListProxyResponse{
 		Disks: map[string]*rpc.EngineSnapshotDiskInfo{},
-	}, nil
+	}
+
+	for name, snapshot := range replica.Snapshots {
+		parentUUID := snapshot.Parent
+		if snapshot.Parent != "" {
+			parentUUID, err = GetSnapshotNameFromReplicaSnapshotLvolName(snapshot.Parent)
+			if err != nil {
+				parentUUID = snapshot.Parent
+			}
+		}
+
+		childrenUUID := map[string]bool{}
+		for child, value := range snapshot.Children {
+			childUUID := child
+			if child != "" {
+				childUUID, err = GetSnapshotNameFromReplicaSnapshotLvolName(child)
+				if err != nil {
+					childUUID = "volume-head"
+				}
+			}
+			childrenUUID[childUUID] = value
+		}
+
+		resp.Disks[name] = &rpc.EngineSnapshotDiskInfo{
+			Name:        name,
+			Parent:      parentUUID,
+			Children:    childrenUUID,
+			Removed:     false,
+			UserCreated: true,
+			Created:     snapshot.CreationTime,
+			Size:        strconv.FormatUint(snapshot.SpecSize, 10),
+			Labels:      map[string]string{},
+		}
+	}
+
+	return resp, nil
+}
+
+func GetSnapshotNameFromReplicaSnapshotLvolName(input string) (string, error) {
+	re := regexp.MustCompile(`[a-zA-Z0-9_.-]+-r-[a-zA-Z0-9]{8}-snap-([a-zA-Z0-9-]+)$`)
+	match := re.FindStringSubmatch(input)
+	if len(match) < 2 {
+		return "", fmt.Errorf("no matching pattern found in the input string")
+	}
+	return match[1], nil
 }
 
 func (p *Proxy) SnapshotClone(ctx context.Context, req *rpc.EngineSnapshotCloneRequest) (resp *empty.Empty, err error) {

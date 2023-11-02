@@ -12,6 +12,7 @@ import (
 	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
 
 	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
 
 func (p *Proxy) VolumeGet(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineVolumeGetProxyResponse, err error) {
@@ -62,7 +63,12 @@ func (p *Proxy) volumeGet(ctx context.Context, req *rpc.ProxyEngineRequest) (res
 }
 
 func (p *Proxy) spdkVolumeGet(ctx context.Context, req *rpc.ProxyEngineRequest) (resp *rpc.EngineVolumeGetProxyResponse, err error) {
-	c, err := spdkclient.NewSPDKClient(p.spdkServiceAddress)
+	spdkServiceAddress, err := util.GetSpdkServiceAddressFromEngineAddress(req.Address, p.spdkServicePort)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := spdkclient.NewSPDKClient(spdkServiceAddress)
 	if err != nil {
 		return nil, err
 	}
