@@ -1,6 +1,6 @@
 module github.com/longhorn/longhorn-instance-manager
 
-go 1.20
+go 1.21
 
 require (
 	github.com/RoaringBitmap/roaring v1.2.3
@@ -128,4 +128,4 @@ require (
 
 replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
 
-replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20231005170812-e9b634e07e47 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231101113052-2fececb8f42f
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20231005170812-e9b634e07e47 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231101114544-5ad57a021717
