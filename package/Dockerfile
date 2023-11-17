@@ -76,20 +76,22 @@ ARG ARCH=amd64
 
 RUN zypper -n addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/SLE_15/system:snappy.repo && \
     zypper -n addrepo --refresh https://download.opensuse.org/repositories/network:/utilities/SLE_15_SP4/network:utilities.repo && \
-    zypper -n addrepo --refresh https://download.opensuse.org/repositories/devel:libraries:c_c++/15.4/devel:libraries:c_c++.repo && \
-    zypper -n addrepo --refresh https://download.opensuse.org/repositories/devel:languages:python:Factory/15.4/devel:languages:python:Factory.repo && \
+    zypper -n addrepo --refresh https://download.opensuse.org/repositories/devel:libraries:c_c++/15.5/devel:libraries:c_c++.repo && \
+    zypper -n addrepo --refresh https://download.opensuse.org/repositories/devel:languages:python:Factory/15.5/devel:languages:python:Factory.repo && \
     zypper -n addrepo --refresh https://download.opensuse.org/repositories/devel:languages:python:backports/SLE_15/devel:languages:python:backports.repo && \
     zypper --gpg-auto-import-keys ref
 
-RUN zypper -n install nfs-client nfs4-acl-tools cifs-utils libaio1 sg3_utils \
-    iputils iproute2 qemu-tools e2fsprogs util-linux-systemd && \
+
+
+RUN zypper -n install nfs-client nfs4-acl-tools cifs-utils sg3_utils \
+    iputils iproute2 qemu-tools e2fsprogs util-linux-systemd python3-pyelftools libcmocka-devel&& \
     rm -rf /var/cache/zypp/*
 
 # Install SPDK dependencies
 COPY --from=builder /usr/src/spdk/scripts /spdk/
 RUN if [ "${ARCH}" == "amd64" ]; then \
         sh /spdk/pkgdep.sh; \
-        rm -rf /tmp/spdk; \
+        rm -rf /spdk; \
     fi
 
 # Copy pre-built binaries from builder
