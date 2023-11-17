@@ -82,7 +82,7 @@ RUN zypper -n addrepo --refresh https://download.opensuse.org/repositories/syste
     zypper --gpg-auto-import-keys ref
 
 RUN zypper -n install nfs-client nfs4-acl-tools cifs-utils libaio1 sg3_utils \
-    iputils iproute2 qemu-tools e2fsprogs util-linux-systemd python3 && \
+    iputils iproute2 qemu-tools e2fsprogs util-linux-systemd && \
     rm -rf /var/cache/zypp/*
 
 # Install SPDK dependencies
