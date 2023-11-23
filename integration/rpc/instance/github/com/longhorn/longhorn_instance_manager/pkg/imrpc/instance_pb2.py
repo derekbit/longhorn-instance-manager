@@ -23,7 +23,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='imrpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\nFgithub.com/longhorn/longhorn-instance-manager/pkg/imrpc/instance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x44github.com/longhorn/longhorn-instance-manager/pkg/imrpc/common.proto\x1a\x43github.com/longhorn/longhorn-instance-manager/pkg/imrpc/imrpc.proto\"3\n\x13ProcessInstanceSpec\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xf8\x01\n\x10SpdkInstanceSpec\x12K\n\x13replica_address_map\x18\x01 \x03(\x0b\x32..imrpc.SpdkInstanceSpec.ReplicaAddressMapEntry\x12\x11\n\tdisk_name\x18\x02 \x01(\t\x12\x11\n\tdisk_uuid\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x04\x12\x17\n\x0f\x65xpose_required\x18\x05 \x01(\x08\x12\x10\n\x08\x66rontend\x18\x06 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x8f\x02\n\x0cInstanceSpec\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x13\n\x0bvolume_name\x18\x04 \x01(\t\x12\x12\n\nport_count\x18\x05 \x01(\x05\x12\x11\n\tport_args\x18\x06 \x03(\t\x12\x39\n\x15process_instance_spec\x18\x07 \x01(\x0b\x32\x1a.imrpc.ProcessInstanceSpec\x12\x33\n\x12spdk_instance_spec\x18\x08 \x01(\x0b\x32\x17.imrpc.SpdkInstanceSpec\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"\x99\x01\n\x15InstanceDeleteRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x11\n\tdisk_uuid\x18\x04 \x01(\t\x12\x18\n\x10\x63leanup_required\x18\x05 \x01(\x08\"i\n\x12InstanceGetRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"i\n\x12InstanceLogRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t2\xb9\x04\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12:\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x0c.LogResponse\"\x00\x30\x01\x12\x43\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
+  serialized_pb=_b('\nFgithub.com/longhorn/longhorn-instance-manager/pkg/imrpc/instance.proto\x12\x05imrpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x44github.com/longhorn/longhorn-instance-manager/pkg/imrpc/common.proto\x1a\x43github.com/longhorn/longhorn-instance-manager/pkg/imrpc/imrpc.proto\"3\n\x13ProcessInstanceSpec\x12\x0e\n\x06\x62inary\x18\x01 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x02 \x03(\t\"\xf8\x01\n\x10SpdkInstanceSpec\x12K\n\x13replica_address_map\x18\x01 \x03(\x0b\x32..imrpc.SpdkInstanceSpec.ReplicaAddressMapEntry\x12\x11\n\tdisk_name\x18\x02 \x01(\t\x12\x11\n\tdisk_uuid\x18\x03 \x01(\t\x12\x0c\n\x04size\x18\x04 \x01(\x04\x12\x17\n\x0f\x65xpose_required\x18\x05 \x01(\x08\x12\x10\n\x08\x66rontend\x18\x06 \x01(\t\x1a\x38\n\x16ReplicaAddressMapEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x8f\x02\n\x0cInstanceSpec\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x13\n\x0bvolume_name\x18\x04 \x01(\t\x12\x12\n\nport_count\x18\x05 \x01(\x05\x12\x11\n\tport_args\x18\x06 \x03(\t\x12\x39\n\x15process_instance_spec\x18\x07 \x01(\x0b\x32\x1a.imrpc.ProcessInstanceSpec\x12\x33\n\x12spdk_instance_spec\x18\x08 \x01(\x0b\x32\x17.imrpc.SpdkInstanceSpec\"X\n\x0eInstanceStatus\x12\r\n\x05state\x18\x01 \x01(\t\x12\x11\n\terror_msg\x18\x02 \x01(\t\x12\x12\n\nport_start\x18\x03 \x01(\x05\x12\x10\n\x08port_end\x18\x04 \x01(\x05\":\n\x15InstanceCreateRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\"\x99\x01\n\x15InstanceDeleteRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x11\n\tdisk_uuid\x18\x04 \x01(\t\x12\x18\n\x10\x63leanup_required\x18\x05 \x01(\x08\"i\n\x12InstanceGetRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\"m\n\x10InstanceResponse\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12%\n\x06status\x18\x02 \x01(\x0b\x32\x15.imrpc.InstanceStatus\x12\x0f\n\x07\x64\x65leted\x18\x03 \x01(\x08\"\xa0\x01\n\x14InstanceListResponse\x12=\n\tinstances\x18\x01 \x03(\x0b\x32*.imrpc.InstanceListResponse.InstancesEntry\x1aI\n\x0eInstancesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.imrpc.InstanceResponse:\x02\x38\x01\"i\n\x12InstanceLogRequest\x12\x37\n\x14\x62\x61\x63kend_store_driver\x18\x01 \x01(\x0e\x32\x19.imrpc.BackendStoreDriver\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\"U\n\x16InstanceReplaceRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\x12\x18\n\x10terminate_signal\x18\x02 \x01(\t\";\n\x16InstanceSuspendRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec\":\n\x15InstanceResumeRequest\x12!\n\x04spec\x18\x01 \x01(\x0b\x32\x13.imrpc.InstanceSpec2\xcf\x05\n\x0fInstanceService\x12I\n\x0eInstanceCreate\x12\x1c.imrpc.InstanceCreateRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12I\n\x0eInstanceDelete\x12\x1c.imrpc.InstanceDeleteRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x43\n\x0bInstanceGet\x12\x19.imrpc.InstanceGetRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12\x45\n\x0cInstanceList\x12\x16.google.protobuf.Empty\x1a\x1b.imrpc.InstanceListResponse\"\x00\x12:\n\x0bInstanceLog\x12\x19.imrpc.InstanceLogRequest\x1a\x0c.LogResponse\"\x00\x30\x01\x12\x43\n\rInstanceWatch\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x30\x01\x12K\n\x0fInstanceReplace\x12\x1d.imrpc.InstanceReplaceRequest\x1a\x17.imrpc.InstanceResponse\"\x00\x12J\n\x0fInstanceSuspend\x12\x1d.imrpc.InstanceSuspendRequest\x1a\x16.google.protobuf.Empty\"\x00\x12H\n\x0eInstanceResume\x12\x1c.imrpc.InstanceResumeRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x36\n\nVersionGet\x12\x16.google.protobuf.Empty\x1a\x10.VersionResponseb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_common__pb2.DESCRIPTOR,github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_imrpc__pb2.DESCRIPTOR,])
 
@@ -633,6 +633,68 @@ _INSTANCEREPLACEREQUEST = _descriptor.Descriptor(
   serialized_end=1706,
 )
 
+
+_INSTANCESUSPENDREQUEST = _descriptor.Descriptor(
+  name='InstanceSuspendRequest',
+  full_name='imrpc.InstanceSuspendRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='spec', full_name='imrpc.InstanceSuspendRequest.spec', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1708,
+  serialized_end=1767,
+)
+
+
+_INSTANCERESUMEREQUEST = _descriptor.Descriptor(
+  name='InstanceResumeRequest',
+  full_name='imrpc.InstanceResumeRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='spec', full_name='imrpc.InstanceResumeRequest.spec', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1769,
+  serialized_end=1827,
+)
+
 _SPDKINSTANCESPEC_REPLICAADDRESSMAPENTRY.containing_type = _SPDKINSTANCESPEC
 _SPDKINSTANCESPEC.fields_by_name['replica_address_map'].message_type = _SPDKINSTANCESPEC_REPLICAADDRESSMAPENTRY
 _INSTANCESPEC.fields_by_name['backend_store_driver'].enum_type = github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_common__pb2._BACKENDSTOREDRIVER
@@ -648,6 +710,8 @@ _INSTANCELISTRESPONSE_INSTANCESENTRY.containing_type = _INSTANCELISTRESPONSE
 _INSTANCELISTRESPONSE.fields_by_name['instances'].message_type = _INSTANCELISTRESPONSE_INSTANCESENTRY
 _INSTANCELOGREQUEST.fields_by_name['backend_store_driver'].enum_type = github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_common__pb2._BACKENDSTOREDRIVER
 _INSTANCEREPLACEREQUEST.fields_by_name['spec'].message_type = _INSTANCESPEC
+_INSTANCESUSPENDREQUEST.fields_by_name['spec'].message_type = _INSTANCESPEC
+_INSTANCERESUMEREQUEST.fields_by_name['spec'].message_type = _INSTANCESPEC
 DESCRIPTOR.message_types_by_name['ProcessInstanceSpec'] = _PROCESSINSTANCESPEC
 DESCRIPTOR.message_types_by_name['SpdkInstanceSpec'] = _SPDKINSTANCESPEC
 DESCRIPTOR.message_types_by_name['InstanceSpec'] = _INSTANCESPEC
@@ -659,6 +723,8 @@ DESCRIPTOR.message_types_by_name['InstanceResponse'] = _INSTANCERESPONSE
 DESCRIPTOR.message_types_by_name['InstanceListResponse'] = _INSTANCELISTRESPONSE
 DESCRIPTOR.message_types_by_name['InstanceLogRequest'] = _INSTANCELOGREQUEST
 DESCRIPTOR.message_types_by_name['InstanceReplaceRequest'] = _INSTANCEREPLACEREQUEST
+DESCRIPTOR.message_types_by_name['InstanceSuspendRequest'] = _INSTANCESUSPENDREQUEST
+DESCRIPTOR.message_types_by_name['InstanceResumeRequest'] = _INSTANCERESUMEREQUEST
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ProcessInstanceSpec = _reflection.GeneratedProtocolMessageType('ProcessInstanceSpec', (_message.Message,), {
@@ -754,6 +820,20 @@ InstanceReplaceRequest = _reflection.GeneratedProtocolMessageType('InstanceRepla
   })
 _sym_db.RegisterMessage(InstanceReplaceRequest)
 
+InstanceSuspendRequest = _reflection.GeneratedProtocolMessageType('InstanceSuspendRequest', (_message.Message,), {
+  'DESCRIPTOR' : _INSTANCESUSPENDREQUEST,
+  '__module__' : 'github.com.longhorn.longhorn_instance_manager.pkg.imrpc.instance_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.InstanceSuspendRequest)
+  })
+_sym_db.RegisterMessage(InstanceSuspendRequest)
+
+InstanceResumeRequest = _reflection.GeneratedProtocolMessageType('InstanceResumeRequest', (_message.Message,), {
+  'DESCRIPTOR' : _INSTANCERESUMEREQUEST,
+  '__module__' : 'github.com.longhorn.longhorn_instance_manager.pkg.imrpc.instance_pb2'
+  # @@protoc_insertion_point(class_scope:imrpc.InstanceResumeRequest)
+  })
+_sym_db.RegisterMessage(InstanceResumeRequest)
+
 
 _SPDKINSTANCESPEC_REPLICAADDRESSMAPENTRY._options = None
 _INSTANCELISTRESPONSE_INSTANCESENTRY._options = None
@@ -764,8 +844,8 @@ _INSTANCESERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1709,
-  serialized_end=2278,
+  serialized_start=1830,
+  serialized_end=2549,
   methods=[
   _descriptor.MethodDescriptor(
     name='InstanceCreate',
@@ -831,9 +911,27 @@ _INSTANCESERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
+    name='InstanceSuspend',
+    full_name='imrpc.InstanceService.InstanceSuspend',
+    index=7,
+    containing_service=None,
+    input_type=_INSTANCESUSPENDREQUEST,
+    output_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='InstanceResume',
+    full_name='imrpc.InstanceService.InstanceResume',
+    index=8,
+    containing_service=None,
+    input_type=_INSTANCERESUMEREQUEST,
+    output_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
     name='VersionGet',
     full_name='imrpc.InstanceService.VersionGet',
-    index=7,
+    index=9,
     containing_service=None,
     input_type=google_dot_protobuf_dot_empty__pb2._EMPTY,
     output_type=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_imrpc__pb2._VERSIONRESPONSE,

@@ -51,6 +51,16 @@ class InstanceServiceStub(object):
         request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceRequest.SerializeToString,
         response_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResponse.FromString,
         )
+    self.InstanceSuspend = channel.unary_unary(
+        '/imrpc.InstanceService/InstanceSuspend',
+        request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceSuspendRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
+    self.InstanceResume = channel.unary_unary(
+        '/imrpc.InstanceService/InstanceResume',
+        request_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResumeRequest.SerializeToString,
+        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
     self.VersionGet = channel.unary_unary(
         '/imrpc.InstanceService/VersionGet',
         request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -111,6 +121,20 @@ class InstanceServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def InstanceSuspend(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def InstanceResume(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def VersionGet(self, request, context):
     # missing associated documentation comment in .proto file
     pass
@@ -155,6 +179,16 @@ def add_InstanceServiceServicer_to_server(servicer, server):
           servicer.InstanceReplace,
           request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceReplaceRequest.FromString,
           response_serializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResponse.SerializeToString,
+      ),
+      'InstanceSuspend': grpc.unary_unary_rpc_method_handler(
+          servicer.InstanceSuspend,
+          request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceSuspendRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+      ),
+      'InstanceResume': grpc.unary_unary_rpc_method_handler(
+          servicer.InstanceResume,
+          request_deserializer=github_dot_com_dot_longhorn_dot_longhorn__instance__manager_dot_pkg_dot_imrpc_dot_instance__pb2.InstanceResumeRequest.FromString,
+          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
       ),
       'VersionGet': grpc.unary_unary_rpc_method_handler(
           servicer.VersionGet,

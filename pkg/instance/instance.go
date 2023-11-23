@@ -672,3 +672,22 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 		},
 	}
 }
+
+func (s *Server) InstanceSuspend(ctx context.Context, req *rpc.InstanceSuspendRequest) (*emptypb.Empty, error) {
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Spec.Name,
+		"type":               req.Spec.Type,
+		"backendStoreDriver": req.Spec.BackendStoreDriver,
+	}).Info("Suspending instance")
+
+	return &emptypb.Empty{}, nil
+}
+func (s *Server) InstanceResume(ctx context.Context, req *rpc.InstanceResumeRequest) (*emptypb.Empty, error) {
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Spec.Name,
+		"type":               req.Spec.Type,
+		"backendStoreDriver": req.Spec.BackendStoreDriver,
+	}).Info("Resuming instance")
+
+	return &emptypb.Empty{}, nil
+}
