@@ -95,9 +95,13 @@ message InstanceReplaceRequest {
 }
 
 message InstanceSuspendRequest {
-	InstanceSpec spec = 1;
+	BackendStoreDriver backend_store_driver = 1;
+	string name = 2;
+	string type = 3;
 }
 
 message InstanceResumeRequest {
-	InstanceSpec spec = 1;
+	BackendStoreDriver backend_store_driver = 1;
+	string name = 2;
+	string type = 3;
 }
