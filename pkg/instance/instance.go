@@ -680,8 +680,37 @@ func (s *Server) InstanceSuspend(ctx context.Context, req *rpc.InstanceSuspendRe
 		"backendStoreDriver": req.BackendStoreDriver,
 	}).Info("Suspending instance")
 
-	return &emptypb.Empty{}, nil
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_v1:
+		return nil, fmt.Errorf("suspend is not supported for backend store driver %v", req.BackendStoreDriver)
+	case rpc.BackendStoreDriver_v2:
+		return s.spdkInstanceSuspend(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
 }
+
+func (s *Server) spdkInstanceSuspend(ctx context.Context, req *rpc.InstanceSuspendRequest) (*emptypb.Empty, error) {
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create SPDK client").Error())
+	}
+	defer c.Close()
+
+	switch req.Type {
+	case types.InstanceTypeEngine:
+		err := c.EngineSuspend(req.Name)
+		if err != nil {
+			return nil, err
+		}
+		return &emptypb.Empty{}, nil
+	case types.InstanceTypeReplica:
+		return nil, fmt.Errorf("suspend is not supported for instance type %v", req.Type)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown instance type %v", req.Type)
+	}
+}
+
 func (s *Server) InstanceResume(ctx context.Context, req *rpc.InstanceResumeRequest) (*emptypb.Empty, error) {
 	logrus.WithFields(logrus.Fields{
 		"name":               req.Name,

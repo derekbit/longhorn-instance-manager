@@ -880,3 +880,20 @@ func (e *Engine) SetErrorState() {
 		needUpdate = true
 	}
 }
+
+func (e *Engine) Suspend(spdkClient *SPDKClient) (err error) {
+	requireUpdate := true
+
+	e.Lock()
+	defer func() {
+		e.Unlock()
+
+		if requireUpdate {
+			e.UpdateCh <- nil
+		}
+	}()
+
+	logrus.Infof("Debug =========> Suspend Endpointx=%v", e.Endpoint)
+
+	return nil
+}

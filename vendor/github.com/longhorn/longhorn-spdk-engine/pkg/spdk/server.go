@@ -560,6 +560,39 @@ func (s *Server) EngineCreate(ctx context.Context, req *spdkrpc.EngineCreateRequ
 	return e.Create(s.spdkClient, req.ReplicaAddressMap, s.getLocalReplicaLvsNameMap(req.ReplicaAddressMap), req.PortCount, s.portAllocator)
 }
 
+func (s *Server) EngineSuspend(ctx context.Context, req *spdkrpc.EngineSuspendRequest) (ret *empty.Empty, err error) {
+	if req.Name == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine name is required")
+	}
+
+	logrus.Infof("Debig =======> EngineSuspend: %v", req.Name)
+
+	s.RLock()
+	e := s.engineMap[req.Name]
+	s.RUnlock()
+
+	if e == nil {
+		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for suspension", req.Name)
+	}
+
+	err = e.Suspend(s.spdkClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &empty.Empty{}, nil
+}
+
+func (s *Server) EngineResume(ctx context.Context, req *spdkrpc.EngineResumeRequest) (ret *empty.Empty, err error) {
+	if req.Name == "" {
+		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine name is requiredxx")
+	}
+
+	logrus.Infof("Debig =======> EngineResume: %v", req.Name)
+
+	return &empty.Empty{}, nil
+}
+
 func (s *Server) getLocalReplicaLvsNameMap(replicaMap map[string]string) (replicaLvsNameMap map[string]string) {
 	replicaLvsNameMap = map[string]string{}
 	for replicaName := range replicaMap {
