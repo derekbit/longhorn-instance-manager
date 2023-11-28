@@ -126,7 +126,7 @@ func (i *Initiator) Start(transportAddress, transportServiceID string) (err erro
 	}
 
 	i.logger.Infof("Stopping NVMe initiator blindly before starting")
-	if err := i.stopWithoutLock(); err != nil {
+	if err := i.stopWithoutLock(false); err != nil {
 		return errors.Wrapf(err, "failed to stop the mismatching NVMe initiator %s before starting", i.Name)
 	}
 
@@ -178,7 +178,7 @@ func (i *Initiator) Start(transportAddress, transportServiceID string) (err erro
 	return nil
 }
 
-func (i *Initiator) Stop() error {
+func (i *Initiator) Stop(isUpgrade bool) error {
 	if i.hostProc != "" {
 		lock := nsfilelock.NewLockWithTimeout(util.GetHostNamespacePath(i.hostProc), LockFile, LockTimeout)
 		if err := lock.Lock(); err != nil {
@@ -187,16 +187,18 @@ func (i *Initiator) Stop() error {
 		defer lock.Unlock()
 	}
 
-	return i.stopWithoutLock()
+	return i.stopWithoutLock(isUpgrade)
 }
 
-func (i *Initiator) stopWithoutLock() error {
-	if err := i.removeEndpoint(); err != nil {
-		return err
-	}
+func (i *Initiator) stopWithoutLock(isUpgrade bool) error {
+	if !isUpgrade {
+		if err := i.removeEndpoint(); err != nil {
+			return err
+		}
 
-	if err := i.removeLinearDmDevice(); err != nil {
-		return err
+		if err := i.removeLinearDmDevice(); err != nil {
+			return err
+		}
 	}
 
 	if err := DisconnectTarget(i.SubsystemNQN, i.executor); err != nil {

@@ -209,7 +209,7 @@ func (e *Engine) Delete(spdkClient *SPDKClient, superiorPortAllocator *util.Bitm
 		if err != nil {
 			return err
 		}
-		if err := initiator.Stop(); err != nil {
+		if err := initiator.Stop(false); err != nil {
 			return err
 		}
 
@@ -893,7 +893,34 @@ func (e *Engine) Suspend(spdkClient *SPDKClient) (err error) {
 		}
 	}()
 
-	logrus.Infof("Debug =========> Suspend Endpointx=%v", e.Endpoint)
+	defer func() {
+		if err != nil && e.State != types.InstanceStateError {
+			e.State = types.InstanceStateError
+		}
+	}()
+
+	nqn := helpertypes.GetNQN(e.Name)
+
+	initiator, err := nvme.NewInitiator(e.VolumeName, nqn, nvme.HostProc)
+	if err != nil {
+		return err
+	}
+
+	err = initiator.Suspend()
+	if err != nil {
+		return err
+	}
+
+	e.log.Infof("Stopped engine %s for upgrade", e.Name)
+	if err := initiator.Stop(true); err != nil {
+		return err
+	}
+
+	if err := spdkClient.StopExposeBdev(nqn); err != nil {
+		return err
+	}
+
+	e.State = types.InstanceStateSuspended
 
 	return nil
 }
