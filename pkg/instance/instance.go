@@ -84,6 +84,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		"name":               req.Spec.Name,
 		"type":               req.Spec.Type,
 		"backendStoreDriver": req.Spec.BackendStoreDriver,
+		"suspended":          req.Suspended,
 	}).Info("Creating instance")
 
 	switch req.Spec.BackendStoreDriver {
@@ -123,7 +124,7 @@ func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Instan
 
 	switch req.Spec.Type {
 	case types.InstanceTypeEngine:
-		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend, req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount)
+		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend, req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount, req.Suspended)
 		if err != nil {
 			return nil, err
 		}

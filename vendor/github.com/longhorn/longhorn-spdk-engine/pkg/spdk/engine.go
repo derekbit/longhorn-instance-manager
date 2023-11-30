@@ -73,7 +73,7 @@ func NewEngine(engineName, volumeName, frontend string, specSize uint64, engineU
 	}
 }
 
-func (e *Engine) Create(spdkClient *SPDKClient, replicaAddressMap, localReplicaLvsNameMap map[string]string, portCount int32, superiorPortAllocator *util.Bitmap) (ret *spdkrpc.Engine, err error) {
+func (e *Engine) Create(spdkClient *SPDKClient, replicaAddressMap, localReplicaLvsNameMap map[string]string, portCount int32, superiorPortAllocator *util.Bitmap, suspended bool) (ret *spdkrpc.Engine, err error) {
 	requireUpdate := true
 
 	e.Lock()
@@ -104,6 +104,7 @@ func (e *Engine) Create(spdkClient *SPDKClient, replicaAddressMap, localReplicaL
 
 	replicaBdevList := []string{}
 	for replicaName, replicaAddr := range replicaAddressMap {
+		logrus.Infof("Debug ----> replicaName: %s, replicaAddr: %s", replicaName, replicaAddr)
 		bdevName, err := getBdevNameForReplica(spdkClient, localReplicaLvsNameMap, replicaName, replicaAddr, podIP)
 		if err != nil {
 			e.log.WithError(err).Errorf("Failed to get bdev from replica %s with address %s, will skip it and continue", replicaName, replicaAddr)
@@ -122,12 +123,15 @@ func (e *Engine) Create(spdkClient *SPDKClient, replicaAddressMap, localReplicaL
 		return nil, err
 	}
 
-	if err := e.handleFrontend(spdkClient, portCount, superiorPortAllocator); err != nil {
-		return nil, err
+	if suspended {
+		e.State = types.InstanceStateSuspended
+	} else {
+		if err := e.handleFrontend(spdkClient, portCount, superiorPortAllocator, suspended); err != nil {
+			return nil, err
+		}
+
+		e.State = types.InstanceStateRunning
 	}
-
-	e.State = types.InstanceStateRunning
-
 	return e.getWithoutLock(), nil
 }
 
@@ -155,7 +159,7 @@ func getBdevNameForReplica(spdkClient *SPDKClient, localReplicaLvsNameMap map[st
 	return nvmeBdevNameList[0], nil
 }
 
-func (e *Engine) handleFrontend(spdkClient *SPDKClient, portCount int32, superiorPortAllocator *util.Bitmap) error {
+func (e *Engine) handleFrontend(spdkClient *SPDKClient, portCount int32, superiorPortAllocator *util.Bitmap, suspended bool) error {
 	if e.Frontend != types.FrontendEmpty && e.Frontend != types.FrontendSPDKTCPNvmf && e.Frontend != types.FrontendSPDKTCPBlockdev {
 		return fmt.Errorf("unknown frontend type %s", e.Frontend)
 	}
