@@ -885,7 +885,7 @@ func (e *Engine) SetErrorState() {
 	}
 }
 
-func (e *Engine) Suspend(spdkClient *SPDKClient) (err error) {
+func (e *Engine) Suspend(spdkClient *SPDKClient, superiorPortAllocator *util.Bitmap) (err error) {
 	requireUpdate := true
 
 	e.Lock()
@@ -922,6 +922,33 @@ func (e *Engine) Suspend(spdkClient *SPDKClient) (err error) {
 
 	if err := spdkClient.StopExposeBdev(nqn); err != nil {
 		return err
+	}
+
+	if e.Port != 0 {
+		if err := superiorPortAllocator.ReleaseRange(e.Port, e.Port); err != nil {
+			return err
+		}
+		e.Port = 0
+		requireUpdate = true
+	}
+
+	if _, err := spdkClient.BdevRaidDelete(e.Name); err != nil && !jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
+		return err
+	}
+
+	for replicaName := range e.ReplicaAddressMap {
+		if err := e.removeReplica(spdkClient, replicaName); err != nil {
+			if e.ReplicaModeMap[replicaName] != types.ModeERR {
+				e.ReplicaModeMap[replicaName] = types.ModeERR
+				requireUpdate = true
+			}
+			return err
+		}
+
+		delete(e.ReplicaAddressMap, replicaName)
+		delete(e.ReplicaBdevNameMap, replicaName)
+		delete(e.ReplicaModeMap, replicaName)
+		requireUpdate = true
 	}
 
 	e.State = types.InstanceStateSuspended

@@ -565,7 +565,7 @@ func (s *Server) EngineSuspend(ctx context.Context, req *spdkrpc.EngineSuspendRe
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "engine name is required")
 	}
 
-	logrus.Infof("Debig =======> EngineSuspend: %v", req.Name)
+	logrus.Infof("Debig =======> EngineSuspendx: %v", req.Name)
 
 	s.RLock()
 	e := s.engineMap[req.Name]
@@ -575,7 +575,13 @@ func (s *Server) EngineSuspend(ctx context.Context, req *spdkrpc.EngineSuspendRe
 		return nil, grpcstatus.Errorf(grpccodes.NotFound, "cannot find engine %v for suspension", req.Name)
 	}
 
-	err = e.Suspend(s.spdkClient)
+	defer func() {
+		if err == nil {
+			delete(s.engineMap, req.Name)
+		}
+	}()
+
+	err = e.Suspend(s.spdkClient, s.portAllocator)
 	if err != nil {
 		return nil, err
 	}
