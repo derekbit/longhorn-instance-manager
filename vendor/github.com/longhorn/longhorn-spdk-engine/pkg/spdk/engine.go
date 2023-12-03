@@ -123,15 +123,12 @@ func (e *Engine) Create(spdkClient *SPDKClient, replicaAddressMap, localReplicaL
 		return nil, err
 	}
 
-	if suspended {
-		e.State = types.InstanceStateReconnected
-	} else {
-		if err := e.handleFrontend(spdkClient, portCount, superiorPortAllocator, suspended); err != nil {
-			return nil, err
-		}
-
-		e.State = types.InstanceStateRunning
+	if err := e.handleFrontend(spdkClient, portCount, superiorPortAllocator, suspended); err != nil {
+		return nil, err
 	}
+
+	e.State = types.InstanceStateRunning
+
 	return e.getWithoutLock(), nil
 }
 
