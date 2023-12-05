@@ -226,6 +226,18 @@ func start(c *cli.Context) (err error) {
 		sig := <-sigs
 		logrus.Infof("Instance Manager received %v to exit", sig)
 		pmGRPCServer.Stop()
+		// proxyGRPCServer.Stop()
+		// instanceGRPCServer.Stop()
+		// diskGRPCServer.Stop()
+
+		process, err := util.FindProcessByName("spdk_tgt")
+		if err != nil {
+			logrus.WithError(err).Warnf("Failed to find spdk_tgt process xx")
+			return
+		}
+		if err := process.Signal(syscall.SIGTERM); err != nil {
+			logrus.WithError(err).Warnf("Failed to send SIGTERM to spdk_tgt process")
+		}
 	}()
 
 	return <-shutdownCh
