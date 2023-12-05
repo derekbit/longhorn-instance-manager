@@ -7,12 +7,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/go-ps"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -137,18 +137,42 @@ func IsSPDKTgtReady(timeout time.Duration) bool {
 	return false
 }
 
-// FindProcessByName finds a process by name and returns the process
-func FindProcessByName(name string) (*os.Process, error) {
-	processes, err := ps.Processes()
+// FindProcessByCmdline finds the process with matching cmdline
+func FindProcessByCmdline(cmdline string) (*os.Process, error) {
+	procDir, err := os.Open("/proc")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list processes")
+		return nil, err
+	}
+	defer procDir.Close()
+
+	processes, err := procDir.Readdir(-1)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, process := range processes {
-		if process.Executable() == name {
-			return os.FindProcess(process.Pid())
+		if process.IsDir() {
+			pid, convErr := strconv.Atoi(process.Name())
+			if convErr != nil {
+				continue
+			}
+
+			cmdlinePath := filepath.Join("/proc", process.Name(), "cmdline")
+			cmdlineContent, readErr := os.ReadFile(cmdlinePath)
+			if readErr != nil {
+				continue
+			}
+
+			if strings.Contains(string(cmdlineContent), cmdline) {
+				process, err := os.FindProcess(pid)
+				if err != nil {
+					return nil, err
+				}
+				return process, nil
+			}
 		}
 	}
 
-	return nil, fmt.Errorf("process %s is not found", name)
+	// If no process with matching cmdline is found, return an error
+	return nil, errors.New("process not found")
 }
