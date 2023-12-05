@@ -100,6 +100,11 @@ func cleanup(pm *process.Manager) {
 	logrus.Error("Failed to clean up all processes for Instance Manager graceful shutdown")
 }
 
+type Shutdown struct {
+	ch   chan error
+	once sync.Once
+}
+
 func start(c *cli.Context) (err error) {
 	listen := c.String("listen")
 	logsDir := c.String("logs-dir")
@@ -131,7 +136,9 @@ func start(c *cli.Context) (err error) {
 		logrus.Info("Creating gRPC server with no auth")
 	}
 
-	shutdownCh := make(chan error)
+	shutdown := &Shutdown{
+		ch: make(chan error),
+	}
 
 	go func() {
 		debugAddress := ":6060"
@@ -149,19 +156,22 @@ func start(c *cli.Context) (err error) {
 
 	var wg sync.WaitGroup
 
-	waitCount := 5
+	waitCount := 4
 	if spdkEnabled {
 		waitCount++
 	}
 	wg.Add(waitCount)
 
 	// Start disk server
-	diskGRPCServer, diskGRPCListener, err := setupDiskGRPCServer(diskServiceAddress, spdkServiceAddress, spdkEnabled, shutdownCh)
+	diskGRPCServer, diskGRPCListener, err := setupDiskGRPCServer(diskServiceAddress, spdkServiceAddress, spdkEnabled, shutdown.ch)
 	if err != nil {
 		return err
 	}
 	go func() {
 		defer func() {
+			shutdown.once.Do(func() {
+				close(shutdown.ch)
+			})
 			wg.Done()
 			logrus.Info("Stopped disk gRPC server")
 		}()
@@ -174,12 +184,15 @@ func start(c *cli.Context) (err error) {
 
 	// Start instance server
 	instanceGRPCServer, instanceRPCListener, err := setupInstanceGRPCServer(logsDir,
-		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, spdkServiceAddress, tlsConfig, spdkEnabled, shutdownCh)
+		instanceServiceAddress, processManagerServiceAddress, diskServiceAddress, spdkServiceAddress, tlsConfig, spdkEnabled, shutdown.ch)
 	if err != nil {
 		return err
 	}
 	go func() {
 		defer func() {
+			shutdown.once.Do(func() {
+				close(shutdown.ch)
+			})
 			wg.Done()
 			logrus.Info("Stopped instance gRPC server")
 		}()
@@ -191,12 +204,15 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager instance gRPC server listening to %v", instanceServiceAddress)
 
 	// Start proxy server
-	proxyGRPCServer, proxyGRPCListener, err := setupProxyGRPCServer(logsDir, proxyServiceAddress, diskServiceAddress, spdkServiceAddress, tlsConfig, shutdownCh)
+	proxyGRPCServer, proxyGRPCListener, err := setupProxyGRPCServer(logsDir, proxyServiceAddress, diskServiceAddress, spdkServiceAddress, tlsConfig, shutdown.ch)
 	if err != nil {
 		return err
 	}
 	go func() {
 		defer func() {
+			shutdown.once.Do(func() {
+				close(shutdown.ch)
+			})
 			wg.Done()
 			logrus.Info("Stopped proxy gRPC server")
 		}()
@@ -208,12 +224,15 @@ func start(c *cli.Context) (err error) {
 	logrus.Infof("Instance Manager proxy gRPC server listening to %v", proxyServiceAddress)
 
 	// Start process manager server
-	pm, pmGRPCServer, pmGRPCListener, err := setupProcessManagerGRPCServer(processPortRange, logsDir, processManagerServiceAddress, shutdownCh)
+	pm, pmGRPCServer, pmGRPCListener, err := setupProcessManagerGRPCServer(processPortRange, logsDir, processManagerServiceAddress, shutdown.ch)
 	if err != nil {
 		return err
 	}
 	go func() {
 		defer func() {
+			shutdown.once.Do(func() {
+				close(shutdown.ch)
+			})
 			wg.Done()
 			logrus.Info("Stopped process manager gRPC server")
 		}()
@@ -229,12 +248,15 @@ func start(c *cli.Context) (err error) {
 	var spdkGRPCServer *grpc.Server
 	var spdkGRPCListener net.Listener
 	if spdkEnabled {
-		spdkGRPCServer, spdkGRPCListener, err = setupSPDKGRPCServer(spdkPortRange, spdkServiceAddress, shutdownCh)
+		spdkGRPCServer, spdkGRPCListener, err = setupSPDKGRPCServer(spdkPortRange, spdkServiceAddress, shutdown.ch)
 		if err != nil {
 			return err
 		}
 		go func() {
 			defer func() {
+				shutdown.once.Do(func() {
+					close(shutdown.ch)
+				})
 				wg.Done()
 				logrus.Info("Stopped SPDK gRPC server")
 			}()
@@ -251,11 +273,6 @@ func start(c *cli.Context) (err error) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		defer func() {
-			wg.Done()
-			logrus.Info("Handled signals")
-		}()
-
 		sig := <-sigs
 
 		logrus.Infof("Instance Manager received %v to exit", sig)
@@ -270,35 +287,43 @@ func start(c *cli.Context) (err error) {
 
 	wg.Wait()
 
-	logrus.Infof("Stopping spgk_tgt process")
-	process, err := util.FindProcessByCmdline("spdk_tgt")
-	if err == nil {
-		logrus.Infof("Stopping spdk_tgt process %v", process.Pid)
-		if err := process.Signal(syscall.SIGTERM); err != nil {
-			logrus.WithError(err).Errorf("Failed to send SIGTERM to spdk_tgt process")
-		} else {
-			done := make(chan error, 1)
-			go func() {
-				_, err := process.Wait()
-				done <- err
-			}()
-
-			select {
-			case <-time.After(30 * time.Second):
-				logrus.Error("Timeout waiting for spdk_tgt process to exit")
-			case err := <-done:
-				if err != nil {
-					logrus.WithError(err).Error("Error waiting for spdk_tgt process to exit")
-				} else {
-					logrus.Info("spdk_tgt process exited successfully")
-				}
-			}
-		}
-	} else {
-		logrus.WithError(err).Error("Failed to find spdk_tgt process")
+	if spdkEnabled {
+		stopSPDKTgt(30 * time.Second)
 	}
 
 	return nil
+}
+
+func stopSPDKTgt(timeout time.Duration) {
+	logrus.Infof("Stopping spgk_tgt process")
+
+	process, err := util.FindProcessByCmdline("spdk_tgt")
+	if err != nil {
+		logrus.WithError(err).Error("Failed to find spdk_tgt process")
+		return
+	}
+
+	logrus.Infof("Stopping spdk_tgt process")
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		logrus.WithError(err).Errorf("Failed to send SIGTERM to spdk_tgt process")
+	} else {
+		done := make(chan error, 1)
+		go func() {
+			_, err := process.Wait()
+			done <- err
+		}()
+
+		select {
+		case <-time.After(timeout):
+			logrus.Error("spdk_tgt process did not exit in time")
+		case err := <-done:
+			if err != nil {
+				logrus.WithError(err).Error("Error waiting for spdk_tgt process to exit")
+			} else {
+				logrus.Info("spdk_tgt process exited successfully")
+			}
+		}
+	}
 }
 
 func getServiceAddresses(listen string) (processManagerServiceAddress, proxyServiceAddress, diskServiceAddress, instanceServiceAddress, spdkerviceAddress string, err error) {
