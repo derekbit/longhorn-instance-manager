@@ -22,6 +22,11 @@ const (
 	RebuildingSnapshotNamePrefix = "rebuild"
 )
 
+// Restore
+const (
+	PeriodicRefreshIntervalInSeconds = 2
+)
+
 func GetReplicaSnapshotLvolNamePrefix(replicaName string) string {
 	return fmt.Sprintf("%s-snap-", replicaName)
 }
@@ -32,6 +37,10 @@ func GetReplicaSnapshotLvolName(replicaName, snapshotName string) string {
 
 func GetSnapshotNameFromReplicaSnapshotLvolName(replicaName, snapLvolName string) string {
 	return strings.TrimPrefix(snapLvolName, GetReplicaSnapshotLvolNamePrefix(replicaName))
+}
+
+func IsReplicaSnapshotLvol(replicaName, lvolName string) bool {
+	return strings.HasPrefix(lvolName, GetReplicaSnapshotLvolNamePrefix(replicaName))
 }
 
 func GenerateRebuildingSnapshotName() string {
@@ -121,4 +130,10 @@ func GetNvmfSubsystemMap(cli *spdkclient.Client) (map[string]*spdktypes.NvmfSubs
 	}
 
 	return subsystemMap, nil
+}
+
+type BackupCreateInfo struct {
+	BackupName     string
+	IsIncremental  bool
+	ReplicaAddress string
 }
