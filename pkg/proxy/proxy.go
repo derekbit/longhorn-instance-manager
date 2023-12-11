@@ -4,10 +4,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
-	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
-
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	eptypes "github.com/longhorn/longhorn-engine/proto/ptypes"
+
+	rpc "github.com/longhorn/longhorn-instance-manager/pkg/imrpc"
+
+	"github.com/longhorn/longhorn-instance-manager/pkg/util"
 )
 
 type Proxy struct {
@@ -17,15 +19,23 @@ type Proxy struct {
 
 	diskServiceAddress string
 	spdkServiceAddress string
+
+	spdkServicePort int
 }
 
 func NewProxy(logsDir, diskServiceAddress, spdkServiceAddress string, shutdownCh chan error) (*Proxy, error) {
+	_, port, err := util.SplitHostPort(spdkServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Proxy{
 		logsDir:            logsDir,
 		shutdownCh:         shutdownCh,
 		HealthChecker:      &GRPCHealthChecker{},
 		diskServiceAddress: diskServiceAddress,
 		spdkServiceAddress: spdkServiceAddress,
+		spdkServicePort:    port,
 	}
 
 	go p.startMonitoring()
