@@ -84,6 +84,7 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		"name":               req.Spec.Name,
 		"type":               req.Spec.Type,
 		"backendStoreDriver": req.Spec.BackendStoreDriver,
+		"upgradeRequired":    req.Spec.UpgradeRequired,
 	}).Info("Creating instance")
 
 	switch req.Spec.BackendStoreDriver {
@@ -123,7 +124,7 @@ func (s *Server) spdkInstanceCreate(req *rpc.InstanceCreateRequest) (*rpc.Instan
 
 	switch req.Spec.Type {
 	case types.InstanceTypeEngine:
-		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend, req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount)
+		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend, req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount, req.Spec.UpgradeRequired)
 		if err != nil {
 			return nil, err
 		}
@@ -670,5 +671,43 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 			PortStart: e.Port,
 			PortEnd:   e.Port,
 		},
+	}
+}
+
+func (s *Server) InstanceSuspend(ctx context.Context, req *rpc.InstanceSuspendRequest) (*emptypb.Empty, error) {
+	logrus.WithFields(logrus.Fields{
+		"name":               req.Name,
+		"type":               req.Type,
+		"backendStoreDriver": req.BackendStoreDriver,
+	}).Info("Suspending instance")
+
+	switch req.BackendStoreDriver {
+	case rpc.BackendStoreDriver_v1:
+		return nil, fmt.Errorf("suspend is not supported for backend store driver %v", req.BackendStoreDriver)
+	case rpc.BackendStoreDriver_v2:
+		return s.spdkInstanceSuspend(ctx, req)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown backend store driver %v", req.BackendStoreDriver)
+	}
+}
+
+func (s *Server) spdkInstanceSuspend(ctx context.Context, req *rpc.InstanceSuspendRequest) (*emptypb.Empty, error) {
+	c, err := spdkclient.NewSPDKClient(s.spdkServiceAddress)
+	if err != nil {
+		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to create SPDK client").Error())
+	}
+	defer c.Close()
+
+	switch req.Type {
+	case types.InstanceTypeEngine:
+		err := c.EngineSuspend(req.Name)
+		if err != nil {
+			return nil, err
+		}
+		return &emptypb.Empty{}, nil
+	case types.InstanceTypeReplica:
+		return nil, fmt.Errorf("suspend is not supported for instance type %v", req.Type)
+	default:
+		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unknown instance type %v", req.Type)
 	}
 }
