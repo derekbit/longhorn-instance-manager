@@ -42,7 +42,7 @@ func DmsetupReload(dmDeviceName, table string, executor Executor) error {
 
 func DmsetupRemove(dmDeviceName string, executor Executor) error {
 	opts := []string{
-		"remove", dmDeviceName,
+		"remove", "--force", "--deferred", dmDeviceName,
 	}
 	_, err := executor.Execute(dmsetupBinary, opts)
 	return err

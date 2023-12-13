@@ -233,13 +233,17 @@ func (i *Initiator) stopWithoutLock(cleanUpDmDevice bool) error {
 			return err
 		}
 
+		if err := DisconnectTarget(i.SubsystemNQN, i.executor); err != nil {
+			return errors.Wrapf(err, "failed to logout target")
+		}
+
 		if err := i.removeLinearDmDevice(); err != nil {
 			return err
 		}
-	}
-
-	if err := DisconnectTarget(i.SubsystemNQN, i.executor); err != nil {
-		return errors.Wrapf(err, "failed to logout target")
+	} else {
+		if err := DisconnectTarget(i.SubsystemNQN, i.executor); err != nil {
+			return errors.Wrapf(err, "failed to logout target")
+		}
 	}
 
 	i.ControllerName = ""

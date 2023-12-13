@@ -93,8 +93,14 @@ func (e *Engine) Create(spdkClient *spdkclient.Client, replicaAddressMap, localR
 	}
 
 	defer func() {
-		if err != nil && e.State != types.InstanceStateError {
-			e.State = types.InstanceStateError
+		if err != nil {
+			e.log.WithError(err).Errorf("Failed to create engine %s", e.Name)
+			if e.State != types.InstanceStateError {
+				e.State = types.InstanceStateError
+			}
+
+			ret = e.getWithoutLock()
+			err = nil
 		}
 	}()
 
@@ -174,6 +180,12 @@ func (e *Engine) handleFrontend(spdkClient *spdkclient.Client, portCount int32, 
 	}
 
 	nqn := helpertypes.GetNQN(e.Name)
+
+	e.log.Infof("Blindly stopping expose bdev for engine")
+	if err := spdkClient.StopExposeBdev(nqn); err != nil {
+		return errors.Wrap(err, "failed to stop expose bdev for engine")
+	}
+
 	port, _, err := superiorPortAllocator.AllocateRange(portCount)
 	if err != nil {
 		return err

@@ -493,8 +493,14 @@ func (r *Replica) Create(spdkClient *spdkclient.Client, exposeRequired bool, por
 	}
 
 	defer func() {
-		if err != nil && r.State != types.InstanceStateError {
-			r.State = types.InstanceStateError
+		if err != nil {
+			r.log.WithError(err).Errorf("Failed to create replica %s", r.Name)
+			if r.State != types.InstanceStateError {
+				r.State = types.InstanceStateError
+			}
+
+			ret = ServiceReplicaToProtoReplica(r)
+			err = nil
 		}
 	}()
 
