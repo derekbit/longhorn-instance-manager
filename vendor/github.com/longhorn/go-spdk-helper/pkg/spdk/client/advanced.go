@@ -1,9 +1,8 @@
 package client
 
 import (
-	"path/filepath"
-
 	"github.com/longhorn/go-spdk-helper/pkg/jsonrpc"
+	"path/filepath"
 
 	spdktypes "github.com/longhorn/go-spdk-helper/pkg/spdk/types"
 )

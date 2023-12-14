@@ -70,4 +70,4 @@ replace golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
 
 replace github.com/longhorn/go-spdk-helper v0.0.0-20231212033123-3b72caa5a1ea => github.com/derekbit/go-spdk-helper v0.0.0-20231212081804-7b9490b98ebf
 
-replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20231130061918-2909626ec6e3 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231212082201-ed897c44f372
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20231130061918-2909626ec6e3 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231213160200-f1e022b701a2

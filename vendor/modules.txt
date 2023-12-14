@@ -164,7 +164,7 @@ github.com/longhorn/longhorn-engine/pkg/types
 github.com/longhorn/longhorn-engine/pkg/util
 github.com/longhorn/longhorn-engine/pkg/util/disk
 github.com/longhorn/longhorn-engine/proto/ptypes
-# github.com/longhorn/longhorn-spdk-engine v0.0.0-20231130061918-2909626ec6e3 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231212082201-ed897c44f372
+# github.com/longhorn/longhorn-spdk-engine v0.0.0-20231130061918-2909626ec6e3 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20231213160200-f1e022b701a2
 ## explicit; go 1.21
 github.com/longhorn/longhorn-spdk-engine/pkg/api
 github.com/longhorn/longhorn-spdk-engine/pkg/client

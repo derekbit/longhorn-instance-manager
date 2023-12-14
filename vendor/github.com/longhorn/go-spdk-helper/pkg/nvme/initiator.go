@@ -54,7 +54,7 @@ func NewInitiator(name, subsystemNQN, hostProc string) (*Initiator, error) {
 	}
 
 	// If transportAddress or transportServiceID is empty, the initiator is still valid for stopping
-	executor, err := util.GetExecutorByHostProc("")
+	executor, err := util.GetExecutorByHostProc(hostProc)
 	if err != nil {
 		return nil, err
 	}
