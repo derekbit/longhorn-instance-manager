@@ -10,7 +10,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,6 +24,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/longhorn/go-spdk-helper/pkg/nvme"
+	helperutil "github.com/longhorn/go-spdk-helper/pkg/util"
 	spdk "github.com/longhorn/longhorn-spdk-engine/pkg/spdk"
 	spdkrpc "github.com/longhorn/longhorn-spdk-engine/proto/spdkrpc"
 
@@ -99,6 +103,21 @@ func cleanup(pm *process.Manager) {
 	logrus.Error("Failed to clean up all processes for Instance Manager graceful shutdown")
 }
 
+func parseName(input string) (string, error) {
+	// compile a regular expression that matches ${name} between : and -e-
+	re, err := regexp.Compile(`:(.*)-e-`)
+	if err != nil {
+		return "", err
+	}
+	// find the first submatch of the input string
+	submatch := re.FindStringSubmatch(input)
+	if len(submatch) < 2 {
+		return "", fmt.Errorf("no name found in input")
+	}
+	// return the second element of the submatch, which is ${name}
+	return submatch[1], nil
+}
+
 func start(c *cli.Context) (err error) {
 	listen := c.String("listen")
 	logsDir := c.String("logs-dir")
@@ -128,6 +147,33 @@ func start(c *cli.Context) (err error) {
 		logrus.Info("Creating gRPC server with mtls auth")
 	} else {
 		logrus.Info("Creating gRPC server with no auth")
+	}
+
+	executor, err := helperutil.GetExecutorByHostProc(nvme.HostProc)
+	if err != nil {
+		logrus.WithError(err).Errorf("Failed to get executor by host proc %v", nvme.HostProc)
+		return err
+	}
+
+	subsystems, err := nvme.GetSubsystems(executor)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get NVMe subsystems")
+	}
+	for _, sys := range subsystems {
+		logrus.Infof("Found NVMe subsystem %+v", sys)
+		if strings.HasPrefix(sys.NQN, "nqn.2023-01.io.longhorn.spdk") {
+			logrus.Infof("Cleaning up NVMe subsystem %v: NQN %v", sys.Name, sys.NQN)
+
+			if err := nvme.DisconnectTarget(sys.NQN, executor); err != nil {
+				logrus.WithError(err).Errorf("Failed to disconnect NVMe subsystem %v: NQN %v", sys.Name, sys.NQN)
+			}
+
+			dmDeviceName, _ := parseName(sys.NQN)
+			logrus.Infof("Removing dm device %v", dmDeviceName)
+			if err := helperutil.DmsetupRemove(dmDeviceName, executor); err != nil {
+				logrus.WithError(err).Errorf("Failed to remove dm device %v", dmDeviceName)
+			}
+		}
 	}
 
 	shutdownCh := make(chan error)

@@ -145,3 +145,8 @@ func GetDevices(ip, port, nqn string, executor util.Executor) (devices []Device,
 	}
 	return res, nil
 }
+
+// GetSubsystems returns all devices
+func GetSubsystems(executor util.Executor) (subsystems []Subsystem, err error) {
+	return listSubsystems("", executor)
+}

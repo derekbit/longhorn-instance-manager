@@ -146,7 +146,7 @@ func (s *Server) DiskGet(ctx context.Context, req *rpc.DiskGetRequest) (*rpc.Dis
 
 	log.Trace("Disk Server: Getting disk info")
 
-	if req.DiskName == "" || req.DiskPath == "" {
+	if req.DiskName == "" {
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "disk name and disk path are required")
 	}
 
