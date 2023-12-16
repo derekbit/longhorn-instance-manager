@@ -247,6 +247,7 @@ func (r *Replica) construct(bdevLvolMap map[string]*spdktypes.BdevInfo) (err err
 func (r *Replica) validateAndUpdate(bdevLvolMap map[string]*spdktypes.BdevInfo, subsystemMap map[string]*spdktypes.NvmfSubsystem) (err error) {
 	defer func() {
 		if err != nil {
+			logrus.Infof("Debug =======> replica err=%v", err)
 			if r.State != types.InstanceStateError {
 				r.State = types.InstanceStateError
 				r.log.Errorf("Found error during validation and update: %v", err)
@@ -503,6 +504,20 @@ func (r *Replica) Create(spdkClient *spdkclient.Client, exposeRequired bool, por
 		return nil, fmt.Errorf("invalid state %s for replica %s creation", r.State, r.Name)
 	}
 
+	var lvsList []spdktypes.LvstoreInfo
+	if r.LvsUUID != "" {
+		lvsList, err = spdkClient.BdevLvolGetLvstore("", r.LvsUUID)
+	} else if r.LvsName != "" {
+		lvsList, err = spdkClient.BdevLvolGetLvstore(r.LvsName, "")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(lvsList) != 1 {
+		return nil, fmt.Errorf("found zero or multiple lvstore with name %s and UUID %s during replica %s creation", r.LvsName, r.LvsUUID, r.Name)
+	}
+	lvs := lvsList[0]
+
 	defer func() {
 		if err != nil {
 			r.log.WithError(err).Errorf("Failed to create replica %s", r.Name)
@@ -525,25 +540,13 @@ func (r *Replica) Create(spdkClient *spdkclient.Client, exposeRequired bool, por
 
 	// Create bdev lvol if the replica is the new one
 	if r.State == types.InstanceStatePending {
-		var lvsList []spdktypes.LvstoreInfo
-		if r.LvsUUID != "" {
-			lvsList, err = spdkClient.BdevLvolGetLvstore("", r.LvsUUID)
-		} else if r.LvsName != "" {
-			lvsList, err = spdkClient.BdevLvolGetLvstore(r.LvsName, "")
-		}
-		if err != nil {
-			return nil, err
-		}
-		if len(lvsList) != 1 {
-			return nil, fmt.Errorf("found zero or multiple lvstore with name %s and UUID %s during replica %s creation", r.LvsName, r.LvsUUID, r.Name)
-		}
 		if r.LvsName == "" {
-			r.LvsName = lvsList[0].Name
+			r.LvsName = lvs.Name
 		}
 		if r.LvsUUID == "" {
-			r.LvsUUID = lvsList[0].UUID
+			r.LvsUUID = lvs.UUID
 		}
-		if r.LvsName != lvsList[0].Name || r.LvsUUID != lvsList[0].UUID {
+		if r.LvsName != lvs.Name || r.LvsUUID != lvs.UUID {
 			return nil, fmt.Errorf("found mismatching between the actual lvstore name %s with UUID %s and the recorded lvstore name %s with UUID %s during replica %s creation", lvsList[0].Name, lvsList[0].UUID, r.LvsName, r.LvsUUID, r.Name)
 		}
 
@@ -594,6 +597,7 @@ func (r *Replica) Delete(spdkClient *spdkclient.Client, cleanupRequired bool, su
 	r.Lock()
 	defer func() {
 		if err != nil {
+			logrus.Infof("Debug =======> replica delete err=%v", err)
 			r.State = types.InstanceStateError
 			r.ErrorMsg = err.Error()
 		}
