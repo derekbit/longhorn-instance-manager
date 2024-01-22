@@ -608,6 +608,12 @@ func (c *Client) BdevNvmeGetControllers(name string) (controllerInfoList []spdkt
 // Parameters, ctrlr_loss_timeout_sec, reconnect_delay_sec, and fast_io_fail_timeout_sec, are
 // for I/O error resiliency. They can be overridden if they are given by the RPC bdev_nvme_attach_controller.
 //
+// "actionOnTimeout": Action on timeout. It can be "none", "reset", "abort".
+//
+// "timeoutUs": Timeout in microseconds for each command sent to controller.
+//
+// "timeoutAdminUs": Timeout in microseconds for each admin command sent to controller.
+//
 // "ctrlrLossTimeoutSec": Controller loss timeout in seconds
 //
 // "reconnectDelaySec": Controller reconnect delay in seconds
@@ -617,8 +623,11 @@ func (c *Client) BdevNvmeGetControllers(name string) (controllerInfoList []spdkt
 // "transportAckTimeout": Time to wait ack until retransmission for RDMA or connection close for TCP. Range 0-31 where 0 means use default
 //
 // "keepAliveTimeoutMs": Keep alive timeout in milliseconds.
-func (c *Client) BdevNvmeSetOptions(ctrlrLossTimeoutSec, reconnectDelaySec, fastIOFailTimeoutSec, transportAckTimeout, keepAliveTimeoutMs int32) (result bool, err error) {
+func (c *Client) BdevNvmeSetOptions(actionOnTimeout string, timeoutUs, timeoutAdminUs int64, ctrlrLossTimeoutSec, reconnectDelaySec, fastIOFailTimeoutSec, transportAckTimeout, keepAliveTimeoutMs int32) (result bool, err error) {
 	req := spdktypes.BdevNvmeSetOptionsRequest{
+		ActionOnTimeout:      actionOnTimeout,
+		TimeoutUs:            timeoutUs,
+		TimeoutAdminUs:       timeoutAdminUs,
 		CtrlrLossTimeoutSec:  ctrlrLossTimeoutSec,
 		ReconnectDelaySec:    reconnectDelaySec,
 		FastIOFailTimeoutSec: fastIOFailTimeoutSec,

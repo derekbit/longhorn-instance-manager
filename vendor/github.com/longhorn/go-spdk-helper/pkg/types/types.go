@@ -18,6 +18,9 @@ const (
 	FrontendSPDKTCPNvmf     = "spdk-tcp-nvmf"
 	FrontendSPDKTCPBlockdev = "spdk-tcp-blockdev"
 
+	DefaultActionOnTimeout     = "abort"
+	DefaultTimeoutUs           = 5000000
+	DefaultTimeoutAdminUs      = 5000000
 	DefaultCtrlrLossTimeoutSec = 30
 	// DefaultReconnectDelaySec can't be more than DefaultFastIoFailTimeoutSec, same for non-default values.
 	DefaultReconnectDelaySec    = 5

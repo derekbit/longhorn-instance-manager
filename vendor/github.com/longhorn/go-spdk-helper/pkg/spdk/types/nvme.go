@@ -110,11 +110,14 @@ type BdevNvmeDetachControllerRequest struct {
 }
 
 type BdevNvmeSetOptionsRequest struct {
-	CtrlrLossTimeoutSec  int32 `json:"ctrlr_loss_timeout_sec"`
-	ReconnectDelaySec    int32 `json:"reconnect_delay_sec"`
-	FastIOFailTimeoutSec int32 `json:"fast_io_fail_timeout_sec"`
-	TransportAckTimeout  int32 `json:"transport_ack_timeout"`
-	KeepAliveTimeoutMs   int32 `json:"keep_alive_timeout_ms"`
+	ActionOnTimeout      string `json:"action_on_timeout"`
+	TimeoutUs            int64  `json:"timeout_us"`
+	TimeoutAdminUs       int64  `json:"timeout_admin_us"`
+	CtrlrLossTimeoutSec  int32  `json:"ctrlr_loss_timeout_sec"`
+	ReconnectDelaySec    int32  `json:"reconnect_delay_sec"`
+	FastIOFailTimeoutSec int32  `json:"fast_io_fail_timeout_sec"`
+	TransportAckTimeout  int32  `json:"transport_ack_timeout"`
+	KeepAliveTimeoutMs   int32  `json:"keep_alive_timeout_ms"`
 }
 
 type BdevNvmeGetControllersRequest struct {

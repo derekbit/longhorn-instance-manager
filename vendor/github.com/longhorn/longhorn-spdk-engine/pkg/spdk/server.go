@@ -57,6 +57,9 @@ func NewServer(ctx context.Context, portStart, portEnd int32) (*Server, error) {
 	}
 
 	if _, err = cli.BdevNvmeSetOptions(
+		helpertypes.DefaultActionOnTimeout,
+		helpertypes.DefaultTimeoutUs,
+		helpertypes.DefaultTimeoutAdminUs,
 		helpertypes.DefaultCtrlrLossTimeoutSec,
 		helpertypes.DefaultReconnectDelaySec,
 		helpertypes.DefaultFastIOFailTimeoutSec,
