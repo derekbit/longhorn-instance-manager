@@ -72,3 +72,9 @@ require (
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 )
+
+replace github.com/longhorn/go-spdk-helper v0.0.0-20240426112700-a797602bf7fe => github.com/derekbit/go-spdk-helper v0.0.0-20240426150552-cc8ae612cae5
+
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20240426084525-210492ed1d43 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20240426151739-9a3205165ef7
+
+replace github.com/longhorn/types v0.0.0-20240424162824-4995e1e42438 => github.com/derekbit/longhorn-types v0.0.0-20240420062442-035497cf812f
