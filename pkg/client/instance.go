@@ -88,7 +88,10 @@ func NewInstanceServiceClientWithTLS(ctx context.Context, ctxCancel context.Canc
 type EngineCreateRequest struct {
 	ReplicaAddressMap map[string]string
 	Frontend          string
-	UpgradeRequired   bool
+
+	UpgradeRequired bool
+	EntityType      rpc.EntityType
+	TargetAddress   string
 }
 
 type ReplicaCreateRequest struct {
@@ -183,6 +186,8 @@ func (c *InstanceServiceClient) InstanceCreate(req *InstanceCreateRequest) (*api
 			SpdkInstanceSpec:    spdkInstanceSpec,
 
 			UpgradeRequired: req.Engine.UpgradeRequired,
+			EntityType:      req.Engine.EntityType,
+			TargetAddress:   req.Engine.TargetAddress,
 		},
 	})
 	if err != nil {

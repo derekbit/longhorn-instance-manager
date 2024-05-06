@@ -17,6 +17,7 @@ import (
 	spdkapi "github.com/longhorn/longhorn-spdk-engine/pkg/api"
 	spdkclient "github.com/longhorn/longhorn-spdk-engine/pkg/client"
 	rpc "github.com/longhorn/types/pkg/generated/imrpc"
+	spdkrpc "github.com/longhorn/types/pkg/generated/spdkrpc"
 
 	"github.com/longhorn/longhorn-instance-manager/pkg/client"
 	"github.com/longhorn/longhorn-instance-manager/pkg/meta"
@@ -119,6 +120,8 @@ func (s *Server) InstanceCreate(ctx context.Context, req *rpc.InstanceCreateRequ
 		"type":            req.Spec.Type,
 		"dataEngine":      req.Spec.DataEngine,
 		"upgradeRequired": req.Spec.UpgradeRequired,
+		"entityType":      req.Spec.EntityType,
+		"targetAddress":   req.Spec.TargetAddress,
 	}).Info("Creating instance")
 
 	ops, ok := s.ops[req.Spec.DataEngine]
@@ -159,7 +162,7 @@ func (ops V2DataEngineInstanceOps) InstanceCreate(req *rpc.InstanceCreateRequest
 	case types.InstanceTypeEngine:
 		engine, err := c.EngineCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Frontend,
 			req.Spec.SpdkInstanceSpec.Size, req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount,
-			req.Spec.UpgradeRequired)
+			req.Spec.UpgradeRequired, spdkrpc.EntityType(req.Spec.EntityType), req.Spec.TargetAddress)
 		if err != nil {
 			return nil, err
 		}
