@@ -8,14 +8,14 @@ require (
 	github.com/RoaringBitmap/roaring v1.9.3
 	github.com/google/uuid v1.6.0
 	github.com/longhorn/backupstore v0.0.0-20240426093637-ac3867f121c0
-	github.com/longhorn/go-common-libs v0.0.0-20240426033718-77710d2242df
+	github.com/longhorn/go-common-libs v0.0.0-20240427164621-70d1933bfa90
 	github.com/longhorn/go-spdk-helper v0.0.0-20240426112700-a797602bf7fe
 	github.com/longhorn/longhorn-engine v1.6.0-dev-20231217.0.20240418025706-519598108463
 	github.com/longhorn/longhorn-spdk-engine v0.0.0-20240426084525-210492ed1d43
 	github.com/longhorn/types v0.0.0-20240424162824-4995e1e42438
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli v1.22.14
+	github.com/urfave/cli v1.22.15
 	golang.org/x/net v0.24.0
 	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.63.2
@@ -34,7 +34,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/gammazero/workerpool v1.1.3 // indirect
@@ -72,3 +72,9 @@ require (
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 )
+
+replace github.com/longhorn/go-spdk-helper v0.0.0-20240426112700-a797602bf7fe => github.com/derekbit/go-spdk-helper v0.0.0-20240505233615-1c185e7579e4
+
+replace github.com/longhorn/longhorn-spdk-engine v0.0.0-20240426084525-210492ed1d43 => github.com/derekbit/longhorn-spdk-engine v0.0.0-20240506033711-2ef675ee947f
+
+replace github.com/longhorn/types v0.0.0-20240424162824-4995e1e42438 => github.com/derekbit/longhorn-types v0.0.0-20240506023841-5655cad0981a
