@@ -179,12 +179,6 @@ func start(c *cli.Context) (err error) {
 		return err
 	}
 
-	if spdkEnabled {
-		if err := cleanupStaledNvmeAndDmDevices(); err != nil {
-			return err
-		}
-	}
-
 	// setup tls config
 	var tlsConfig *tls.Config
 	tlsDir := c.GlobalString("tls-dir")

@@ -18,8 +18,8 @@ RUN wget -O - https://storage.googleapis.com/golang/go1.22.2.linux-${!GOLANG_ARC
     go install golang.org/x/lint/golint@latest
 
 ENV GO_SPDK_HELPER_DIR /usr/src/go-spdk-helper
-ENV GO_SPDK_HELPER_COMMIT_ID d05637da59788eeeb8927c663f0eec7c958d3f97
-RUN git clone https://github.com/longhorn/go-spdk-helper.git ${GO_SPDK_HELPER_DIR} && \
+ENV GO_SPDK_HELPER_COMMIT_ID 2b83180ae2591b08e92588d4bb70e667f99b56ab
+RUN git clone https://github.com/derekbit/go-spdk-helper.git ${GO_SPDK_HELPER_DIR} && \
     cd ${GO_SPDK_HELPER_DIR} && \
     git checkout ${GO_SPDK_HELPER_COMMIT_ID} && \
     go build && \
