@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/bci-base:15.6 AS builder
+FROM registry.suse.com/bci/golang:1.22 AS builder
 
 ARG ARCH=amd64
 
@@ -17,8 +17,7 @@ RUN zypper -n install cmake curl wget git gcc tar gzip xsltproc docbook-xsl-styl
 # Build go-spdk-helper
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm64=arm64 GOLANG_ARCH_s390x=s390x GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GOPATH=/go PATH=/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash
-RUN wget -O - https://storage.googleapis.com/golang/go1.22.2.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
-    go install golang.org/x/lint/golint@latest
+RUN go install golang.org/x/lint/golint@latest
 
 ENV GO_SPDK_HELPER_DIR /usr/src/go-spdk-helper
 ENV GO_SPDK_HELPER_COMMIT_ID d05637da59788eeeb8927c663f0eec7c958d3f97
