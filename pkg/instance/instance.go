@@ -719,13 +719,15 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 			DataEngine:         rpc.DataEngine_DATA_ENGINE_V2,
 		},
 		Status: &rpc.InstanceStatus{
-			State:           e.State,
-			ErrorMsg:        e.ErrorMsg,
-			PortStart:       e.Port,
-			PortEnd:         e.Port,
-			TargetPortStart: e.TargetPort,
-			TargetPortEnd:   e.TargetPort,
-			Conditions:      make(map[string]bool),
+			State:                  e.State,
+			ErrorMsg:               e.ErrorMsg,
+			PortStart:              e.Port,
+			PortEnd:                e.Port,
+			TargetPortStart:        e.TargetPort,
+			TargetPortEnd:          e.TargetPort,
+			StandbyTargetPortStart: e.StandbyTargetPort,
+			StandbyTargetPortEnd:   e.StandbyTargetPort,
+			Conditions:             make(map[string]bool),
 		},
 	}
 }
