@@ -711,6 +711,19 @@ func replicaResponseToInstanceResponse(r *spdkapi.Replica) *rpc.InstanceResponse
 }
 
 func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
+	nvmeSubsystem := &rpc.NvmeSubsystem{
+		Paths: make(map[string]*rpc.NvmeDevicePath),
+	}
+	for pathName, path := range e.NvmeSubsystem.Paths {
+		nvmeSubsystem.Paths[pathName] = &rpc.NvmeDevicePath{
+			Trtype:  path.Trtype,
+			Traddr:  path.Traddr,
+			Trsvcid: path.Trsvcid,
+			SrcAddr: path.SrcAddr,
+			State:   string(path.State),
+		}
+	}
+
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: e.Name,
@@ -729,6 +742,7 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 			StandbyTargetPortStart: e.StandbyTargetPort,
 			StandbyTargetPortEnd:   e.StandbyTargetPort,
 			Conditions:             make(map[string]bool),
+			NvmeSubsystem:          nvmeSubsystem,
 		},
 	}
 }
