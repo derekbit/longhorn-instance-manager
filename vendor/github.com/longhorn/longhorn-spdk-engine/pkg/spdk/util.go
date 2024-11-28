@@ -89,7 +89,7 @@ func connectNVMfBdev(spdkClient *spdkclient.Client, controllerName, address stri
 
 	nvmeBdevNameList, err := spdkClient.BdevNvmeAttachController(controllerName, helpertypes.GetNQN(controllerName),
 		ip, port, spdktypes.NvmeTransportTypeTCP, spdktypes.NvmeAddressFamilyIPv4,
-		helpertypes.DefaultCtrlrLossTimeoutSec, helpertypes.DefaultReconnectDelaySec, helpertypes.DefaultFastIOFailTimeoutSec,
+		helpertypes.DefaultReplicaCtrlrLossTimeoutSec, helpertypes.DefaultReplicaReconnectDelaySec, helpertypes.DefaultReplicaFastIOFailTimeoutSec,
 		helpertypes.DefaultMultipath)
 	if err != nil {
 		return "", err
