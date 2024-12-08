@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/multierr"
 
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -55,8 +56,8 @@ type Engine struct {
 
 	ReplicaStatusMap map[string]*EngineReplicaStatus
 
-	initiator    *nvme.Initiator
-	dmDeviceBusy bool
+	initiator      *nvme.Initiator
+	dmDeviceIsBusy bool
 
 	State    types.InstanceState
 	ErrorMsg string
@@ -422,13 +423,13 @@ func (e *Engine) handleFrontend(spdkClient *spdkclient.Client, superiorPortAlloc
 
 	targetIP, targetPort, err := splitHostPort(targetAddress)
 	if err != nil {
-		return errors.Wrapf(err, "failed to split target address %v", targetAddress)
+		return err
 	}
 
 	e.Nqn = helpertypes.GetNQN(e.Name)
 	e.Nguid = commonutils.RandomID(nvmeNguidLength)
 
-	dmDeviceBusy := false
+	dmDeviceIsBusy := false
 	port := int32(0)
 	initiator, err := nvme.NewInitiator(e.VolumeName, e.Nqn, nvme.HostProc)
 	if err != nil {
@@ -439,7 +440,7 @@ func (e *Engine) handleFrontend(spdkClient *spdkclient.Client, superiorPortAlloc
 		if err == nil {
 			if !standbyTargetCreationRequired {
 				e.initiator = initiator
-				e.dmDeviceBusy = dmDeviceBusy
+				e.dmDeviceIsBusy = dmDeviceIsBusy
 				e.Endpoint = initiator.GetEndpoint()
 				e.log = e.log.WithFields(logrus.Fields{
 					"endpoint":   e.Endpoint,
@@ -519,9 +520,7 @@ func (e *Engine) handleFrontend(spdkClient *spdkclient.Client, superiorPortAlloc
 		return nil
 	}
 
-	e.log.Info("Starting initiator for engine")
-
-	dmDeviceBusy, err = initiator.Start(targetIP, strconv.Itoa(int(port)), true)
+	dmDeviceIsBusy, err = initiator.Start(targetIP, strconv.Itoa(int(port)), true)
 	if err != nil {
 		return errors.Wrapf(err, "failed to start initiator for engine %v", e.Name)
 	}
@@ -530,8 +529,6 @@ func (e *Engine) handleFrontend(spdkClient *spdkclient.Client, superiorPortAlloc
 }
 
 func (e *Engine) Delete(spdkClient *spdkclient.Client, superiorPortAllocator *commonbitmap.Bitmap) (err error) {
-	e.log.Info("Deleting engine")
-
 	requireUpdate := false
 
 	e.Lock()
@@ -561,37 +558,35 @@ func (e *Engine) Delete(spdkClient *spdkclient.Client, superiorPortAllocator *co
 		}
 	}()
 
-	if e.Endpoint != "" {
-		nqn := helpertypes.GetNQN(e.Name)
+	e.log.Info("Deleting engine")
 
-		if e.initiator != nil {
-			if _, err := e.initiator.Stop(true, true, true); err != nil {
-				return err
-			}
-			e.initiator = nil
-		}
+	if e.Nqn == "" {
+		e.Nqn = helpertypes.GetNQN(e.Name)
+	}
 
-		if err := spdkClient.StopExposeBdev(nqn); err != nil {
+	// Stop the frontend
+	if e.initiator != nil {
+		if _, err := e.initiator.Stop(true, true, true); err != nil {
 			return err
 		}
-
+		e.initiator = nil
 		e.Endpoint = ""
+
 		requireUpdate = true
 	}
 
-	if e.TargetPort != 0 || e.Port != 0 {
-		port := e.TargetPort
-		if port == 0 {
-			port = e.Port
-		}
-		if err := superiorPortAllocator.ReleaseRange(port, port); err != nil {
-			return err
-		}
-		e.TargetPort = 0
-		e.Port = 0
-		requireUpdate = true
+	if err := spdkClient.StopExposeBdev(e.Nqn); err != nil {
+		return err
 	}
 
+	// Release the ports if they are allocated
+	err = e.releasePorts(superiorPortAllocator)
+	if err != nil {
+		return err
+	}
+	requireUpdate = true
+
+	// Delete the Raid bdev and disconnect the replicas
 	if _, err := spdkClient.BdevRaidDelete(e.Name); err != nil && !jsonrpc.IsJSONRPCRespErrorNoSuchDevice(err) {
 		return err
 	}
@@ -611,6 +606,43 @@ func (e *Engine) Delete(spdkClient *spdkclient.Client, superiorPortAllocator *co
 
 	e.log.Info("Deleted engine")
 
+	return nil
+}
+
+func (e *Engine) releasePorts(superiorPortAllocator *commonbitmap.Bitmap) (err error) {
+	ports := map[int32]struct{}{
+		e.Port:              {},
+		e.TargetPort:        {},
+		e.StandbyTargetPort: {},
+	}
+
+	if errRelease := releasePortIfExists(superiorPortAllocator, ports, &e.Port); errRelease != nil {
+		err = multierr.Append(err, errRelease)
+	}
+	if errRelease := releasePortIfExists(superiorPortAllocator, ports, &e.TargetPort); errRelease != nil {
+		err = multierr.Append(err, errRelease)
+	}
+	if errRelease := releasePortIfExists(superiorPortAllocator, ports, &e.StandbyTargetPort); errRelease != nil {
+		err = multierr.Append(err, errRelease)
+	}
+
+	return err
+}
+
+func releasePortIfExists(superiorPortAllocator *commonbitmap.Bitmap, ports map[int32]struct{}, port *int32) error {
+	if *port == 0 {
+		return nil
+	}
+
+	_, exists := ports[*port]
+	if exists {
+		if err := superiorPortAllocator.ReleaseRange(*port, *port); err != nil {
+			return err
+		}
+		delete(ports, *port)
+	} else {
+		*port = 0
+	}
 	return nil
 }
 
@@ -711,6 +743,7 @@ func (e *Engine) ValidateAndUpdate(spdkClient *spdkclient.Client) (err error) {
 	if spdktypes.GetBdevType(bdevRaid) != spdktypes.BdevTypeRaid {
 		return fmt.Errorf("cannot find a raid bdev for engine %v", e.Name)
 	}
+
 	bdevRaidSize := bdevRaid.NumBlocks * uint64(bdevRaid.BlockSize)
 	if e.SpecSize != bdevRaidSize {
 		return fmt.Errorf("found mismatching between engine spec size %d and actual raid bdev size %d for engine %s", e.SpecSize, bdevRaidSize, e.Name)
@@ -746,6 +779,7 @@ func (e *Engine) ValidateAndUpdate(spdkClient *spdkclient.Client) (err error) {
 			containValidReplica = true
 		}
 	}
+
 	e.log = e.log.WithField("replicaStatusMap", e.ReplicaStatusMap)
 
 	if !containValidReplica {
@@ -886,16 +920,22 @@ func (e *Engine) checkAndUpdateInfoFromReplicaNoLock() {
 }
 
 func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.NvmfSubsystem) (err error) {
-	if e.Frontend != types.FrontendEmpty && e.Frontend != types.FrontendSPDKTCPNvmf && e.Frontend != types.FrontendSPDKTCPBlockdev {
+	if e.Frontend != types.FrontendEmpty &&
+		e.Frontend != types.FrontendSPDKTCPNvmf &&
+		e.Frontend != types.FrontendSPDKTCPBlockdev {
 		return fmt.Errorf("unknown frontend type %s", e.Frontend)
 	}
 
 	nqn := helpertypes.GetNQN(e.Name)
-	subsystem := subsystemMap[nqn]
+
+	subsystem, ok := subsystemMap[nqn]
+	if !ok {
+		return fmt.Errorf("cannot find the NVMf subsystem for engine %s", e.Name)
+	}
 
 	if e.Frontend == types.FrontendEmpty {
 		if subsystem != nil {
-			return fmt.Errorf("found nvmf subsystem %s for engine %s with empty frontend", nqn, e.Name)
+			return fmt.Errorf("found NVMf subsystem %s for engine %s with empty frontend", nqn, e.Name)
 		}
 		if e.Endpoint != "" {
 			return fmt.Errorf("found non-empty endpoint %s for engine %s with empty frontend", e.Endpoint, e.Name)
@@ -907,7 +947,7 @@ func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.Nv
 	}
 
 	if subsystem == nil || len(subsystem.ListenAddresses) == 0 {
-		return fmt.Errorf("cannot find the Nvmf subsystem for engine %s", e.Name)
+		return fmt.Errorf("cannot find the NVMf subsystem for engine %s", e.Name)
 	}
 
 	port := 0
@@ -924,7 +964,7 @@ func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.Nv
 		}
 	}
 	if port == 0 || e.Port != int32(port) {
-		return fmt.Errorf("cannot find a matching listener with port %d from Nvmf subsystem for engine %s", e.Port, e.Name)
+		return fmt.Errorf("cannot find a matching listener with port %d from NVMf subsystem for engine %s", e.Port, e.Name)
 	}
 
 	switch e.Frontend {
@@ -932,7 +972,7 @@ func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.Nv
 		if e.initiator == nil {
 			initiator, err := nvme.NewInitiator(e.VolumeName, nqn, nvme.HostProc)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "failed to create initiator for engine %v during frontend validation and update", e.Name)
 			}
 			e.initiator = initiator
 		}
@@ -944,7 +984,7 @@ func (e *Engine) validateAndUpdateFrontend(subsystemMap map[string]*spdktypes.Nv
 			}
 			return err
 		}
-		if err := e.initiator.LoadEndpoint(e.dmDeviceBusy); err != nil {
+		if err := e.initiator.LoadEndpoint(e.dmDeviceIsBusy); err != nil {
 			return err
 		}
 		blockDevEndpoint := e.initiator.GetEndpoint()
@@ -2216,7 +2256,7 @@ func (e *Engine) SwitchOverTarget(spdkClient *spdkclient.Client, newTargetAddres
 
 	// Load NVMe device info before target switchover.
 	if err := initiator.LoadNVMeDeviceInfo(initiator.TransportAddress, initiator.TransportServiceID, initiator.SubsystemNQN); err != nil {
-		if !nvme.IsValidNvmeDeviceNotFound(err) {
+		if !helpertypes.ErrorIsValidNvmeDeviceNotFound(err) {
 			return errors.Wrapf(err, "failed to load NVMe device info for engine %s target switchover", e.Name)
 		}
 	}
@@ -2270,7 +2310,7 @@ func (e *Engine) isTargetDisconnected() (bool, error) {
 	}
 
 	if err := initiator.LoadNVMeDeviceInfo(initiator.TransportAddress, initiator.TransportServiceID, initiator.SubsystemNQN); err != nil {
-		if !nvme.IsValidNvmeDeviceNotFound(err) {
+		if !helpertypes.ErrorIsValidNvmeDeviceNotFound(err) {
 			return false, errors.Wrapf(err, "failed to load NVMe device info for checking engine %s target disconnected", e.Name)
 		}
 	}
@@ -2302,7 +2342,7 @@ func (e *Engine) disconnectTarget(targetAddress string) error {
 	}
 
 	if err := initiator.LoadNVMeDeviceInfo(initiator.TransportAddress, initiator.TransportServiceID, initiator.SubsystemNQN); err != nil {
-		if !nvme.IsValidNvmeDeviceNotFound(err) {
+		if !helpertypes.ErrorIsValidNvmeDeviceNotFound(err) {
 			return errors.Wrapf(err, "failed to load NVMe device info for engine %s disconnect target %v", e.Name, targetAddress)
 		}
 	}
@@ -2338,7 +2378,7 @@ func (e *Engine) connectTarget(targetAddress string) error {
 	}
 
 	if err := initiator.LoadNVMeDeviceInfo(initiator.TransportAddress, initiator.TransportServiceID, initiator.SubsystemNQN); err != nil {
-		if !nvme.IsValidNvmeDeviceNotFound(err) {
+		if !helpertypes.ErrorIsValidNvmeDeviceNotFound(err) {
 			return errors.Wrapf(err, "failed to load NVMe device info for engine %s connect target %v:%v", e.Name, targetIP, targetPort)
 		}
 	}

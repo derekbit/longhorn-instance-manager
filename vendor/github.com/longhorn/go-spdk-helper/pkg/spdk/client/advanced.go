@@ -79,6 +79,7 @@ func (c *Client) StartExposeBdev(nqn, bdevName, nguid, ip, port string) error {
 
 func (c *Client) StopExposeBdev(nqn string) error {
 	var subsystem *spdktypes.NvmfSubsystem
+
 	subsystemList, err := c.NvmfGetSubsystems("", "")
 	if err != nil {
 		return err
