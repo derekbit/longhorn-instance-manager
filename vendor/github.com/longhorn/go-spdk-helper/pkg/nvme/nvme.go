@@ -57,6 +57,11 @@ func ConnectTarget(ip, port, nqn string, executor *commonns.Executor) (controlle
 	return connect(hostID, hostNQN, nqn, DefaultTransportType, ip, port, executor)
 }
 
+// DisconnectTarget disconnects from a target
+func DisconnectTarget(nqn string, executor *commonns.Executor) error {
+	return disconnect(nqn, executor)
+}
+
 // GetDevices returns all devices
 func GetDevices(ip, port, nqn string, executor *commonns.Executor) (devices []Device, err error) {
 	defer func() {

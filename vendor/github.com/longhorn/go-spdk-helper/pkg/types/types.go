@@ -28,6 +28,7 @@ const (
 
 const (
 	ErrorMessageCannotFindValidNvmeDevice = "cannot find a valid NVMe device"
+	ErrorMessageDeviceOrResourceBusy      = "device or resource busy"
 )
 
 const (
@@ -76,7 +77,7 @@ type DiskStatus struct {
 }
 
 func ErrorIsDeviceOrResourceBusy(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "device or resource busy")
+	return strings.Contains(strings.ToLower(err.Error()), ErrorMessageDeviceOrResourceBusy)
 }
 
 func ErrorIsValidNvmeDeviceNotFound(err error) bool {

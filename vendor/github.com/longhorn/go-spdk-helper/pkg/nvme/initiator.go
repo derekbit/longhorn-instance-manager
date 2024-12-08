@@ -3,6 +3,7 @@ package nvme
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -128,7 +129,7 @@ func (i *Initiator) DisconnectTarget() error {
 		defer lock.Unlock()
 	}
 
-	return i.disconnectTargetWithOutLock()
+	return DisconnectTarget(i.SubsystemNQN, i.executor)
 }
 
 // WaitForConnect waits for the NVMe initiator to connect
@@ -215,7 +216,7 @@ func (i *Initiator) Resume() error {
 }
 
 func (i *Initiator) resumeLinearDmDevice() error {
-	logrus.Infof("Resuming linear dm device %s", i.Name)
+	i.logger.Info("Resuming linear dm device")
 
 	return util.DmsetupResume(i.Name, i.executor)
 }
@@ -306,7 +307,7 @@ func (i *Initiator) Start(transportAddress, transportServiceID string, dmDeviceA
 			// Endpoint is already created, just replace the target device
 			i.logger.Info("Linear dm device is busy, trying the best to replace the target device for NVMe initiator")
 			if err := i.replaceDmDeviceTarget(); err != nil {
-				i.logger.WithError(err).Warnf("Failed to replace the target device for NVMe initiator %s", i.Name)
+				i.logger.WithError(err).Warnf("Failed to replace the target device for NVMe initiator")
 			} else {
 				i.logger.Info("Successfully replaced the target device for NVMe initiator")
 				dmDeviceIsBusy = false
@@ -411,7 +412,7 @@ func (i *Initiator) stopWithoutLock(dmDeviceAndEndpointCleanupRequired, deferDmD
 		}
 	}
 
-	err = i.disconnectTargetWithOutLock()
+	err = DisconnectTarget(i.SubsystemNQN, i.executor)
 	if err != nil {
 		return dmDeviceIsBusy, errors.Wrapf(err, "failed to disconnect target for NVMe initiator %s", i.Name)
 	}
@@ -422,10 +423,6 @@ func (i *Initiator) stopWithoutLock(dmDeviceAndEndpointCleanupRequired, deferDmD
 	i.TransportServiceID = ""
 
 	return dmDeviceIsBusy, nil
-}
-
-func (i *Initiator) disconnectTargetWithOutLock() error {
-	return disconnect(i.SubsystemNQN, i.executor)
 }
 
 func (i *Initiator) GetControllerName() string {
@@ -529,7 +526,7 @@ func (i *Initiator) LoadEndpoint(dmDeviceIsBusy bool) error {
 	}
 
 	if dmDeviceIsBusy {
-		i.logger.Debugf("Skipping endpoint %v loading for NVMe initiator %v due to device busy", i.Endpoint, i.Name)
+		i.logger.Debugf("Skipping endpoint %v loading due to device busy", i.Endpoint)
 	} else {
 		if i.NamespaceName != "" && !i.isNamespaceExist(depDevices) {
 			return fmt.Errorf("detected device %s name mismatching from endpoint %v for NVMe initiator %s", dev.Name, i.Endpoint, i.Name)
@@ -577,12 +574,12 @@ func (i *Initiator) removeEndpoint() error {
 }
 
 func (i *Initiator) removeLinearDmDevice(force, deferred bool) error {
-	devPath := getDmDevicePath(i.Name)
-	if _, err := os.Stat(devPath); err != nil {
+	dmDevPath := getDmDevicePath(i.Name)
+	if _, err := os.Stat(dmDevPath); err != nil {
 		return err
 	}
 
-	logrus.Infof("Removing linear dm device %s", i.Name)
+	i.logger.Info("Removing linear dm device")
 	return util.DmsetupRemove(i.Name, force, deferred, i.executor)
 }
 
@@ -636,7 +633,7 @@ func validateDiskCreation(path string, timeout int) error {
 }
 
 func (i *Initiator) suspendLinearDmDevice(noflush, nolockfs bool) error {
-	logrus.Infof("Suspending linear dm device %s", i.Name)
+	i.logger.Info("Suspending linear dm device")
 
 	return util.DmsetupSuspend(i.Name, noflush, nolockfs, i.executor)
 }
@@ -687,7 +684,7 @@ func (i *Initiator) reloadLinearDmDevice() error {
 
 	table := fmt.Sprintf("0 %v linear %v 0", sectors, devPath)
 
-	logrus.Infof("Reloading linear dm device %s with table '%s'", i.Name, table)
+	i.logger.Infof("Reloading linear dm device with table '%s'", table)
 
 	err = util.DmsetupReload(i.Name, table, i.executor)
 	if err != nil {
@@ -709,5 +706,5 @@ func (i *Initiator) reloadLinearDmDevice() error {
 }
 
 func getDmDevicePath(name string) string {
-	return fmt.Sprintf("/dev/mapper/%s", name)
+	return filepath.Join("/dev/mapper", name)
 }
