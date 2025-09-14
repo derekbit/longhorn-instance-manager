@@ -1803,6 +1803,8 @@ func (s *Server) DiskCreate(ctx context.Context, req *spdkrpc.DiskCreateRequest)
 		return nil, err
 	}
 
+	logrus.Infof("SPDK gRPC server: Start to scan the newly added disk %s(%s) with path %s", req.DiskName, req.DiskUuid, req.DiskPath)
+
 	waitForScan := true
 	timer := time.NewTimer(3 * time.Minute)
 	defer timer.Stop()

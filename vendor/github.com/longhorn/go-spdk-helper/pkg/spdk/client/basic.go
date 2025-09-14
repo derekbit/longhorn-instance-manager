@@ -49,7 +49,7 @@ func (c *Client) BdevAioCreate(filePath, name string, blockSize uint64) (bdevNam
 		BlockSize: blockSize,
 	}
 
-	cmdOutput, err := c.jsonCli.SendCommand("bdev_aio_create", req)
+	cmdOutput, err := c.jsonCli.SendCommandWithLongTimeout("bdev_aio_create", req)
 	if err != nil {
 		return "", err
 	}

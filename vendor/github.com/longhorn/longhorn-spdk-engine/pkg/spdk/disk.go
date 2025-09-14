@@ -277,6 +277,13 @@ func addBlockDevice(spdkClient *spdkclient.Client, diskName, diskUUID, originalD
 	lvstoreName := bdev.Name
 
 	log.Infof("Creating lvstore %v", lvstoreName)
+	defer func() {
+		if err == nil {
+			log.Infof("Created lvstore %v", lvstoreName)
+		} else {
+			log.WithError(err).Errorf("Failed to create lvstore %v", lvstoreName)
+		}
+	}()
 
 	lvstores, err := spdkClient.BdevLvolGetLvstore("", "")
 	if err != nil {

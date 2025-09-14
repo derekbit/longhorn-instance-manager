@@ -17,13 +17,13 @@ function cleanup_spdk_resources() {
         log "Removed device file: $device_file"
     done
 
-    log "Sending SIGTERM to go-spdk-helper to stop spdk_tgt..."
-    go-spdk-helper kill-instance --sig-name SIGTERM
-    if [[ $? -ne 0 ]]; then
-        log "Failed to send SIGTERM to go-spdk-helper"
-    else
-        log "Successfully sent SIGTERM to go-spdk-helper"
-    fi
+    # log "Sending SIGTERM to go-spdk-helper to stop spdk_tgt..."
+    # go-spdk-helper kill-instance --sig-name SIGTERM
+    # if [[ $? -ne 0 ]]; then
+    #     log "Failed to send SIGTERM to go-spdk-helper"
+    # else
+    #     log "Successfully sent SIGTERM to go-spdk-helper"
+    # fi
 }
 
 function get_v2_devices() {
