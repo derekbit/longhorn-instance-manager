@@ -60,8 +60,8 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/longhorn/go-iscsi-helper v0.0.0-20250810143507-5c5f9a0060b4 // indirect
-	github.com/longhorn/sparse-tools v0.0.0-20250826041019-4aae87cb253a // indirect
+	github.com/longhorn/go-iscsi-helper v0.0.0-20251102142448-23eedefc2b60 // indirect
+	github.com/longhorn/sparse-tools v0.0.0-20251020055717-ae3aca526fd7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -106,3 +106,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/longhorn/longhorn-engine => github.com/derekbit/longhorn-engine v1.3.1-0.20260120160409-cc2f16138910
