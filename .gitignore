@@ -5,6 +5,7 @@
 *.dylib
 .dapper
 Dockerfile.dapper[0-9]*
+cscope.*
 
 # Editors
 .idea
