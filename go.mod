@@ -124,3 +124,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/longhorn/types => github.com/derekbit/longhorn-types v0.0.0-20260201132233-1ea17e38be8f
+
+replace github.com/longhorn/longhorn-spdk-engine => github.com/derekbit/longhorn-spdk-engine v0.0.0-20260201141912-47897c5f1745
