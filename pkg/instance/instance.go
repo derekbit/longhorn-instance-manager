@@ -177,6 +177,13 @@ func (ops V2DataEngineInstanceOps) InstanceCreate(req *rpc.InstanceCreateRequest
 			return nil, err
 		}
 		return engineResponseToInstanceResponse(engine), nil
+	case types.InstanceTypeEngineTarget:
+		engineTarget, err := c.EngineTargetCreate(req.Spec.Name, req.Spec.VolumeName, req.Spec.SpdkInstanceSpec.Size,
+			req.Spec.SpdkInstanceSpec.ReplicaAddressMap, req.Spec.PortCount, req.Spec.SpdkInstanceSpec.SalvageRequested)
+		if err != nil {
+			return nil, err
+		}
+		return engineTargetResponseToInstanceResponse(engineTarget), nil
 	case types.InstanceTypeReplica:
 		replica, err := c.ReplicaCreate(req.Spec.Name, req.Spec.SpdkInstanceSpec.DiskName, req.Spec.SpdkInstanceSpec.DiskUuid, req.Spec.SpdkInstanceSpec.Size, req.Spec.PortCount, req.Spec.SpdkInstanceSpec.BackingImageName)
 		if err != nil {
@@ -425,6 +432,14 @@ func (ops V2DataEngineInstanceOps) InstanceList(instances map[string]*rpc.Instan
 	for _, engine := range engines {
 		instances[engine.Name] = engineResponseToInstanceResponse(engine)
 	}
+
+	engineTargets, err := c.EngineTargetList()
+	if err != nil {
+		return err
+	}
+	for _, engineTarget := range engineTargets {
+		instances[engineTarget.Name] = engineTargetResponseToInstanceResponse(engineTarget)
+	}
 	return nil
 }
 
@@ -623,6 +638,10 @@ func (s *Server) InstanceWatch(req *emptypb.Empty, srv rpc.InstanceService_Insta
 		})
 
 		g.Go(func() error {
+			return s.watchSPDKEngineTarget(ctx, req, spdkClient, notifyChan)
+		})
+
+		g.Go(func() error {
 			return s.watchSPDKReplica(ctx, req, spdkClient, notifyChan)
 		})
 	}
@@ -700,6 +719,43 @@ func (s *Server) watchSPDKEngine(ctx context.Context, req *emptypb.Empty, client
 					return err
 				}
 				logrus.WithError(err).Error("Failed to receive next item in SPDK engine watch")
+				time.Sleep(monitorRetryPollInterval)
+				failureCount++
+			} else {
+				notifyChan <- struct{}{}
+			}
+		}
+	}
+}
+
+func (s *Server) watchSPDKEngineTarget(ctx context.Context, req *emptypb.Empty, client *spdkclient.SPDKClient, notifyChan chan struct{}) error {
+	logrus.Info("Start watching SPDK engine targets")
+
+	notifier, err := client.EngineTargetWatch(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "failed to create SPDK engine target watch notifier")
+	}
+
+	failureCount := 0
+	for {
+		if failureCount >= maxMonitorRetryCount {
+			logrus.Errorf("Continuously receiving errors for %v times, stopping watching SPDK engine targets", maxMonitorRetryCount)
+			return fmt.Errorf("continuously receiving errors for %v times, stopping watching SPDK engine targets", maxMonitorRetryCount)
+		}
+
+		select {
+		case <-ctx.Done():
+			logrus.Info("Stopped watching SPDK engine targets")
+			return ctx.Err()
+		default:
+			_, err := notifier.Recv()
+			if err != nil {
+				status, ok := grpcstatus.FromError(err)
+				if ok && status.Code() == grpccodes.Canceled {
+					logrus.WithError(err).Warn("SPDK engine target watch is canceled")
+					return err
+				}
+				logrus.WithError(err).Error("Failed to receive next item in SPDK engine target watch")
 				time.Sleep(monitorRetryPollInterval)
 				failureCount++
 			} else {
@@ -824,6 +880,26 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 			Conditions:             make(map[string]bool),
 			UblkId:                 e.UblkID,
 			Uuid:                   e.UUID,
+		},
+	}
+}
+
+func engineTargetResponseToInstanceResponse(e *spdkapi.EngineTarget) *rpc.InstanceResponse {
+	return &rpc.InstanceResponse{
+		Spec: &rpc.InstanceSpec{
+			Name: e.Name,
+			Type: types.InstanceTypeEngineTarget,
+			// Deprecated
+			BackendStoreDriver: rpc.BackendStoreDriver_v2,
+			DataEngine:         rpc.DataEngine_DATA_ENGINE_V2,
+		},
+		Status: &rpc.InstanceStatus{
+			State:      e.State,
+			ErrorMsg:   e.ErrorMsg,
+			PortStart:  e.Port,
+			PortEnd:    e.Port,
+			Conditions: make(map[string]bool),
+			Uuid:       e.UUID,
 		},
 	}
 }
