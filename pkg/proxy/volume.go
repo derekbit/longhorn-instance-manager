@@ -84,26 +84,34 @@ func (ops V2DataEngineProxyOps) VolumeGet(ctx context.Context, req *rpc.ProxyEng
 	defer func() {
 		if closeErr := c.Close(); closeErr != nil {
 			logrus.WithFields(logrus.Fields{
-				"serviceURL": req.Address,
-				"engineName": req.EngineName,
-				"volumeName": req.VolumeName,
-				"dataEngine": req.DataEngine,
+				"serviceURL":         req.Address,
+				"engineFrontendName": req.EngineFrontendName,
+				"volumeName":         req.VolumeName,
+				"dataEngine":         req.DataEngine,
 			}).WithError(closeErr).Warn("Failed to close SPDK client")
 		}
 	}()
 
-	recv, err := c.EngineGet(req.EngineName)
+	endpoint := ""
+	frontend := ""
+	engineFrontend, err := c.EngineFrontendGet(req.EngineName)
+	if err == nil && engineFrontend != nil {
+		endpoint = engineFrontend.Endpoint
+		frontend = engineFrontend.Frontend
+	}
+
+	engine, err := c.EngineGet(req.EngineName)
 	if err != nil {
 		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to get engine %v: %v", req.EngineName, err)
 	}
 
 	return &rpc.EngineVolumeGetProxyResponse{
 		Volume: &enginerpc.Volume{
-			Name:                      recv.Name,
-			Size:                      int64(recv.SpecSize),
-			ReplicaCount:              int32(len(recv.ReplicaAddressMap)),
-			Endpoint:                  recv.Endpoint,
-			Frontend:                  recv.Frontend,
+			Name:                      engine.Name,
+			Size:                      int64(engine.SpecSize),
+			ReplicaCount:              int32(len(engine.ReplicaAddressMap)),
+			Endpoint:                  endpoint,
+			Frontend:                  frontend,
 			FrontendState:             "",
 			IsExpanding:               false,
 			LastExpansionError:        "",
@@ -170,7 +178,7 @@ func (ops V2DataEngineProxyOps) VolumeExpand(ctx context.Context, req *rpc.Engin
 		}
 	}()
 
-	err = c.EngineExpand(ctx, req.ProxyEngineRequest.EngineName, uint64(req.Expand.Size))
+	err = c.EngineFrontendExpand(ctx, req.ProxyEngineRequest.EngineName, uint64(req.Expand.Size))
 	if err != nil {
 		return nil, err
 	}
