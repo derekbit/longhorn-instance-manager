@@ -373,48 +373,47 @@ func (ops V2DataEngineProxyOps) SnapshotCloneStatus(ctx context.Context, req *rp
 		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to get engine %v", req.EngineName).Error())
 	}
 
-	replicaName, replicaAddress := "", ""
-	for rName, mode := range recv.ReplicaModeMap {
-		if mode != spdktypes.ModeRW {
-			continue
-		}
-		address, ok := recv.ReplicaAddressMap[rName]
-		if !ok {
-			return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to get replica address for %v", replicaName)
-		}
-		replicaName = rName
-		replicaAddress = address
-		break
-	}
-	if replicaName == "" || replicaAddress == "" {
-		return nil, grpcstatus.Error(grpccodes.Internal, "cannot find a RW replica")
-	}
-
-	replicaClient, err := getSPDKClientFromAddress(replicaAddress)
-	if err != nil {
-		return nil, grpcstatus.Errorf(grpccodes.Internal, "cannot ger client for replica %v", replicaName)
-	}
-	defer func() {
-		if closeErr := replicaClient.Close(); closeErr != nil {
-			log.WithError(closeErr).Warn("Failed to close SPDK client")
-		}
-	}()
-
-	status, err := replicaClient.ReplicaSnapshotCloneDstStatusCheck(replicaName)
-	if err != nil {
-		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to get clone status for %v: %v", replicaName, err)
-	}
 	resp = &rpc.EngineSnapshotCloneStatusProxyResponse{
 		Status: map[string]*enginerpc.SnapshotCloneStatusResponse{},
 	}
-	tcpReplicaAddress := types.AddTcpPrefixForAddress(replicaAddress)
-	resp.Status[tcpReplicaAddress] = &enginerpc.SnapshotCloneStatusResponse{
-		IsCloning:          status.IsCloning,
-		Error:              status.Error,
-		Progress:           int32(status.Progress),
-		State:              status.State,
-		FromReplicaAddress: status.SrcReplicaAddress,
-		SnapshotName:       status.SnapshotName,
+
+	for replicaName, mode := range recv.ReplicaModeMap {
+		if mode != spdktypes.ModeRW {
+			continue
+		}
+		replicaAddress, ok := recv.ReplicaAddressMap[replicaName]
+		if !ok {
+			return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to get replica address for %v", replicaName)
+		}
+
+		if replicaName == "" || replicaAddress == "" {
+			return nil, grpcstatus.Error(grpccodes.Internal, "cannot find a RW replica")
+		}
+
+		replicaClient, err := getSPDKClientFromAddress(replicaAddress)
+		if err != nil {
+			return nil, grpcstatus.Errorf(grpccodes.Internal, "cannot ger client for replica %v", replicaName)
+		}
+		defer func() {
+			if closeErr := replicaClient.Close(); closeErr != nil {
+				log.WithError(closeErr).Warn("Failed to close SPDK client")
+			}
+		}()
+
+		status, err := replicaClient.ReplicaSnapshotCloneDstStatusCheck(replicaName)
+		if err != nil {
+			return nil, grpcstatus.Errorf(grpccodes.Internal, "failed to get clone status for %v: %v", replicaName, err)
+		}
+
+		tcpReplicaAddress := types.AddTcpPrefixForAddress(replicaAddress)
+		resp.Status[tcpReplicaAddress] = &enginerpc.SnapshotCloneStatusResponse{
+			IsCloning:          status.IsCloning,
+			Error:              status.Error,
+			Progress:           int32(status.Progress),
+			State:              status.State,
+			FromReplicaAddress: status.SrcReplicaAddress,
+			SnapshotName:       status.SnapshotName,
+		}
 	}
 
 	return resp, nil
