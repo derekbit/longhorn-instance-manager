@@ -13,10 +13,10 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/sirupsen/logrus"
 
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	grpccodes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	grpcstatus "google.golang.org/grpc/status"
 
 	"github.com/longhorn/backupstore"
@@ -457,7 +457,12 @@ func (s *Server) syncVerifiedObjects(state *verifyState) error {
 		}
 	}
 
-	// TODO: validate and update engine targets as well
+	for _, ef := range state.engineFrontendForSync {
+		if err := ef.ValidateAndUpdate(state.spdkClient); err != nil && jsonrpc.IsJSONRPCRespErrorBrokenPipe(err) {
+			return err
+		}
+	}
+
 	for _, bi := range state.backingImageForSync {
 		if err := bi.ValidateAndUpdate(state.spdkClient); err != nil {
 			if jsonrpc.IsJSONRPCRespErrorBrokenPipe(err) {
@@ -2620,18 +2625,6 @@ func setNvmeHotPlug(spdkClient *spdkclient.Client, enable bool) (success bool) {
 	return true
 }
 
-func (s *Server) isFrontendSupported(frontend string) bool {
-	switch frontend {
-	case types.FrontendSPDKTCPBlockdev,
-		types.FrontendSPDKTCPNvmf,
-		types.FrontendUBLK,
-		types.FrontendEmpty:
-		return true
-	default:
-		return false
-	}
-}
-
 // EngineFrontendCreate creates a new engine frontend.
 func (s *Server) EngineFrontendCreate(ctx context.Context, req *spdkrpc.EngineFrontendCreateRequest) (ret *spdkrpc.EngineFrontend, err error) {
 	if req.Name == "" {
@@ -2647,22 +2640,20 @@ func (s *Server) EngineFrontendCreate(ctx context.Context, req *spdkrpc.EngineFr
 		return nil, grpcstatus.Error(grpccodes.InvalidArgument, "spec size is required")
 	}
 
-	if !s.isFrontendSupported(req.Frontend) {
+	if !types.IsFrontendSupported(req.Frontend) {
 		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "frontend %v is not supported", req.Frontend)
 	}
 
 	s.Lock()
-	ef, ok := s.engineFrontendMap[req.Name]
+	_, ok := s.engineFrontendMap[req.Name]
 	if ok {
 		s.Unlock()
 		return nil, grpcstatus.Errorf(grpccodes.AlreadyExists, "engine frontend %v already exists", req.Name)
 	}
 
-	if ef == nil {
-		s.engineFrontendMap[req.Name] = NewEngineFrontend(req.Name, req.EngineName, req.VolumeName, req.Frontend, req.SpecSize,
-			req.UblkQueueDepth, req.UblkNumberOfQueue, s.updateChs[types.InstanceTypeEngineFrontend])
-		ef = s.engineFrontendMap[req.Name]
-	}
+	ef := NewEngineFrontend(req.Name, req.EngineName, req.VolumeName, req.Frontend, req.SpecSize,
+		req.UblkQueueDepth, req.UblkNumberOfQueue, s.updateChs[types.InstanceTypeEngineFrontend])
+	s.engineFrontendMap[req.Name] = ef
 
 	spdkClient := s.spdkClient
 	s.Unlock()
