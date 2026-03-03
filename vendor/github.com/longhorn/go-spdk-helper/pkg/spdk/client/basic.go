@@ -1322,9 +1322,10 @@ func (c *Client) NvmfSubsystemsGetNss(nqn, bdevName string, nsid uint32) (nsList
 //		"trtype": Required. NVMe-oF target trtype: "tcp", "rdma" or "pcie". "tcp" by default.
 //
 //	 	"adrfam": Required. Address family ("ipv4", "ipv6", "ib", or "fc"). "ipv4" by default.
-func (c *Client) NvmfSubsystemAddListener(nqn, traddr, trsvcid string, trtype spdktypes.NvmeTransportType, adrfam spdktypes.NvmeAddressFamily) (created bool, err error) {
+func (c *Client) NvmfSubsystemAddListener(nqn, traddr, trsvcid string, trtype spdktypes.NvmeTransportType, adrfam spdktypes.NvmeAddressFamily, anaState spdktypes.AnaState) (created bool, err error) {
 	req := spdktypes.NvmfSubsystemAddListenerRequest{
-		Nqn: nqn,
+		Nqn:      nqn,
+		AnaState: anaState,
 		ListenAddress: spdktypes.NvmfSubsystemListenAddress{
 			Traddr:  traddr,
 			Trsvcid: trsvcid,
@@ -1397,7 +1398,7 @@ func (c *Client) NvmfSubsystemGetListeners(nqn, tgtName string) (listenerList []
 // NvmfSubsystemListenerSetAnaState sets ANA state for a listener in an NVMe-oF subsystem.
 func (c *Client) NvmfSubsystemListenerSetAnaState(nqn, traddr, trsvcid string,
 	trtype spdktypes.NvmeTransportType, adrfam spdktypes.NvmeAddressFamily,
-	anaState spdktypes.NvmfSubsystemListenerAnaState, anaGroupID uint32, tgtName string) (updated bool, err error) {
+	anaState spdktypes.AnaState, anaGroupID uint32, tgtName string) (updated bool, err error) {
 	req := spdktypes.NvmfSubsystemListenerSetAnaStateRequest{
 		Nqn: nqn,
 		ListenAddress: spdktypes.NvmfSubsystemListenAddress{

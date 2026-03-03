@@ -100,7 +100,8 @@ type NvmfSubsystemAddListenerRequest struct {
 	Nqn           string                     `json:"nqn"`
 	ListenAddress NvmfSubsystemListenAddress `json:"listen_address"`
 
-	TgtName string `json:"tgt_name,omitempty"`
+	AnaState AnaState `json:"ana_state"`
+	TgtName  string   `json:"tgt_name,omitempty"`
 }
 
 type NvmfSubsystemRemoveListenerRequest struct {
@@ -116,23 +117,27 @@ type NvmfSubsystemGetListenersRequest struct {
 	TgtName string `json:"tgt_name,omitempty"`
 }
 
-type NvmfSubsystemListenerAnaState string
+type AnaState string
 
 const (
-	NvmfSubsystemListenerAnaStateOptimized    = "optimized"
-	NvmfSubsystemListenerAnaStateNonOptimized = "non_optimized"
-	NvmfSubsystemListenerAnaStateInaccessible = "inaccessible"
+	AnaStateOptimized    = "optimized"
+	AnaStateNonOptimized = "non_optimized"
+	AnaStateInaccessible = "inaccessible"
 )
 
+type NvmfSubsystemListenerAnaState struct {
+	AnaGroup uint32   `json:"ana_group"`
+	State    AnaState `json:"ana_state"`
+}
 type NvmfSubsystemListener struct {
-	Address  NvmfSubsystemListenAddress    `json:"address"`
-	AnaState NvmfSubsystemListenerAnaState `json:"ana_state"`
+	Address   NvmfSubsystemListenAddress      `json:"address"`
+	AnaStates []NvmfSubsystemListenerAnaState `json:"ana_states"`
 }
 
 type NvmfSubsystemListenerSetAnaStateRequest struct {
-	Nqn           string                        `json:"nqn"`
-	ListenAddress NvmfSubsystemListenAddress    `json:"listen_address"`
-	AnaState      NvmfSubsystemListenerAnaState `json:"ana_state"`
-	AnaGroupID    uint32                        `json:"anagrpid,omitempty"`
-	TgtName       string                        `json:"tgt_name,omitempty"`
+	Nqn           string                     `json:"nqn"`
+	ListenAddress NvmfSubsystemListenAddress `json:"listen_address"`
+	AnaState      AnaState                   `json:"ana_state"`
+	AnaGroupID    uint32                     `json:"anagrpid,omitempty"`
+	TgtName       string                     `json:"tgt_name,omitempty"`
 }

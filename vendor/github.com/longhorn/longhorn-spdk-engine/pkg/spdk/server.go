@@ -1445,9 +1445,9 @@ func (s *Server) NvmfSubsystemListenerSetAnaState(ctx context.Context, req *spdk
 
 	anaState := strings.ToLower(strings.TrimSpace(req.AnaState))
 	switch anaState {
-	case string(spdktypes.NvmfSubsystemListenerAnaStateOptimized),
-		string(spdktypes.NvmfSubsystemListenerAnaStateNonOptimized),
-		string(spdktypes.NvmfSubsystemListenerAnaStateInaccessible):
+	case string(spdktypes.AnaStateOptimized),
+		string(spdktypes.AnaStateNonOptimized),
+		string(spdktypes.AnaStateInaccessible):
 	default:
 		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "unsupported ana_state %q", req.AnaState)
 	}
@@ -1458,7 +1458,7 @@ func (s *Server) NvmfSubsystemListenerSetAnaState(ctx context.Context, req *spdk
 		strconv.Itoa(int(req.Trsvcid)),
 		spdktypes.NvmeTransportTypeTCP,
 		spdktypes.NvmeAddressFamilyIPv4,
-		spdktypes.NvmfSubsystemListenerAnaState(anaState),
+		spdktypes.AnaState(anaState),
 		1,
 		"",
 	)
@@ -1483,12 +1483,26 @@ func (s *Server) NvmfSubsystemListenerSetAnaState(ctx context.Context, req *spdk
 			continue
 		}
 		matched = true
-		if strings.EqualFold(string(listener.AnaState), anaState) {
+		if strings.EqualFold(string(listener.AnaStates[0].State), anaState) {
+			return &emptypb.Empty{}, nil
+		}
+		// When ANA reporting is not enabled on the subsystem (or not
+		// supported by the SPDK version), the listener response may
+		// contain an empty AnaState. Treat this as a non-fatal
+		// condition: the set-ana-state RPC already returned success.
+
+		if listener.AnaStates[0].State == "" {
+			logrus.WithFields(logrus.Fields{
+				"nqn":            req.Nqn,
+				"traddr":         req.Traddr,
+				"trsvcid":        req.Trsvcid,
+				"requestedState": anaState,
+			}).Warn("Listener ANA state is empty after set; ANA reporting may not be enabled on this subsystem")
 			return &emptypb.Empty{}, nil
 		}
 		return nil, grpcstatus.Errorf(grpccodes.Internal,
 			"ANA state mismatch for %s at %s:%d: expected=%s actual=%s",
-			req.Nqn, req.Traddr, req.Trsvcid, anaState, listener.AnaState)
+			req.Nqn, req.Traddr, req.Trsvcid, anaState, listener.AnaStates[0].State)
 	}
 
 	if !matched {
