@@ -892,6 +892,22 @@ func engineResponseToInstanceResponse(e *spdkapi.Engine) *rpc.InstanceResponse {
 }
 
 func engineFrontendResponseToInstanceResponse(e *spdkapi.EngineFrontend) *rpc.InstanceResponse {
+	paths := make([]*rpc.EngineFrontendNvmeTcpPath, 0, len(e.Paths))
+	for _, path := range e.Paths {
+		if path == nil {
+			continue
+		}
+		paths = append(paths, &rpc.EngineFrontendNvmeTcpPath{
+			Address:    path.Address,
+			TargetIp:   path.TargetIP,
+			TargetPort: path.TargetPort,
+			EngineName: path.EngineName,
+			Nqn:        path.NQN,
+			Nguid:      path.NGUID,
+			AnaState:   path.ANAState,
+		})
+	}
+
 	return &rpc.InstanceResponse{
 		Spec: &rpc.InstanceSpec{
 			Name: e.Name,
@@ -910,6 +926,9 @@ func engineFrontendResponseToInstanceResponse(e *spdkapi.EngineFrontend) *rpc.In
 			Uuid:            e.UUID,
 			Endpoint:        e.Endpoint,
 			Frontend:        e.Frontend,
+			ActivePath:      e.ActivePath,
+			PreferredPath:   e.PreferredPath,
+			Paths:           paths,
 		},
 	}
 }
