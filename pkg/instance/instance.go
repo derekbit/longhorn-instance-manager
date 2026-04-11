@@ -182,6 +182,9 @@ func (ops V2DataEngineInstanceOps) InstanceCreate(req *rpc.InstanceCreateRequest
 		if err != nil {
 			return nil, err
 		}
+		if req.Spec.EngineIp != "" {
+			engineFrontend.EngineIP = req.Spec.EngineIp
+		}
 		return engineFrontendResponseToInstanceResponse(engineFrontend), nil
 	case types.InstanceTypeReplica:
 		replica, err := c.ReplicaCreate(req.Spec.Name, req.Spec.SpdkInstanceSpec.DiskName, req.Spec.SpdkInstanceSpec.DiskUuid, req.Spec.SpdkInstanceSpec.Size, req.Spec.PortCount, req.Spec.SpdkInstanceSpec.BackingImageName)
@@ -905,6 +908,7 @@ func engineFrontendResponseToInstanceResponse(e *spdkapi.EngineFrontend) *rpc.In
 			Nqn:        path.NQN,
 			Nguid:      path.NGUID,
 			AnaState:   path.ANAState,
+			EngineIp:   path.EngineIP,
 		})
 	}
 
@@ -924,6 +928,8 @@ func engineFrontendResponseToInstanceResponse(e *spdkapi.EngineFrontend) *rpc.In
 			Conditions:      make(map[string]bool),
 			UblkId:          int32(e.UblkID),
 			Uuid:            e.UUID,
+			EngineName:      e.EngineName,
+			EngineIp:        e.EngineIP,
 			Endpoint:        e.Endpoint,
 			Frontend:        e.Frontend,
 			ActivePath:      e.ActivePath,
@@ -1075,7 +1081,7 @@ func (ops V2DataEngineInstanceOps) InstanceSwitchOverTarget(req *rpc.InstanceSwi
 		// Kept for backward compatibility if engine is passed instead of EngineFrontend, but EngineFrontendSwitchOver has EngineName argument
 		return nil, grpcstatus.Error(grpccodes.Unimplemented, "switch over target for engine has been replaced by engine frontend switch over")
 	case types.InstanceTypeEngineFrontend:
-		err := c.EngineFrontendSwitchOver(req.Name, req.EngineName, req.TargetAddress)
+		err := c.EngineFrontendSwitchOver(req.Name, req.EngineName, req.TargetAddress, req.EngineIp)
 		if err != nil {
 			return nil, toSPDKGRPCError(err, grpccodes.Internal, "failed to switch over target for engine frontend %v", req.Name)
 		}
