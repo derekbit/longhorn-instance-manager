@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -15,6 +14,7 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 
 	backupstore "github.com/longhorn/backupstore"
+	btypes "github.com/longhorn/backupstore/types"
 	butil "github.com/longhorn/backupstore/util"
 	eclient "github.com/longhorn/longhorn-engine/pkg/controller/client"
 	rclient "github.com/longhorn/longhorn-engine/pkg/replica/client"
@@ -43,11 +43,7 @@ func (p *Proxy) SnapshotBackup(ctx context.Context, req *rpc.EngineSnapshotBacku
 	})
 	log.Infof("Backing up snapshot %v to backup %v", req.SnapshotName, req.BackupName)
 
-	if err := setEnv(req.Envs); err != nil {
-		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to set envs").Error())
-	}
-
-	credential, err := butil.GetBackupCredential(req.BackupTarget)
+	credential, err := getBackupCredential(req.BackupTarget, req.Envs)
 	if err != nil {
 		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "failed to get backup credential: %v", err)
 	}
@@ -287,11 +283,7 @@ func (p *Proxy) BackupRestore(ctx context.Context, req *rpc.EngineBackupRestoreR
 	})
 	log.Infof("Restoring backup %v to %v", req.Url, req.VolumeName)
 
-	if err := setEnv(req.Envs); err != nil {
-		return nil, grpcstatus.Error(grpccodes.Internal, errors.Wrapf(err, "failed to set envs").Error())
-	}
-
-	credential, err := butil.GetBackupCredential(req.Target)
+	credential, err := getBackupCredential(req.Target, req.Envs)
 	if err != nil {
 		return nil, grpcstatus.Errorf(grpccodes.InvalidArgument, "failed to get backup credential: %v", err)
 	}
@@ -440,18 +432,70 @@ func (ops V2DataEngineProxyOps) BackupRestoreStatus(ctx context.Context, req *rp
 	return resp, nil
 }
 
-func setEnv(envs []string) error {
+// allowedEnvKeys is the set of environment variable keys that callers are
+// permitted to supply via the gRPC Envs field. Only backup-credential and
+// proxy-related variables are allowed; security-sensitive keys such as
+// LD_PRELOAD, PATH, or LD_LIBRARY_PATH are explicitly excluded and request
+// envs are never written into the process environment.
+var allowedEnvKeys = map[string]bool{
+	// AWS S3
+	btypes.AWSAccessKey:       true,
+	btypes.AWSSecretKey:       true,
+	btypes.AWSEndPoint:        true,
+	btypes.AWSCert:            true,
+	btypes.VirtualHostedStyle: true,
+	// Azure Blob
+	btypes.AZBlobAccountName: true,
+	btypes.AZBlobAccountKey:  true,
+	btypes.AZBlobEndpoint:    true,
+	btypes.AZBlobCert:        true,
+	// CIFS
+	btypes.CIFSUsername: true,
+	btypes.CIFSPassword: true,
+	// Proxy
+	btypes.HTTPProxy:  true,
+	btypes.HTTPSProxy: true,
+	btypes.NOProxy:    true,
+}
+
+func getBackupCredential(backupURL string, envs []string) (map[string]string, error) {
+	credential, err := butil.GetBackupCredential(backupURL)
+	if err != nil {
+		return nil, err
+	}
+
+	overrides, err := getEnvOverrides(envs)
+	if err != nil {
+		return nil, err
+	}
+
+	if credential == nil {
+		credential = map[string]string{}
+	}
+	for key, value := range overrides {
+		credential[key] = value
+	}
+
+	return credential, nil
+}
+
+func getEnvOverrides(envs []string) (map[string]string, error) {
+	overrides := map[string]string{}
 	for _, env := range envs {
 		part := strings.SplitN(env, "=", 2)
 		if len(part) < 2 {
 			continue
 		}
 
-		if err := os.Setenv(part[0], part[1]); err != nil {
-			return err
+		key := part[0]
+		if !allowedEnvKeys[key] {
+			return nil, fmt.Errorf("environment variable %q is not allowed", key)
 		}
+
+		overrides[key] = part[1]
 	}
-	return nil
+
+	return overrides, nil
 }
 
 func getLabels(labels map[string]string) []string {
