@@ -198,6 +198,19 @@ func (lock *initiatorLock) Unlock() {
 	lock.lock.Unlock()
 }
 
+func (i *Initiator) logOperationDuration(scope, operation string, start time.Time, opErr error) {
+	entry := i.logger.WithFields(logrus.Fields{
+		"scope":     scope,
+		"operation": operation,
+		"duration":  time.Since(start),
+	})
+	if opErr != nil {
+		entry.WithError(opErr).Warn("Operation failed")
+		return
+	}
+	entry.Info("Operation completed")
+}
+
 // DiscoverNVMeTCPTarget discovers a target
 func (i *Initiator) DiscoverNVMeTCPTarget(ip, port string) (string, error) {
 	return DiscoverTarget(ip, port, i.executor)
@@ -862,14 +875,18 @@ func (i *Initiator) discoverAndConnectNVMeTCPTarget(transportAddress, transportS
 					subsystemNQN, transportAddress, transportServiceID)
 			} else {
 				i.logger.Infof("Discovering NVMe/TCP target %s:%s", transportAddress, transportServiceID)
+				discoverStart := time.Now()
 				subsystemNQN, e = DiscoverTarget(transportAddress, transportServiceID, i.executor)
+				i.logOperationDuration("discoverAndConnectNVMeTCPTarget", "DiscoverTarget", discoverStart, e)
 				if e != nil {
 					return errors.Wrapf(e, "discover NVMe/TCP target %s:%s failed", transportAddress, transportServiceID)
 				}
 			}
 
 			i.logger.Infof("Connecting to NVMe/TCP target %s:%s with subsystemNQN %s", transportAddress, transportServiceID, subsystemNQN)
+			connectStart := time.Now()
 			controllerName, e = ConnectTarget(transportAddress, transportServiceID, subsystemNQN, i.executor)
+			i.logOperationDuration("discoverAndConnectNVMeTCPTarget", "ConnectTarget", connectStart, e)
 			if e != nil {
 				// "already connected" means the path is present in the kernel
 				// but GetDevices() couldn't find a namespace device yet (e.g.
@@ -878,10 +895,14 @@ func (i *Initiator) discoverAndConnectNVMeTCPTarget(transportAddress, transportS
 				// treat it as success.
 				if strings.Contains(strings.ToLower(e.Error()), "already connected") {
 					i.logger.Infof("NVMe/TCP target %s:%s is already connected, verifying controller via subsystem listing", transportAddress, transportServiceID)
+					verifyStart := time.Now()
 					if name, verifyErr := i.findControllerBySubsystem(subsystemNQN, transportAddress, transportServiceID); verifyErr == nil {
+						i.logOperationDuration("discoverAndConnectNVMeTCPTarget", "findControllerBySubsystem", verifyStart, nil)
 						controllerName = name
 						i.logger.Infof("Verified existing controller %s for %s:%s", controllerName, transportAddress, transportServiceID)
 						return nil
+					} else {
+						i.logOperationDuration("discoverAndConnectNVMeTCPTarget", "findControllerBySubsystem", verifyStart, verifyErr)
 					}
 					return retry.Unrecoverable(errors.Wrapf(e, "connect NVMe/TCP target %s:%s (nqn=%s) failed", transportAddress, transportServiceID, subsystemNQN))
 				}
